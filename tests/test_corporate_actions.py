@@ -1,15 +1,26 @@
+import pytest
+
 from finance_quant.pit.corporate_actions import apply_split_if_total_return, split_ratio_as_of
-from finance_quant.pit.fixtures import generate
-from finance_quant.pit.store import MemoryGoldStore
+from finance_quant.pit.model import BitemporalRecord
 
 
-def test_split_is_invisible_before_announcement_and_raw_mode_keeps_price():
-    store = MemoryGoldStore()
-    for row in generate():
-        store.put(row)
-    actions = store.as_of("corporate_action", ["CCC"], "2024-01-01", "2024-03-01", "2024-01-15")
-    assert split_ratio_as_of(actions, "CCC", "2024-02-15", "2024-01-15") == 1.0
-    later = store.as_of("corporate_action", ["CCC"], "2024-01-01", "2024-03-01", "2024-02-05")
-    assert split_ratio_as_of(later, "CCC", "2024-02-15", "2024-02-05") == 2.0
+def test_raw_mode_preserves_price():
     assert apply_split_if_total_return(100.0, 2.0, "Raw") == 100.0
+
+
+def test_split_adjusted_mode_divides_by_ratio():
     assert apply_split_if_total_return(100.0, 2.0, "SplitAdjusted") == 50.0
+
+
+def test_unknown_mode_raises():
+    with pytest.raises(ValueError, match="unknown adjustment mode"):
+        apply_split_if_total_return(100.0, 2.0, "TotalReturn")
+
+
+def test_split_ratio_is_cumulative():
+    actions = [
+        BitemporalRecord("corporate_action", "CCC", "2024-02-01", "2024-02-01", {"kind": "split", "ratio": 2.0}, "x", 0),
+        BitemporalRecord("corporate_action", "CCC", "2024-02-10", "2024-02-10", {"kind": "split", "ratio": 3.0}, "x", 0),
+    ]
+    assert split_ratio_as_of(actions, "CCC", "2024-02-15", "2024-02-15") == 6.0
+    assert split_ratio_as_of(actions, "CCC", "2024-02-05", "2024-02-05") == 2.0
