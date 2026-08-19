@@ -12,6 +12,7 @@ from ..dsl.checker import check
 from ..dsl.interpreter import evaluate
 from ..dsl.ir import Field, Rolling, to_dict
 from ..orchestration.contracts import content_hash
+from ..pit.labels import next_day_returns, rank_ic
 from ..pit.store import PITStore
 
 
@@ -22,6 +23,7 @@ class FoldResult:
     signal_hash: str
     n_signals: int
     mean_signal: float
+    rank_ic: float = 0.0
 
 
 def sma3_expression() -> Rolling:
@@ -45,5 +47,24 @@ def run_walk_forward(store: PITStore, symbols: Sequence[str], days: Sequence[str
             fold_id=f"B2-F{fold_no}", cutoff=cutoff,
             signal_hash=content_hash(signals), n_signals=len(signals),
             mean_signal=sum(signals.values()) / len(signals),
+            rank_ic=score_rank_ic(store, symbols, days, cutoff, signals),
         ))
     return content_hash(to_dict(expr)), outputs
+
+
+def score_rank_ic(store: PITStore, symbols: Sequence[str], days: Sequence[str],
+                  cutoff: str, signals: dict[str, float]) -> float:
+    """Score as-of-cutoff signals against next-day returns knowable only after cutoff."""
+    try:
+        i = list(days).index(cutoff)
+    except ValueError:
+        return 0.0
+    if i + 1 >= len(days):
+        return 0.0
+    label_kt = days[i + 1]
+    rets = {}
+    for s in symbols:
+        series = next_day_returns(store, s, days, label_kt)
+        if cutoff in series:
+            rets[s] = series[cutoff]
+    return rank_ic(signals, rets)

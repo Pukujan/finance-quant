@@ -41,10 +41,13 @@ def main() -> int:
                        model_hash, (0,), "fixture-cutoff-v0", "not-executed-v0")
         run = ledger.begin(spec)
         done = ledger.finalize(run.run_id, RunStatus.SUCCESS,
-                               {"n_signals": float(fold.n_signals), "mean_signal": fold.mean_signal},
+                               {"n_signals": float(fold.n_signals),
+                                "mean_signal": fold.mean_signal,
+                                "rank_ic": fold.rank_ic},
                                {"fold": fold.fold_id, "signal": fold.signal_hash})
         recorded.append({"experiment_id": experiment_id, "run_id": done.run_id,
-                         "fold": fold.fold_id, "n_signals": fold.n_signals})
+                         "fold": fold.fold_id, "n_signals": fold.n_signals,
+                         "rank_ic": fold.rank_ic})
     ledger.close()
     pit.close()
     print(json.dumps({"campaign": "B1-B5", "n_runs": len(recorded), "runs": recorded}, indent=2))

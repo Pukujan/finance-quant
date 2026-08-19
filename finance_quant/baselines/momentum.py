@@ -8,7 +8,7 @@ from ..dsl.interpreter import evaluate
 from ..dsl.ir import Binary, Field, Lag, to_dict
 from ..orchestration.contracts import content_hash
 from ..pit.store import PITStore
-from .walk_forward import FoldResult
+from .walk_forward import FoldResult, score_rank_ic
 
 
 def momentum_expression() -> Binary:
@@ -28,4 +28,5 @@ def run_momentum(store: PITStore, symbols: Sequence[str], days: Sequence[str],
         fold_id="B3-momentum", cutoff=cutoff,
         signal_hash=content_hash(signals), n_signals=len(signals),
         mean_signal=sum(signals.values()) / len(signals) if signals else 0.0,
+        rank_ic=score_rank_ic(store, symbols, days, cutoff, signals),
     )

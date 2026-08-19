@@ -8,7 +8,7 @@ from ..dsl.interpreter import evaluate, evaluate_cross_section
 from ..dsl.ir import CrossSection, Field
 from ..orchestration.contracts import content_hash
 from ..pit.store import PITStore
-from .walk_forward import FoldResult
+from .walk_forward import FoldResult, score_rank_ic
 
 
 def rank_expression() -> CrossSection:
@@ -29,6 +29,7 @@ def run_cross_section_rank(store: PITStore, symbols: Sequence[str], days: Sequen
         fold_id="B4-xs-rank", cutoff=cutoff,
         signal_hash=content_hash(ranks), n_signals=len(ranks),
         mean_signal=sum(ranks.values()) / len(ranks) if ranks else 0.0,
+        rank_ic=score_rank_ic(store, symbols, days, cutoff, ranks),
     )
 
 
@@ -40,4 +41,5 @@ def run_buy_and_hold(store: PITStore, symbols: Sequence[str], days: Sequence[str
         fold_id="B5-buy-hold", cutoff=cutoff,
         signal_hash=content_hash(closes), n_signals=len(closes),
         mean_signal=sum(closes.values()) / len(closes) if closes else 0.0,
+        rank_ic=score_rank_ic(store, symbols, days, cutoff, closes),
     )
