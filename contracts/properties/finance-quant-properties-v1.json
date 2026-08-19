@@ -9,12 +9,12 @@
       "tier": "T0",
       "severity": "critical",
       "owner": "dsl.checker",
-      "oracle": ["static:checker unit corpus", "tests/test_orchestration_v0.py::fixture-gated placeholder"],
+      "oracle": ["tests/test_dsl.py::test_checker_certificate_is_an_explicit_no_future_witness", "tests/test_dsl.py::test_negative_lag_is_a_static_leakage_error"],
       "mutation_scope": "dsl/checker.py",
       "tla_ref": null,
       "lean_ref": "checker_sound (deferred post-slice)",
       "hidden_acceptance_required": true,
-      "status": "specified"
+      "status": "active"
     },
     {
       "property_id": "FQ-PROP-002",
@@ -22,12 +22,12 @@
       "tier": "T1",
       "severity": "critical",
       "owner": "pit.store",
-      "oracle": ["pit as_of PBT vs in-memory gold model (pending pit module)"],
+      "oracle": ["tests/test_pit.py::test_as_of_sqlite_matches_gold_on_generated_revision_histories", "tests/test_pit.py::test_restated_fundamental_is_not_visible_before_its_knowledge_time"],
       "mutation_scope": "pit/",
       "tla_ref": null,
       "lean_ref": null,
       "hidden_acceptance_required": true,
-      "status": "specified"
+      "status": "active"
     },
     {
       "property_id": "FQ-PROP-003",
@@ -35,12 +35,12 @@
       "tier": "T1",
       "severity": "critical",
       "owner": "experiments.ledger",
-      "oracle": ["fresh-container double-run drill (pending experiments module)"],
+      "oracle": ["tests/test_rerun.py::test_fresh_environment_rerun_reproduces_run_id_and_metrics"],
       "mutation_scope": null,
       "tla_ref": null,
       "lean_ref": null,
       "hidden_acceptance_required": false,
-      "status": "specified"
+      "status": "active"
     },
     {
       "property_id": "FQ-PROP-004",
@@ -48,12 +48,12 @@
       "tier": "T1",
       "severity": "high",
       "owner": "experiments.ledger",
-      "oracle": ["delete-attempt drill expected-fail-closed (pending)"],
+      "oracle": ["tests/test_failed_trial_visibility.py::test_failed_trial_cannot_be_deleted"],
       "mutation_scope": "experiments/",
       "tla_ref": null,
       "lean_ref": null,
       "hidden_acceptance_required": true,
-      "status": "specified"
+      "status": "active"
     },
     {
       "property_id": "FQ-PROP-005",
@@ -61,12 +61,12 @@
       "tier": "T3",
       "severity": "critical",
       "owner": "acceptance.holdout",
-      "oracle": ["formal/tla/PromotionLadder.tla (pending)", "sealed clean-runner protocol drills (pending)"],
+      "oracle": ["formal/tla/PromotionLadder.tla", "tests/test_ladder.py::test_ladder_cannot_grant_authority_before_review"],
       "mutation_scope": null,
       "tla_ref": "formal/tla/PromotionLadder.tla",
       "lean_ref": null,
       "hidden_acceptance_required": true,
-      "status": "specified"
+      "status": "active"
     },
     {
       "property_id": "FQ-PROP-006",
@@ -74,12 +74,12 @@
       "tier": "T2",
       "severity": "critical",
       "owner": "execution.lean_bridge",
-      "oracle": ["LEAN conformance poison drills (pending bridge)"],
+      "oracle": ["tests/test_fills.py::test_same_bar_fill_is_a_contract_violation"],
       "mutation_scope": null,
       "tla_ref": null,
       "lean_ref": null,
       "hidden_acceptance_required": true,
-      "status": "specified"
+      "status": "active"
     },
     {
       "property_id": "FQ-PROP-007",
@@ -100,12 +100,12 @@
       "tier": "T1",
       "severity": "critical",
       "owner": "risk.veto",
-      "oracle": ["risk PBT vs adversarial order generator (pending risk module)"],
+      "oracle": ["tests/test_risk_veto.py::test_veto_never_allows_limit_breach", "tests/test_instruction_override.py::test_agent_instructions_cannot_override_risk_veto"],
       "mutation_scope": "risk/",
       "tla_ref": null,
       "lean_ref": "risk checker totality (candidate, deferred)",
       "hidden_acceptance_required": true,
-      "status": "specified"
+      "status": "active"
     },
     {
       "property_id": "FQ-PROP-009",
@@ -165,12 +165,12 @@
       "tier": "T2",
       "severity": "high",
       "owner": "features.graph",
-      "oracle": ["late-announced-edge poison drill (pending graph module)"],
+      "oracle": ["tests/test_graph_leakage.py::test_graph_feature_cannot_use_late_announced_edge", "tests/test_lineage.py::test_late_announced_graph_edge_is_excluded_as_of_earlier_knowledge_time"],
       "mutation_scope": null,
       "tla_ref": null,
       "lean_ref": null,
       "hidden_acceptance_required": true,
-      "status": "specified"
+      "status": "active"
     },
     {
       "property_id": "FQ-PROP-014",
@@ -178,12 +178,12 @@
       "tier": "T1",
       "severity": "critical",
       "owner": "pit.universe",
-      "oracle": ["universe as-of PBT (pending pit module)"],
+      "oracle": ["tests/test_survivorship.py::test_delisted_instrument_remains_queryable_after_effective_date"],
       "mutation_scope": "pit/",
       "tla_ref": null,
       "lean_ref": null,
       "hidden_acceptance_required": true,
-      "status": "specified"
+      "status": "active"
     }
   ]
 }
