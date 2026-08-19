@@ -1,7 +1,9 @@
 """CLI: python -m finance_quant <command>"""
 from __future__ import annotations
 
+import runpy
 import sys
+from pathlib import Path
 
 COMMANDS = {
     "pit-bakeoff": "scripts/run_pit_bakeoff.py",
@@ -29,7 +31,16 @@ def main(argv: list[str] | None = None) -> int:
     if cmd not in COMMANDS:
         print(f"unknown command {cmd!r}", file=sys.stderr)
         return 2
-    print(COMMANDS[cmd])
+    script_path = Path(COMMANDS[cmd])
+    if not script_path.exists():
+        print(f"script not found: {script_path}", file=sys.stderr)
+        return 2
+    # Replace sys.argv so the script sees its own arguments.
+    sys.argv = [str(script_path)] + argv[1:]
+    try:
+        runpy.run_path(str(script_path), run_name="__main__")
+    except SystemExit as exc:
+        return exc.code if isinstance(exc.code, int) else 0
     return 0
 
 
