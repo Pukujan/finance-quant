@@ -13,7 +13,8 @@ from finance_quant.baselines.momentum import run_momentum
 from finance_quant.baselines.walk_forward import run_walk_forward, sma3_expression
 from finance_quant.dsl.ir import to_dict
 from finance_quant.experiments.ledger import ExperimentLedger, RunSpec, RunStatus
-from finance_quant.orchestration.contracts import content_hash
+from finance_quant.lineage.pack import LocalEvidencePack
+from finance_quant.lineage.runs import evidence_commit_for_run
 from finance_quant.pit.fixtures import N_DAYS, START, SYMBOLS, business_days, generate
 from finance_quant.pit.store import SQLiteBitemporalStore
 
@@ -26,6 +27,7 @@ def main() -> int:
     for record in generate():
         pit.put(record)
     ledger = ExperimentLedger(Path(tmp) / "runs.db")
+    pack = LocalEvidencePack(Path(tmp) / "evidence")
     manifest = pit.snapshot_pin()
     ir_hash, folds = run_walk_forward(pit, SYMBOLS, days, (days[19], days[39], cutoff))
     jobs = [
@@ -48,6 +50,7 @@ def main() -> int:
         recorded.append({"experiment_id": experiment_id, "run_id": done.run_id,
                          "fold": fold.fold_id, "n_signals": fold.n_signals,
                          "rank_ic": fold.rank_ic})
+        pack.commit(evidence_commit_for_run(done, manifest))
     ledger.close()
     pit.close()
     print(json.dumps({"campaign": "B1-B5", "n_runs": len(recorded), "runs": recorded}, indent=2))
