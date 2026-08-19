@@ -21,7 +21,7 @@ Executable plumbing, not live trading:
 - Optional TimescaleDB/XTDB PIT adapters (skipped in CI unless DSN env vars are set)
 - Optional ArcticDB PIT adapter (skipped unless `arcticdb` is installed; Apache-converted versions only)
 - Generated LEAN algorithm skeleton with execution-contract constants and same-bar fill contract
-- 489+ tests covering PIT leakage, restatements, survivorship, graph as-of, search floors, risk veto, fill rules, worker authority, evidence lineage, promotion ladder
+- 491+ tests covering PIT leakage, restatements, survivorship, graph as-of, search floors, risk veto, fill rules, worker authority, evidence lineage, promotion ladder
 - Smoke runner (`scripts/smoke.py`) and `python -m finance_quant verify` exercised in CI after pytest
 
 ## Verify
