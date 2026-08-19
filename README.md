@@ -18,7 +18,7 @@ Executable plumbing, not live trading:
 - Sealed-holdout commitment interface (cases stay off-repo)
 - Mechanical risk veto, same-bar fill contract, promotion-ladder conformance
 - GitHub Actions pytest on every push (`requirements-dev.txt`)
-- 100+ tests covering PIT leakage, restatements, survivorship, graph as-of, search floors
+- 130+ tests covering PIT leakage, restatements, survivorship, graph as-of, search floors
 
 ## Verify
 
@@ -34,4 +34,4 @@ Useful scripts:
 - `scripts/run_b1_b5_campaign.py` — boring baseline campaign
 - `scripts/run_search_batch.py` — RANDOM+GP trials into the ledger
 - `scripts/run_b2_via_scheduler.py` — B2 folds as native WorkOrders
-- `scripts/smoke.py` — overnight smoke (PIT + B1–B5 + search + Alpha158)
+- `python -m finance_quant help` — list packaged command entrypoints
