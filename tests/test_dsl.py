@@ -36,3 +36,15 @@ def test_ir_round_trip_and_binary_expression():
     restored = from_dict(to_dict(expr))
     assert restored == expr
     assert evaluate(restored, [{"close": 2}, {"close": 5}]) == 3.0
+
+
+def test_checker_certificate_is_an_explicit_no_future_witness():
+    """FQ-PROP-001 T0: all accepted grammar nodes have no forward-time effect."""
+    approved = [
+        Field("close"),
+        Fundamental("revenue", 45),
+        Rolling("std", Lag(Field("close"), 1), 5),
+        Binary("div", Field("close"), Const(2)),
+        CrossSection("zscore", Field("close"), "FIXIDX"),
+    ]
+    assert all(check(expr).max_lookahead_days == 0 for expr in approved)
