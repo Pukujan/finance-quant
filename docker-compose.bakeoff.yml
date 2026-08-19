@@ -1,0 +1,15 @@
+# Optional Phase-A storage bake-off engines. Not required for V0 tests.
+services:
+  timescaledb:
+    image: timescale/timescaledb:latest-pg16
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_PASSWORD: financequant
+      POSTGRES_USER: fq
+      POSTGRES_DB: pit
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fq -d pit"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
