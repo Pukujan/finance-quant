@@ -11,6 +11,7 @@ SCRIPTS = [
     "scripts/run_b1_b5_campaign.py",
     "scripts/run_search_batch.py",
     "scripts/run_search_scorecard.py",
+    "scripts/run_rank_ic_report.py",
     "scripts/alpha158_coverage.py",
 ]
 
