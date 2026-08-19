@@ -60,6 +60,12 @@ class Ladder:
             raise ProtocolError("tiny-live requires PAPER")
         self.state = "TINY_LIVE"
 
+    def reset(self) -> None:
+        if self.state not in {"PAPER", "TINY_LIVE", "REJECTED"}:
+            raise ProtocolError("reset only from terminal promotion states")
+        self.state = "IDLE"
+        self.current = ""
+
     def no_authority_before_review(self) -> bool:
         if self.state in {"IDLE", "SEALED", "RUNNING", "SCORED", "REVIEW"}:
             return all(v == 0 for v in self.authority.values())
