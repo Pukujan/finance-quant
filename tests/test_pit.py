@@ -8,6 +8,7 @@ from hypothesis import HealthCheck, given, settings, strategies as st
 from finance_quant.pit.bakeoff import BakeoffHarness
 from finance_quant.pit.fixtures import SYMBOLS, business_days, generate
 from finance_quant.pit.model import BitemporalRecord, PitContractError
+from finance_quant.pit.manifest_store import ManifestJsonlStore
 from finance_quant.pit.store import MemoryGoldStore, SQLiteBitemporalStore
 
 
@@ -80,3 +81,18 @@ def test_as_of_sqlite_matches_gold_on_generated_revision_histories(tmp_path, n, 
 def test_contract_rejects_missing_knowledge_time():
     with pytest.raises(PitContractError):
         BitemporalRecord("bar", "AAA", "2024-01-01", "", {}, "x", 0)
+
+
+def test_manifest_jsonl_store_matches_gold_and_sqlite(tmp_path):
+    gold = MemoryGoldStore()
+    sqlite = SQLiteBitemporalStore(tmp_path / "pit.db")
+    jsonl = ManifestJsonlStore(tmp_path / "pit.jsonl")
+    for row in generate():
+        gold.put(row)
+        sqlite.put(row)
+        jsonl.put(row)
+    days = business_days(date(2024, 1, 2), 60)
+    results = BakeoffHarness(jsonl, gold, days).run_all()
+    assert all(r.passed_oracle for r in results)
+    assert jsonl.snapshot_pin() == gold.snapshot_pin() == sqlite.snapshot_pin()
+    sqlite.close()

@@ -1,5 +1,0 @@
-[2026-08-19 03:54:44] Another watchdog instance running (pid 13704), exiting
-[2026-08-19 03:55:42] Another watchdog instance running (pid 38760), exiting
-[2026-08-19 03:57:08] watchdog up (pid 15496), bind=100.67.111.75 port=4097, interval=15s
-[2026-08-19 03:57:09] started opencode serve pid=30400 on 100.67.111.75:4097
-[2026-08-19 03:57:45] started opencode serve pid=33816 on 100.67.111.75:4097
