@@ -50,7 +50,7 @@ class Lag:
 
 @dataclass(frozen=True)
 class Rolling:
-    op: str                 # mean | std | sum | rank | max | min | idxmax | idxmin
+    op: str                 # mean | std | sum | rank | max | min | idxmax | idxmin | quantile
     arg: "Expr"
     window: int
 

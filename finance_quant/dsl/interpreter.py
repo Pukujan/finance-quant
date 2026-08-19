@@ -46,6 +46,10 @@ def evaluate(expr: Expr, history: Sequence[Mapping[str, float]], index: int | No
         if expr.op == "min": return min(xs)
         if expr.op == "idxmax": return float(xs.index(max(xs)))
         if expr.op == "idxmin": return float(xs.index(min(xs)))
+        if expr.op == "quantile":
+            ordered = sorted(xs)
+            k = int(0.5 * (len(ordered) - 1))
+            return ordered[k]
     if isinstance(expr, RollingPair):
         lo = i - expr.window + 1
         if lo < 0: raise EvaluationError("insufficient history for rolling pair")

@@ -17,7 +17,8 @@ class QlibCompileError(ValueError):
 _UNARY = {"neg": "Neg", "abs": "Abs", "log": "Log", "sign": "Sign"}
 _BINARY = {"add": "Add", "sub": "Sub", "mul": "Mul", "div": "Div", "min": "Min", "max": "Max"}
 _ROLLING = {"mean": "Mean", "std": "Std", "sum": "Sum", "rank": "Rank",
-            "max": "Max", "min": "Min", "idxmax": "IdxMax", "idxmin": "IdxMin"}
+            "max": "Max", "min": "Min", "idxmax": "IdxMax", "idxmin": "IdxMin",
+            "quantile": "Quantile"}
 
 
 def compile_expr(expr: Expr) -> str:
