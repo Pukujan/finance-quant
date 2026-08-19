@@ -20,7 +20,7 @@ Executable plumbing, not live trading:
 - GitHub Actions pytest on every push (`requirements-dev.txt`)
 - Optional TimescaleDB/XTDB PIT adapters (skipped in CI unless DSN env vars are set)
 - Optional ArcticDB PIT adapter (skipped unless `arcticdb` is installed; Apache-converted versions only)
-- 370+ tests covering PIT leakage, restatements, survivorship, graph as-of, search floors
+- 400+ tests covering PIT leakage, restatements, survivorship, graph as-of, search floors
 
 ## Verify
 
