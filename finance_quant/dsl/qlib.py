@@ -36,7 +36,7 @@ def _emit(expr: Expr) -> str:
     if isinstance(expr, Lag): return f"Ref({_emit(expr.arg)},{expr.bars})"
     if isinstance(expr, Rolling): return f"{_ROLLING[expr.op]}({_emit(expr.arg)},{expr.window})"
     if isinstance(expr, RollingPair):
-        name = "Corr" if expr.op == "corr" else "Cov"
+        name = {"corr": "Corr", "cov": "Cov", "slope": "Slope", "residual": "Resi", "rsquare": "Rsquare"}[expr.op]
         return f"{name}({_emit(expr.left)},{_emit(expr.right)},{expr.window})"
     if isinstance(expr, CrossSection):
         raise QlibCompileError(

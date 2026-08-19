@@ -57,7 +57,7 @@ class Rolling:
 
 @dataclass(frozen=True)
 class RollingPair:
-    op: str                 # corr | cov
+    op: str                 # corr | cov | slope | residual | rsquare
     left: "Expr"
     right: "Expr"
     window: int

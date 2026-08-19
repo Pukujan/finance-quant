@@ -19,7 +19,7 @@ COVERAGE = {
     "rolling mean/sum/std/max/min": (55, "supported"),
     "rolling rank/quantile/idxmax/idxmin": (42, "partial"),
     "rolling corr/cov with volume": (20, "supported"),
-    "rolling regression/residual/slope/rsquare": (22, "gap"),
+    "rolling regression/residual/slope/rsquare": (22, "supported"),
 }
 
 

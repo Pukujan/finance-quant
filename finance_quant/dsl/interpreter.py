@@ -49,9 +49,20 @@ def evaluate(expr: Expr, history: Sequence[Mapping[str, float]], index: int | No
         ys = [evaluate(expr.right, history, j) for j in range(lo, i + 1)]
         mx, my = sum(xs) / len(xs), sum(ys) / len(ys)
         cov = sum((x - mx) * (y - my) for x, y in zip(xs, ys)) / len(xs)
+        varx = sum((x - mx) ** 2 for x in xs) / len(xs)
+        vary = sum((y - my) ** 2 for y in ys) / len(ys)
         if expr.op == "cov": return cov
-        sx = math.sqrt(sum((x - mx) ** 2 for x in xs) / len(xs))
-        sy = math.sqrt(sum((y - my) ** 2 for y in ys) / len(ys))
+        if expr.op == "slope": return 0.0 if varx == 0 else cov / varx
+        if expr.op == "residual":
+            slope = 0.0 if varx == 0 else cov / varx
+            intercept = my - slope * mx
+            return ys[-1] - (slope * xs[-1] + intercept)
+        if expr.op == "rsquare":
+            if varx == 0 or vary == 0: return 0.0
+            r = cov / (math.sqrt(varx) * math.sqrt(vary))
+            return r * r
+        sx = math.sqrt(varx)
+        sy = math.sqrt(vary)
         if sx == 0 or sy == 0: return 0.0
         return cov / (sx * sy)
     if isinstance(expr, CrossSection):

@@ -26,7 +26,7 @@ class EffectCertificate:
 _UNARY = {"neg", "abs", "log", "sign"}
 _BINARY = {"add", "sub", "mul", "div", "min", "max"}
 _ROLLING = {"mean", "std", "sum", "rank"}
-_ROLLING_PAIR = {"corr", "cov"}
+_ROLLING_PAIR = {"corr", "cov", "slope", "residual", "rsquare"}
 _CROSS = {"rank", "zscore"}
 
 
@@ -64,7 +64,7 @@ def check(expr: Expr) -> EffectCertificate:
                                  e.requires_universe, e.deterministic)
     if isinstance(expr, RollingPair):
         if expr.op not in _ROLLING_PAIR or expr.window < 2:
-            raise TemporalError("rolling pair op must be corr/cov with window >= 2")
+            raise TemporalError("rolling pair op must be corr/cov/slope/residual/rsquare with window >= 2")
         combined = _combine(check(expr.left), check(expr.right))
         return EffectCertificate(combined.max_lookahead_days,
                                  combined.min_lookback_bars + expr.window - 1,
