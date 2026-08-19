@@ -11,6 +11,7 @@ Invariants carried by construction (issue #10):
 from __future__ import annotations
 
 import sqlite3
+import threading
 import time
 from enum import Enum
 from pathlib import Path
@@ -102,7 +103,9 @@ class AttemptStore:
 
     def __init__(self, path: str | Path):
         self._path = str(path)
-        self._db = sqlite3.connect(self._path, isolation_level=None)  # autocommit; explicit BEGIN below
+        self._lock = threading.RLock()
+        self._db = sqlite3.connect(self._path, isolation_level=None,
+                                   check_same_thread=False)  # pool-threads; lock below
         self._db.executescript(_SCHEMA)
 
     def close(self) -> None:
@@ -111,43 +114,48 @@ class AttemptStore:
     # --- manifest projection -------------------------------------------------
     def project_manifest(self, campaign_id: str, manifest_hash: str,
                          manifest_json: str) -> None:
-        self._db.execute(
-            "INSERT OR IGNORE INTO manifests VALUES (?,?,?)",
-            (manifest_hash, campaign_id, manifest_json),
-        )
+        with self._lock:
+            self._db.execute(
+                "INSERT OR IGNORE INTO manifests VALUES (?,?,?)",
+                (manifest_hash, campaign_id, manifest_json),
+            )
 
     # --- issuance ------------------------------------------------------------
     def issue(self, work_order: WorkOrder, retry_seq: int = 0) -> bool:
         """Returns True if newly created. Idempotent for identical (woh, retry_seq)."""
-        now = time.time()
-        cur = self._db.execute(
-            "INSERT OR IGNORE INTO attempts"
-            "(work_order_hash, retry_seq, state, work_order_json, created_at, updated_at)"
-            " VALUES (?,?,?,?,?,?)",
-            (work_order.work_order_hash, retry_seq, AttemptState.ISSUED.value,
-             work_order_to_json(work_order), now, now),
-        )
-        return cur.rowcount == 1
+        with self._lock:
+            now = time.time()
+            cur = self._db.execute(
+                "INSERT OR IGNORE INTO attempts"
+                "(work_order_hash, retry_seq, state, work_order_json, created_at, updated_at)"
+                " VALUES (?,?,?,?,?,?)",
+                (work_order.work_order_hash, retry_seq, AttemptState.ISSUED.value,
+                 work_order_to_json(work_order), now, now),
+            )
+            return cur.rowcount == 1
 
     def _state_of(self, woh: str, retry_seq: int) -> Optional[AttemptState]:
-        row = self._db.execute(
-            "SELECT state FROM attempts WHERE work_order_hash=? AND retry_seq=?",
-            (woh, retry_seq),
-        ).fetchone()
-        return AttemptState(row[0]) if row else None
+        with self._lock:
+            row = self._db.execute(
+                "SELECT state FROM attempts WHERE work_order_hash=? AND retry_seq=?",
+                (woh, retry_seq),
+            ).fetchone()
+            return AttemptState(row[0]) if row else None
 
     def _transition(self, woh: str, retry_seq: int, to: AttemptState,
                     error_class: Optional[str] = None) -> None:
-        cur = self._state_of(woh, retry_seq)
-        if cur is None:
-            raise LifecycleError(f"unknown attempt {woh}:{retry_seq}")
-        if to not in _ALLOWED[cur]:
-            raise LifecycleError(f"illegal transition {cur.value} -> {to.value}")
-        self._db.execute(
-            "UPDATE attempts SET state=?, updated_at=?, error_class=COALESCE(?, error_class)"
-            " WHERE work_order_hash=? AND retry_seq=?",
-            (to.value, time.time(), error_class, woh, retry_seq),
-        )
+        with self._lock:
+            cur = self._state_of(woh, retry_seq)
+            if cur is None:
+                raise LifecycleError(f"unknown attempt {woh}:{retry_seq}")
+            if to not in _ALLOWED[cur]:
+                raise LifecycleError(f"illegal transition {cur.value} -> {to.value}")
+            self._db.execute(
+                "UPDATE attempts SET state=?, updated_at=?,"
+                " error_class=COALESCE(?, error_class)"
+                " WHERE work_order_hash=? AND retry_seq=?",
+                (to.value, time.time(), error_class, woh, retry_seq),
+            )
 
     def mark_queued(self, woh: str, retry_seq: int = 0) -> None:
         self._transition(woh, retry_seq, AttemptState.QUEUED)
@@ -164,6 +172,10 @@ class AttemptStore:
 
     # --- receipt commit (the authority boundary) -----------------------------
     def commit_receipt(self, receipt: ResultReceipt) -> CommitOutcome:
+        with self._lock:
+            return self._commit_receipt(receipt)
+
+    def _commit_receipt(self, receipt: ResultReceipt) -> CommitOutcome:
         woh, seq = receipt.work_order_hash, receipt.retry_seq
         state = self._state_of(woh, seq)
         if state is not AttemptState.RUNNING:
@@ -207,47 +219,52 @@ class AttemptStore:
 
     # --- retry ---------------------------------------------------------------
     def next_retry_seq(self, woh: str) -> int:
-        row = self._db.execute(
-            "SELECT MAX(retry_seq) FROM attempts WHERE work_order_hash=?", (woh,)
-        ).fetchone()
-        return (row[0] if row[0] is not None else -1) + 1
+        with self._lock:
+            row = self._db.execute(
+                "SELECT MAX(retry_seq) FROM attempts WHERE work_order_hash=?", (woh,)
+            ).fetchone()
+            return (row[0] if row[0] is not None else -1) + 1
 
     def last_state(self, woh: str) -> Optional[AttemptState]:
-        row = self._db.execute(
-            "SELECT state FROM attempts WHERE work_order_hash=? ORDER BY retry_seq DESC LIMIT 1",
-            (woh,),
-        ).fetchone()
-        return AttemptState(row[0]) if row else None
+        with self._lock:
+            row = self._db.execute(
+                "SELECT state FROM attempts WHERE work_order_hash=? ORDER BY retry_seq DESC LIMIT 1",
+                (woh,),
+            ).fetchone()
+            return AttemptState(row[0]) if row else None
 
     # --- queries for fan-in ----------------------------------------------------
     def states(self, wohs: Iterable[str]) -> dict[str, AttemptState]:
-        out: dict[str, AttemptState] = {}
-        for woh in wohs:
-            row = self._db.execute(
-                "SELECT state FROM attempts WHERE work_order_hash=?"
-                " ORDER BY retry_seq DESC LIMIT 1",
-                (woh,),
-            ).fetchone()
-            if row:
-                out[woh] = AttemptState(row[0])
-        return out
+        with self._lock:
+            out: dict[str, AttemptState] = {}
+            for woh in wohs:
+                row = self._db.execute(
+                    "SELECT state FROM attempts WHERE work_order_hash=?"
+                    " ORDER BY retry_seq DESC LIMIT 1",
+                    (woh,),
+                ).fetchone()
+                if row:
+                    out[woh] = AttemptState(row[0])
+            return out
 
     def authoritative_receipts(self, wohs: Iterable[str]) -> list[str]:
-        woh_list = list(wohs)
-        if not woh_list:
-            return []
-        placeholders = ",".join("?" for _ in woh_list)
-        rows = self._db.execute(
-            "SELECT receipt_json FROM authoritative_results"
-            f" WHERE work_order_hash IN ({placeholders}) ORDER BY work_order_hash",
-            woh_list,
-        ).fetchall()
-        return [r[0] for r in rows]
+        with self._lock:
+            woh_list = list(wohs)
+            if not woh_list:
+                return []
+            placeholders = ",".join("?" for _ in woh_list)
+            rows = self._db.execute(
+                "SELECT receipt_json FROM authoritative_results"
+                f" WHERE work_order_hash IN ({placeholders}) ORDER BY work_order_hash",
+                woh_list,
+            ).fetchall()
+            return [r[0] for r in rows]
 
     def duplicates(self) -> list[str]:
-        return [r[0] for r in self._db.execute(
-            "SELECT receipt_hash FROM duplicate_receipts ORDER BY observed_at"
-        )]
+        with self._lock:
+            return [r[0] for r in self._db.execute(
+                "SELECT receipt_hash FROM duplicate_receipts ORDER BY observed_at"
+            )]
 
 
 # --- serialization helpers (kept here to keep contracts.py dependency-free of io) --

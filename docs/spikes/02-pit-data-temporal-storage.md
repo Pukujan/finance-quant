@@ -1,7 +1,7 @@
 # Spike #2 — PIT market-data semantics + temporal storage bake-off
 
 Issue: Pukujan/finance-quant#2
-Status: DRAFT EVIDENCE PACK — owner decision pending (`ADOPT | CONSTRAIN | REJECT | DEFER`)
+Status: **DECIDED 2026-08-19** — ADOPT bitemporal semantics; CONSTRAIN storage bake-off (ArcticDB constraint: Apache-converted versions only); REJECT kdb+/ClickHouse-as-authority/Qlib-provider-as-authority. Decision recorded on issue #2 under owner auto-delegation (owner-reversible).
 Serves invariants: I1 (PIT correctness), I2 (reproducibility), I7 (failed trials visible — via immutable revisions)
 
 ---

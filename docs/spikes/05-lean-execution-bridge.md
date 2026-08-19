@@ -1,7 +1,7 @@
 # Spike #5 — LEAN execution bridge + fill/slippage/order semantics contract
 
 Issue: Pukujan/finance-quant#5
-Status: DRAFT EVIDENCE PACK — owner decision pending
+Status: **DECIDED 2026-08-19** — ADOPT LEAN as sole execution truth with generated algorithms + sec. 3 contract; Qlib backtest triage-only; REJECT bespoke engines; DEFER zipline fallback. Decision recorded on issue #5 under owner auto-delegation (owner-reversible).
 Serves invariants: I4 (backtest != execution truth), I6 (risk veto mechanical),
 I8 (promotion gating)
 

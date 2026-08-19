@@ -1,7 +1,7 @@
 # Spike #4 — Qlib + MLflow experiment/training boundary and reproducibility contract
 
 Issue: Pukujan/finance-quant#4
-Status: DRAFT EVIDENCE PACK — owner decision pending
+Status: **DECIDED 2026-08-19** — ADOPT option A (Qlib substrate + MLflow store behind append-only ExperimentLedger facade; reproducibility contract sec. 3 binding); REJECT own-tracking-store. Decision recorded on issue #4 under owner auto-delegation (owner-reversible).
 Serves invariants: I2 (reproducibility), I7 (failed trials visible), I5 (search != authority)
 
 ---

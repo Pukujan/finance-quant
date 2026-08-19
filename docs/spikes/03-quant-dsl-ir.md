@@ -1,7 +1,7 @@
 # Spike #3 — Quant DSL/IR + temporal-effect checker + reference interpreter
 
 Issue: Pukujan/finance-quant#3
-Status: DRAFT EVIDENCE PACK — owner decision pending
+Status: **DECIDED 2026-08-19** — ADOPT two-tier IR + temporal-effect checker + reference interpreter; REJECT Turing-complete DSL and no-DSL. Decision recorded on issue #3 under owner auto-delegation (owner-reversible).
 Serves invariants: I1 (PIT correctness — *statically*), I5 (search proposes, never promotes),
 I6 (risk veto mechanical), I2 (reproducibility via IR as artifact)
 

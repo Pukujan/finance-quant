@@ -1,7 +1,7 @@
 # Spike #10 — Native research orchestration: WorkOrders, attempts, local backend, fan-out/fan-in
 
 Issue: Pukujan/finance-quant#10
-Status: DRAFT EVIDENCE PACK — owner decision pending
+Status: **DECIDED 2026-08-19** — ADOPT V0 as implemented (working code on main with 19 property tests + exit demo); DEFER non-local backends; Cortex V5 REJECTED as dependency. Decision recorded on issue #10 under owner auto-delegation (owner-reversible).
 Serves invariants: I2 (reproducibility), I7 (failures visible), I5/I6 (authority walls),
 I3 via sealed-capability separation (invariant 10), Phase C case #15 (retry/resume
 duplicate authority). Consumes: #2 snapshot IDs, #3 factor hashes, #4 run ledger,

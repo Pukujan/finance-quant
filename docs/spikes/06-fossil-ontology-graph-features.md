@@ -1,7 +1,7 @@
 # Spike #6 — FOSSIL quant ontology/lineage + PIT-safe graph-feature boundary
 
 Issue: Pukujan/finance-quant#6
-Status: DRAFT EVIDENCE PACK — owner decision pending
+Status: **DECIDED 2026-08-19** — ADOPT ontology + five graph-feature boundary rules, delivered as a dedicated FOSSIL pack with narrow mounts (per fossil-core#176 pack laws); CONSTRAIN Phase B to static graph fixtures; DEFER graph DB. Decision recorded on issue #6 under owner auto-delegation (owner-reversible).
 Serves invariants: I2 (reproducibility), I7 (failed trials visible), I1 (PIT correctness
 of *derived* graph features), plus the master issue's authority boundary (FOSSIL is not
 the numerical hot path)

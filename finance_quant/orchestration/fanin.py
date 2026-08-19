@@ -1,11 +1,12 @@
 """Deterministic fan-in against the expected manifest (never arrival-order dependent)."""
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from typing import Optional
 
-from .lifecycle import (AttemptState, AttemptStore, TERMINAL_STATES,
-                        campaign_fingerprint)
+from .contracts import content_hash
+from .lifecycle import (AttemptState, AttemptStore, TERMINAL_STATES)
 
 
 @dataclass(frozen=True)
@@ -19,6 +20,25 @@ class FanInResult:
 
 class PartialCampaign(RuntimeError):
     """Raised when aggregation (not just status query) is requested too early."""
+
+
+def semantic_projection(receipt_json: str) -> dict:
+    """The deterministic content of a receipt: identity, status, metrics, artifact
+    hashes. Wall-clock times, worker ids and staging paths are deliberately excluded
+    so fingerprints are comparable ACROSS runs, not just within one."""
+    r = json.loads(receipt_json)
+    return {
+        "work_order_hash": r["work_order_hash"],
+        "terminal_status": r["terminal_status"],
+        "metrics": r.get("metrics", []),
+        "artifact_sha256": sorted(a["sha256"] for a in r.get("artifact_manifest", [])),
+    }
+
+
+def campaign_fingerprint(manifest_hash: str, receipt_jsons: list[str]) -> str:
+    projections = sorted((semantic_projection(j) for j in receipt_jsons),
+                         key=lambda p: p["work_order_hash"])
+    return content_hash({"manifest": manifest_hash, "results": projections})
 
 
 def status(store: AttemptStore, manifest_hash: str,

@@ -1,7 +1,7 @@
 # Spike #9 — Sealed research holdout + adversarial acceptance protocol
 
 Issue: Pukujan/finance-quant#9
-Status: DRAFT EVIDENCE PACK — owner decision pending
+Status: **DECIDED 2026-08-19** — ADOPT option A + sec. 3 runbook; SEAL-A max 2/epoch (reuse penalty), SEAL-B once ever; private repo Pukujan/finance-quant-holdout created with seal protocol README; credential audit finding documented on issue #9 (gh token has repo scope — owner to narrow with fine-grained PAT or bucket IAM). REJECT time-only holdout; DEFER escrow. Decision recorded on issue #9 under owner auto-delegation (owner-reversible).
 Serves invariants: I3 (holdout stays holdout), I5 (no promotion by prose/score),
 I6, I8 (gating), I7 (failures visible). **Phase C's operating system.**
 

@@ -1,7 +1,7 @@
 # Spike #8 — Quant-specific formal-methods partition: properties vs PBT vs TLA+ vs selective Lean proof
 
 Issue: Pukujan/finance-quant#8
-Status: DRAFT EVIDENCE PACK — owner decision pending
+Status: **DECIDED 2026-08-19** — ADOPT tiered partition (sec. 2) + fossil-core#176 catalog format (live at contracts/properties/finance-quant-properties-v1.json with validation test); ADOPT PromotionLadder.tla plan; DEFER Lean proofs (timeboxed checker-soundness attempt post-slice); REJECT single-tier. Decision recorded on issue #8 under owner auto-delegation (owner-reversible).
 Serves invariants: all of I1-I8, by assigning each the *cheapest enforcement tier that
 can actually carry it*. Consumes: fossil-core#176 (external assurance machinery).
 

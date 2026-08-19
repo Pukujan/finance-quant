@@ -1,7 +1,7 @@
 # Spike #7 — Automated research-search bake-off: human vs random/GP/AlphaGen/RD-Agent/frontier models
 
 Issue: Pukujan/finance-quant#7
-Status: DRAFT EVIDENCE PACK — owner decision pending
+Status: **DECIDED 2026-08-19** — ADOPT 7-lane protocol with PRE-REGISTERED RUBRIC v0.1 (frozen pre-run; see issue #7 decision comment); CONSTRAIN RD-Agent to sandboxed weekly-batch; DEFER AlphaGen-RL (GPU budget); REJECT nothing else yet — measurement decides; lanes propose-only forever. Decision recorded on issue #7 under owner auto-delegation (owner-reversible).
 Serves invariants: I5 (search proposes, never promotes), I2 (reproducible trials),
 I7 (all trials visible), I8 (no capability jump without the ladder)
 
