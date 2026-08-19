@@ -5,6 +5,7 @@ import pytest
 from finance_quant.dsl.checker import TemporalError, check
 from finance_quant.dsl.interpreter import evaluate, evaluate_cross_section
 from finance_quant.dsl.ir import Binary, Const, CrossSection, Field, Fundamental, Lag, Rolling, from_dict, to_dict
+from finance_quant.dsl.qlib import QlibCompileError, compile_expr
 
 
 def test_sma_expression_checks_and_interprets_without_future_access():
@@ -48,3 +49,9 @@ def test_checker_certificate_is_an_explicit_no_future_witness():
         CrossSection("zscore", Field("close"), "FIXIDX"),
     ]
     assert all(check(expr).max_lookahead_days == 0 for expr in approved)
+
+
+def test_qlib_compiler_is_pure_and_requires_checker_approval():
+    assert compile_expr(Rolling("mean", Lag(Field("close"), 1), 3)) == "Mean(Ref($close,1),3)"
+    with pytest.raises(QlibCompileError):
+        compile_expr(CrossSection("rank", Field("close"), "FIXIDX"))
