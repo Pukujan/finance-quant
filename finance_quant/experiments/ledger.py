@@ -85,10 +85,12 @@ CREATE TABLE IF NOT EXISTS runs(
 class ExperimentLedger:
     """Only writer for experiment truth. No delete/update API is intentionally exposed."""
 
-    def __init__(self, path: str | Path):
+    def __init__(self, path: str | Path, jsonl_path: str | Path | None = None):
         self._lock = threading.RLock()
+        self._path = Path(path)
         self._db = sqlite3.connect(str(path), check_same_thread=False)
         self._db.executescript(_SCHEMA)
+        self._jsonl = Path(jsonl_path) if jsonl_path else self._path.with_suffix(".jsonl")
 
     def close(self) -> None:
         self._db.close()
@@ -108,7 +110,9 @@ class ExperimentLedger:
                  now, None, "[]", "[]", None),
             )
             self._db.commit()
-            return RunRecord(run_id, spec, RunStatus.RUNNING, now)
+            record = RunRecord(run_id, spec, RunStatus.RUNNING, now)
+            self._audit("begin", record)
+            return record
 
     def finalize(self, run_id: str, status: RunStatus, metrics: dict[str, float] | None = None,
                  artifacts: dict[str, str] | None = None, error_class: str | None = None) -> RunRecord:
@@ -133,7 +137,17 @@ class ExperimentLedger:
                 (status.value, now, json.dumps(m), json.dumps(a), error_class, run_id),
             )
             self._db.commit()
-            return RunRecord(run_id, existing.spec, status, existing.created_at, now, m, a, error_class)
+            record = RunRecord(run_id, existing.spec, status, existing.created_at, now, m, a, error_class)
+            self._audit("finalize", record)
+            return record
+
+    def _audit(self, event: str, record: RunRecord) -> None:
+        line = json.dumps({
+            "event": event, "run_id": record.run_id, "status": record.status.value,
+            "experiment_id": record.spec.experiment_id, "error_class": record.error_class,
+        }, sort_keys=True)
+        with self._jsonl.open("a", encoding="utf-8") as fh:
+            fh.write(line + "\n")
 
     def get(self, run_id: str) -> RunRecord:
         row = self._db.execute("SELECT * FROM runs WHERE run_id=?", (run_id,)).fetchone()
