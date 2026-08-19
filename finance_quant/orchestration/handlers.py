@@ -23,6 +23,19 @@ def boom(work_order: WorkOrder) -> Tuple[dict, dict]:
     raise RuntimeError("intentional test failure")
 
 
+def feature_eval(work_order: WorkOrder) -> Tuple[dict, dict]:
+    """In-worker SMA3 eval over a seed-derived history. No ledger/promotion handles."""
+    from ..dsl.checker import check
+    from ..dsl.interpreter import evaluate
+    from ..dsl.ir import Field, Rolling
+    expr = Rolling("mean", Field("close"), 3)
+    check(expr)
+    seed = work_order.seeds[0]
+    hist = [{"close": float(seed + i)} for i in range(5)]
+    value = evaluate(expr, hist)
+    return {"sma3": value, "fold": float(len(work_order.fold_id or ""))}, {}
+
+
 def env_probe(work_order: WorkOrder) -> Tuple[dict, dict]:
     """Reports which forbidden handles are visible; used by authority tests."""
     forbidden = [v for v in ("FQ_EXPERIMENT_LEDGER_URI", "FQ_PROMOTION_API",
