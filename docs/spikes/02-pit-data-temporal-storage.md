@@ -114,6 +114,18 @@ Hard rules for the owner to ratify or amend:
   Qlib's official bundle is *temporarily disabled* (verified 2026-08-19) with a community
   mirror; do not build the authority on scraped Yahoo data without a licensed path.
 
+## 6a. V0 implementation evidence (2026-08-19)
+
+Committed in `51b26c1`: bitemporal record contract, append-only SQLite candidate,
+pure `MemoryGoldStore` reference oracle, deterministic restatement/delist/split fixture,
+Q1-Q8 harness, and Hypothesis randomized-revision `as_of` parity test (`FQ-PROP-002`).
+`scripts/run_pit_bakeoff.py` reports every V0 query matches the oracle; fixture snapshot
+pin is `724c3a3a5cd705fc24d296ac8506b57823870b75fa3712f9d60f1577635eb21a`.
+
+This proves semantics and the bake-off harness, **not** a storage winner. XTDB,
+TimescaleDB, ArcticDB (license constraint), and Parquet+manifest remain the measured
+candidate implementations required for final storage selection.
+
 ## 7. Recommendation (evidence-based, not a decision)
 
 **ADOPT bitemporal semantics (Model A) unconditionally.** For storage, **CONSTRAIN** the

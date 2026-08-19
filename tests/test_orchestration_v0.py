@@ -293,3 +293,32 @@ def test_scheduler_crash_then_retry_succeeds(tmp_path):
     assert store.next_retry_seq(wo.work_order_hash) == 2  # initial + 1 retry
     assert store.last_state(wo.work_order_hash) is AttemptState.CRASHED
     store.close()
+
+
+def test_scheduler_resume_only_runs_attempts_not_already_terminal(tmp_path):
+    """Adversarial restart drill: persisted ledger, not scheduler RAM, is authority."""
+    from finance_quant.orchestration.scheduler import Scheduler
+
+    store = AttemptStore(tmp_path / "resume.db")
+    backend = LocalBackend()
+    manifest = fanout.expand_campaign(_spec())
+    first, rest = manifest.work_orders[0], manifest.work_orders[1:]
+    # Simulate a prior scheduler dying after it committed exactly one work order.
+    store.issue(first)
+    store.mark_queued(first.work_order_hash)
+    store.mark_running(first.work_order_hash)
+    store.commit_receipt(make_receipt(first))
+    store.close()
+
+    restarted = AttemptStore(tmp_path / "resume.db")
+    scheduler = Scheduler(restarted, backend)
+    # The individual attempt already terminal: a resume must not resurrect it.
+    assert restarted.last_state(first.work_order_hash) is AttemptState.COMPLETED
+    for wo in rest:
+        scheduler._run_one(wo)
+    aggregate = fanin.deterministic_aggregate(
+        restarted, manifest.manifest_hash, manifest.expected_attempt_ids
+    )
+    assert aggregate["n_authoritative"] == len(manifest.work_orders)
+    assert restarted.last_state(first.work_order_hash) is AttemptState.COMPLETED
+    restarted.close()

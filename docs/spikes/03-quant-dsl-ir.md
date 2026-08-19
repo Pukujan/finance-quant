@@ -103,6 +103,16 @@ Deliberately slow. ~300–600 lines of Python. If it grows past ~1k lines, the I
 - Prior-art pass on the operator set: WorldQuant Alpha101 + Qlib's op list as coverage tests.
 - Decide IR serialization (JSON vs S-expr vs protobuf) — trivial but must be one.
 
+## 6a. V0 implementation evidence (2026-08-19)
+
+Committed in `51b26c1`: JSON-serializable Tier-1 IR (`Const`, PIT `Field`,
+`Fundamental`, unary/binary, historical `Lag`, `Rolling`, `CrossSection`); a temporal
+checker that rejects negative lag and under-declared publication lag; and a
+dependency-light reference interpreter. Every accepted expression emits a
+`max_lookahead_days == 0` witness (first executable `FQ-PROP-001` coverage).
+`30cadf0` proves B1's PIT -> checked IR -> interpreter -> artifact-hash path.
+Alpha158's >=70% coverage probe remains outstanding; no claim is made yet.
+
 ## 7. Recommendation
 
 **ADOPT option A with a hard scope fence:** Tier-1 expression IR + temporal-effect checker

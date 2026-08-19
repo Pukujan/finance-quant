@@ -93,6 +93,16 @@ Mechanical enforcement points:
 - The `agent_origin` field is the hook that lets #7's search lanes and #9's adversarial
   campaign coexist with boring research in one ledger.
 
+## 6a. V0 implementation evidence (2026-08-19)
+
+Committed in `51b26c1`: `finance_quant.experiments.ExperimentLedger` implements the
+contract shell before a Qlib/MLflow adapter exists. `RunSpec` refuses missing code,
+environment, dataset-manifest, IR/model hashes, seeds, split, and cost policy;
+`begin` is idempotent by full-spec hash; terminal records are append-only and
+immutable; failed records remain queryable. `scripts/run_b1_baseline.py` demonstrates
+an actual PIT-to-ledger record. The Qlib+MLflow adapter and clean-container rerun drill
+remain required integration verification tasks.
+
 ## 7. Evidence gaps before decision
 
 - Result of verification task 1 (Qlib PIT depth).

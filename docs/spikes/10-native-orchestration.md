@@ -162,6 +162,16 @@ attempt machine above is small enough that its T1 stateful suite is sufficient.
 - Nothing here needs Qlib/LEAN integrated yet: task_type `feature_eval` over the gold
   fixture with a stub evaluator proves invariants 1-11 before real physics arrives.
 
+## 9a. Exit evidence (2026-08-19)
+
+`eac586a` added `scripts/demo_exit_campaign.py`: a 13-attempt factor x fold x cost
+campaign where one poison worker fails, retries exhaust, the failure remains in
+lineage, fan-in reaches terminal completeness, and independent parallel runs produce
+the same semantic aggregate fingerprint. `30cadf0` added a B1 baseline that exercises
+PIT -> checked IR -> ExperimentLedger. The orchestration property suite also includes
+a persisted-ledger restart drill: a new scheduler does not resurrect a completed
+attempt. The next integration work is real Qlib fold training and LEAN replay handlers.
+
 ## 10. Evidence gaps before decision
 
 - None blocking: this is a build-verify spike, not an explore spike. The only true
