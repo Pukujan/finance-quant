@@ -15,6 +15,7 @@ from finance_quant.dsl.ir import to_dict
 from finance_quant.experiments.ledger import ExperimentLedger, RunSpec, RunStatus
 from finance_quant.lineage.pack import LocalEvidencePack
 from finance_quant.lineage.runs import evidence_commit_for_run
+from finance_quant.orchestration.contracts import content_hash
 from finance_quant.pit.fixtures import N_DAYS, START, SYMBOLS, business_days, generate
 from finance_quant.pit.store import SQLiteBitemporalStore
 
