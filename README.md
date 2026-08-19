@@ -18,8 +18,8 @@ Executable plumbing, not live trading:
 - Sealed-holdout commitment interface (cases stay off-repo)
 - Mechanical risk veto, same-bar fill contract, promotion-ladder conformance
 - GitHub Actions pytest on every push (`requirements-dev.txt`)
-- Optional TimescaleDB PIT adapter (`docker-compose.bakeoff.yml`, skipped in CI unless `FQ_TIMESCALE_DSN` is set)
-- 200+ tests covering PIT leakage, restatements, survivorship, graph as-of, search floors
+- Optional TimescaleDB/XTDB PIT adapters (skipped in CI unless DSN env vars are set)
+- 240+ tests covering PIT leakage, restatements, survivorship, graph as-of, search floors
 
 ## Verify
 
