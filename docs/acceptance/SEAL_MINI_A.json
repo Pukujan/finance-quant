@@ -1,0 +1,11 @@
+{
+  "aggregate_metrics": {},
+  "candidate_artifact_hash": "no-candidate-yet",
+  "case_merkle_root": "a465bd6b9fe8000739a3f9a6c9f5f34bb2d931ee158cec7359ecc4b76c5acd4f",
+  "case_set_id": "SEAL-MINI-A",
+  "commitment_hash": "c2b3754ec55923a1c8f5e0dfc43c664b0ad5c9501f6f6311fc821bb6d81fcb84",
+  "failure_classes": [],
+  "labels_hash": "ba2f269423150c9105b0dff4dad39499a585eb877d2a6ae4d027a52e76ef3fa5",
+  "status": "pass",
+  "use_number": 1
+}
