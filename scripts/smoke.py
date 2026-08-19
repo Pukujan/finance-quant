@@ -16,10 +16,16 @@ SCRIPTS = [
 
 def main() -> int:
     py = sys.executable
+    pytest = subprocess.run([py, "-m", "pytest", "tests", "-q"], cwd=ROOT)
+    if pytest.returncode != 0:
+        print("FAIL pytest", file=sys.stderr)
+        return pytest.returncode
+    print("OK pytest")
     for rel in SCRIPTS:
-        proc = subprocess.run([py, str(ROOT / rel)], cwd=ROOT)
+        proc = subprocess.run([py, str(ROOT / rel)], cwd=ROOT, capture_output=True, text=True)
         if proc.returncode != 0:
             print(f"FAIL {rel}", file=sys.stderr)
+            print(proc.stderr[-500:] if proc.stderr else "", file=sys.stderr)
             return proc.returncode
         print(f"OK {rel}")
     return 0
