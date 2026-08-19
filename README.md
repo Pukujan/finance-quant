@@ -18,7 +18,8 @@ Executable plumbing, not live trading:
 - Sealed-holdout commitment interface (cases stay off-repo)
 - Mechanical risk veto, same-bar fill contract, promotion-ladder conformance
 - GitHub Actions pytest on every push (`requirements-dev.txt`)
-- 170+ tests covering PIT leakage, restatements, survivorship, graph as-of, search floors
+- Optional TimescaleDB PIT adapter (`docker-compose.bakeoff.yml`, skipped in CI unless `FQ_TIMESCALE_DSN` is set)
+- 200+ tests covering PIT leakage, restatements, survivorship, graph as-of, search floors
 
 ## Verify
 
@@ -34,4 +35,7 @@ Useful scripts:
 - `scripts/run_b1_b5_campaign.py` — boring baseline campaign
 - `scripts/run_search_batch.py` — RANDOM+GP trials into the ledger
 - `scripts/run_b2_via_scheduler.py` — B2 folds as native WorkOrders
+- `scripts/run_search_scorecard.py` — RANDOM vs GP rank-IC scorecard (propose-only)
+- `scripts/run_rank_ic_report.py` — B1–B5 walk-forward rank IC
+- `scripts/smoke.py` — pytest + bake-off + campaign + scorecard
 - `python -m finance_quant help` — list packaged command entrypoints
