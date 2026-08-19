@@ -20,14 +20,14 @@ from finance_quant.pit.store import SQLiteBitemporalStore
 
 def main() -> int:
     days = business_days(START, N_DAYS)
-    cutoff = days[-1]
+    cutoff = days[-2]  # interior bar so next-day labels exist (last bar has no IC)
     tmp = tempfile.mkdtemp(prefix="fq-b1b5-")
     pit = SQLiteBitemporalStore(Path(tmp) / "pit.db")
     for record in generate():
         pit.put(record)
     ledger = ExperimentLedger(Path(tmp) / "runs.db")
     manifest = pit.snapshot_pin()
-    ir_hash, folds = run_walk_forward(pit, SYMBOLS, days, (days[19], days[39], days[59]))
+    ir_hash, folds = run_walk_forward(pit, SYMBOLS, days, (days[19], days[39], cutoff))
     jobs = [
         ("B1-sma3", ir_hash, folds[-1]),
         ("B3-momentum", content_hash(to_dict(sma3_expression())), run_momentum(pit, SYMBOLS, days, cutoff)),
