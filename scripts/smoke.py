@@ -10,6 +10,7 @@ SCRIPTS = [
     "scripts/run_pit_bakeoff.py",
     "scripts/run_b1_b5_campaign.py",
     "scripts/run_search_batch.py",
+    "scripts/run_search_scorecard.py",
     "scripts/alpha158_coverage.py",
 ]
 
