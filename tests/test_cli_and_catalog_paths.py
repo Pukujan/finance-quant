@@ -11,6 +11,8 @@ def test_cli_lists_known_commands():
     assert cli.main(["help"]) == 0
     assert cli.main(["nope"]) == 2
     assert "scripts/smoke.py" in cli.COMMANDS["smoke"]
+    for path in cli.COMMANDS.values():
+        assert (ROOT / path).exists()
 
 
 def test_property_catalog_oracles_point_at_existing_paths():

@@ -9,6 +9,9 @@ COMMANDS = {
     "search-batch": "scripts/run_search_batch.py",
     "smoke": "scripts/smoke.py",
     "alpha158": "scripts/alpha158_coverage.py",
+    "scorecard": "scripts/run_search_scorecard.py",
+    "rank-ic": "scripts/run_rank_ic_report.py",
+    "b2-scheduler": "scripts/run_b2_via_scheduler.py",
 }
 
 
