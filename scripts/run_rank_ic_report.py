@@ -9,7 +9,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from finance_quant.baselines.cross_section import run_buy_and_hold, run_cross_section_rank
 from finance_quant.baselines.momentum import run_momentum
-from finance_quant.baselines.walk_forward import run_walk_forward
+from finance_quant.baselines.walk_forward import returns_at_cutoff, run_walk_forward
+from finance_quant.execution.costs import SCENARIOS
+from finance_quant.pit.cost_labels import rank_ic_with_costs
 from finance_quant.pit.fixtures import N_DAYS, START, SYMBOLS, business_days, generate
 from finance_quant.pit.store import MemoryGoldStore
 
@@ -24,6 +26,9 @@ def main() -> int:
     b3 = run_momentum(store, SYMBOLS, days, cutoff)
     b4 = run_cross_section_rank(store, SYMBOLS, days, cutoff)
     b5 = run_buy_and_hold(store, SYMBOLS, days, cutoff)
+    rets = returns_at_cutoff(store, SYMBOLS, days, cutoff)
+    closes = {row.instrument_id: float(row.payload["close"])
+              for row in store.as_of("bar", SYMBOLS, cutoff, cutoff, cutoff)}
     print(json.dumps({
         "cutoff": cutoff,
         "B2_folds": [{"fold": f.fold_id, "rank_ic": f.rank_ic} for f in folds],
@@ -31,7 +36,9 @@ def main() -> int:
         "B3_rank_ic": b3.rank_ic,
         "B4_rank_ic": b4.rank_ic,
         "B5_rank_ic": b5.rank_ic,
-        "note": "labels are next-day returns knowable only after cutoff; not promotion evidence",
+        "B5_rank_ic_c_free": rank_ic_with_costs(closes, rets, 0.0, SCENARIOS[0]),
+        "B5_rank_ic_c_stress2x": rank_ic_with_costs(closes, rets, 1.0, SCENARIOS[1]),
+        "note": "labels are next-day returns knowable only after cutoff; cost-adjusted ICs are not promotion evidence",
     }, indent=2))
     return 0
 
