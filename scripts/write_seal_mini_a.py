@@ -11,12 +11,19 @@ from finance_quant.acceptance.mini_set import make_mini_set_commitment, write_mi
 from finance_quant.orchestration.contracts import content_hash
 
 
-def main() -> int:
+import argparse
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description="Write SEAL-MINI-A public commitment")
+    parser.add_argument("--out", default="docs/acceptance/SEAL_MINI_A.json")
+    args = parser.parse_args(argv)
+
     # Synthetic public hashes only. Real cases live in finance-quant-holdout.
     case_hashes = [content_hash(f"mini-case-{i}") for i in range(8)]
     labels_hash = content_hash("labels-not-in-this-repo")
     seal = make_mini_set_commitment(case_hashes, labels_hash, "h" * 40, max_uses=2)
-    out = Path("docs/acceptance/SEAL_MINI_A.json")
+    out = Path(args.out)
     write_mini_set_receipt(seal, "no-candidate-yet", {}, [], out)
     print(json.dumps({
         "path": str(out),
