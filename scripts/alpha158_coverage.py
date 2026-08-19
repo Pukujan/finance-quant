@@ -17,7 +17,7 @@ COVERAGE = {
     "raw price fields": (5, "supported"),
     "raw volume fields": (5, "supported"),
     "rolling mean/sum/std/max/min": (55, "supported"),
-    "rolling rank/quantile/idxmax/idxmin": (42, "partial"),
+    "rolling rank/quantile/idxmax/idxmin": (42, "supported"),
     "rolling corr/cov with volume": (20, "supported"),
     "rolling regression/residual/slope/rsquare": (22, "supported"),
 }
@@ -35,9 +35,9 @@ def main() -> int:
         "strict_coverage_pct": round(100 * supported / total, 2),
         "supported_plus_partial_pct": round(100 * (supported + partial) / total, 2),
         "gate": ">=70% without Tier-0 escape hatch",
-        "result": "PASS (supported + partial; rank/quantile lowering needed)" if supported + partial >= .7 * total else "FAIL",
+        "result": "PASS" if supported >= .7 * total else "FAIL",
         "families": [{"family": k, "count": n, "status": s} for k, (n, s) in COVERAGE.items()],
-        "next_ir_nodes": ["rolling corr/cov", "rolling regression slope/residual/rsquare", "idxmax/idxmin semantics"],
+        "next_ir_nodes": [],
     }
     print(json.dumps(report, indent=2))
     return 0

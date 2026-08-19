@@ -42,6 +42,10 @@ def evaluate(expr: Expr, history: Sequence[Mapping[str, float]], index: int | No
             m = sum(xs) / len(xs)
             return math.sqrt(sum((x - m) ** 2 for x in xs) / len(xs))
         if expr.op == "rank": return sum(x <= xs[-1] for x in xs) / len(xs)
+        if expr.op == "max": return max(xs)
+        if expr.op == "min": return min(xs)
+        if expr.op == "idxmax": return float(xs.index(max(xs)))
+        if expr.op == "idxmin": return float(xs.index(min(xs)))
     if isinstance(expr, RollingPair):
         lo = i - expr.window + 1
         if lo < 0: raise EvaluationError("insufficient history for rolling pair")

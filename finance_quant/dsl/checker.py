@@ -25,7 +25,7 @@ class EffectCertificate:
 
 _UNARY = {"neg", "abs", "log", "sign"}
 _BINARY = {"add", "sub", "mul", "div", "min", "max"}
-_ROLLING = {"mean", "std", "sum", "rank"}
+_ROLLING = {"mean", "std", "sum", "rank", "max", "min", "idxmax", "idxmin"}
 _ROLLING_PAIR = {"corr", "cov", "slope", "residual", "rsquare"}
 _CROSS = {"rank", "zscore"}
 
