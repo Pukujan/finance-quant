@@ -4,7 +4,7 @@ from __future__ import annotations
 import math
 from typing import Mapping, Sequence
 
-from .ir import Binary, Const, CrossSection, Expr, Field, Fundamental, Lag, Rolling, Unary
+from .ir import Binary, Const, CrossSection, Expr, Field, Fundamental, Lag, Rolling, RollingPair, Unary
 
 
 class EvaluationError(ValueError):
@@ -42,6 +42,18 @@ def evaluate(expr: Expr, history: Sequence[Mapping[str, float]], index: int | No
             m = sum(xs) / len(xs)
             return math.sqrt(sum((x - m) ** 2 for x in xs) / len(xs))
         if expr.op == "rank": return sum(x <= xs[-1] for x in xs) / len(xs)
+    if isinstance(expr, RollingPair):
+        lo = i - expr.window + 1
+        if lo < 0: raise EvaluationError("insufficient history for rolling pair")
+        xs = [evaluate(expr.left, history, j) for j in range(lo, i + 1)]
+        ys = [evaluate(expr.right, history, j) for j in range(lo, i + 1)]
+        mx, my = sum(xs) / len(xs), sum(ys) / len(ys)
+        cov = sum((x - mx) * (y - my) for x, y in zip(xs, ys)) / len(xs)
+        if expr.op == "cov": return cov
+        sx = math.sqrt(sum((x - mx) ** 2 for x in xs) / len(xs))
+        sy = math.sqrt(sum((y - my) ** 2 for y in ys) / len(ys))
+        if sx == 0 or sy == 0: return 0.0
+        return cov / (sx * sy)
     if isinstance(expr, CrossSection):
         raise EvaluationError("cross-sectional evaluation needs evaluate_cross_section")
     raise EvaluationError(f"unsupported expression {expr!r}")

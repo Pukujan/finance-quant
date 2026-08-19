@@ -18,7 +18,7 @@ COVERAGE = {
     "raw volume fields": (5, "supported"),
     "rolling mean/sum/std/max/min": (55, "supported"),
     "rolling rank/quantile/idxmax/idxmin": (42, "partial"),
-    "rolling corr/cov with volume": (20, "gap"),
+    "rolling corr/cov with volume": (20, "supported"),
     "rolling regression/residual/slope/rsquare": (22, "gap"),
 }
 

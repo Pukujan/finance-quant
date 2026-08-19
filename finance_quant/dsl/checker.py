@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from .ir import Binary, Const, CrossSection, Expr, Field, Fundamental, Lag, Rolling, Unary
+from .ir import Binary, Const, CrossSection, Expr, Field, Fundamental, Lag, Rolling, RollingPair, Unary
 
 
 class TemporalError(ValueError):
@@ -26,6 +26,7 @@ class EffectCertificate:
 _UNARY = {"neg", "abs", "log", "sign"}
 _BINARY = {"add", "sub", "mul", "div", "min", "max"}
 _ROLLING = {"mean", "std", "sum", "rank"}
+_ROLLING_PAIR = {"corr", "cov"}
 _CROSS = {"rank", "zscore"}
 
 
@@ -61,6 +62,13 @@ def check(expr: Expr) -> EffectCertificate:
         e = check(expr.arg)
         return EffectCertificate(e.max_lookahead_days, e.min_lookback_bars + expr.window - 1,
                                  e.requires_universe, e.deterministic)
+    if isinstance(expr, RollingPair):
+        if expr.op not in _ROLLING_PAIR or expr.window < 2:
+            raise TemporalError("rolling pair op must be corr/cov with window >= 2")
+        combined = _combine(check(expr.left), check(expr.right))
+        return EffectCertificate(combined.max_lookahead_days,
+                                 combined.min_lookback_bars + expr.window - 1,
+                                 combined.requires_universe, combined.deterministic)
     if isinstance(expr, CrossSection):
         if expr.op not in _CROSS or not expr.universe:
             raise TemporalError("cross-sectional op needs supported op and bitemporal universe")

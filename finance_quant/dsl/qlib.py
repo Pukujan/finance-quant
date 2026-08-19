@@ -7,7 +7,7 @@ reaches a downstream Qlib runtime.
 from __future__ import annotations
 
 from .checker import check
-from .ir import Binary, Const, CrossSection, Expr, Field, Fundamental, Lag, Rolling, Unary
+from .ir import Binary, Const, CrossSection, Expr, Field, Fundamental, Lag, Rolling, RollingPair, Unary
 
 
 class QlibCompileError(ValueError):
@@ -35,6 +35,9 @@ def _emit(expr: Expr) -> str:
     if isinstance(expr, Binary): return f"{_BINARY[expr.op]}({_emit(expr.left)},{_emit(expr.right)})"
     if isinstance(expr, Lag): return f"Ref({_emit(expr.arg)},{expr.bars})"
     if isinstance(expr, Rolling): return f"{_ROLLING[expr.op]}({_emit(expr.arg)},{expr.window})"
+    if isinstance(expr, RollingPair):
+        name = "Corr" if expr.op == "corr" else "Cov"
+        return f"{name}({_emit(expr.left)},{_emit(expr.right)},{expr.window})"
     if isinstance(expr, CrossSection):
         raise QlibCompileError(
             "cross-sectional ops require the bitemporal universe-aware handler; "

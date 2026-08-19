@@ -56,13 +56,21 @@ class Rolling:
 
 
 @dataclass(frozen=True)
+class RollingPair:
+    op: str                 # corr | cov
+    left: "Expr"
+    right: "Expr"
+    window: int
+
+
+@dataclass(frozen=True)
 class CrossSection:
     op: str                 # rank | zscore
     arg: "Expr"
     universe: str           # bitemporal universe name, injected into effect
 
 
-Expr = Union[Const, Field, Fundamental, Unary, Binary, Lag, Rolling, CrossSection]
+Expr = Union[Const, Field, Fundamental, Unary, Binary, Lag, Rolling, RollingPair, CrossSection]
 
 
 def to_dict(expr: Expr) -> dict:
@@ -85,6 +93,9 @@ def to_dict(expr: Expr) -> dict:
     if isinstance(expr, Rolling):
         return {"node": "rolling", "op": expr.op, "window": expr.window,
                 "arg": to_dict(expr.arg)}
+    if isinstance(expr, RollingPair):
+        return {"node": "rolling_pair", "op": expr.op, "window": expr.window,
+                "left": to_dict(expr.left), "right": to_dict(expr.right)}
     if isinstance(expr, CrossSection):
         return {"node": "cross_section", "op": expr.op, "universe": expr.universe,
                 "arg": to_dict(expr.arg)}
@@ -100,5 +111,6 @@ def from_dict(raw: Mapping) -> Expr:
     if n == "binary": return Binary(str(raw["op"]), from_dict(raw["left"]), from_dict(raw["right"]))
     if n == "lag": return Lag(from_dict(raw["arg"]), int(raw["bars"]))
     if n == "rolling": return Rolling(str(raw["op"]), from_dict(raw["arg"]), int(raw["window"]))
+    if n == "rolling_pair": return RollingPair(str(raw["op"]), from_dict(raw["left"]), from_dict(raw["right"]), int(raw["window"]))
     if n == "cross_section": return CrossSection(str(raw["op"]), from_dict(raw["arg"]), str(raw["universe"]))
     raise IRValidationError(f"unknown IR node tag {n!r}")
