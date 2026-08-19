@@ -5,11 +5,12 @@ from finance_quant.experiments.ledger import RunRecord
 from finance_quant.lineage.evidence import EvidenceCommit, evidence_payload
 
 
-def evidence_commit_for_run(record: RunRecord, snapshot_hash: str) -> EvidenceCommit:
+def evidence_commit_for_run(record: RunRecord, snapshot_hash: str,
+                            activity_type: str = "ExperimentRun") -> EvidenceCommit:
     return EvidenceCommit(
         entity_type="RunRecord",
         entity_hash=record.run_id,
-        activity_type="ExperimentRun",
+        activity_type=activity_type,
         known_at="2026-08-19",
         derived_from=(snapshot_hash, record.spec.feature_ir_hash),
         decided_by=None,

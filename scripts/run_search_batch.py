@@ -18,6 +18,8 @@ from finance_quant.pit.store import SQLiteBitemporalStore
 from finance_quant.search.evaluator import evaluate_proposal
 from finance_quant.search.gp_lane import evolve
 from finance_quant.search.random_lane import propose
+from finance_quant.lineage.pack import LocalEvidencePack
+from finance_quant.lineage.runs import evidence_commit_for_run
 
 
 def _histories(store, days):
@@ -36,6 +38,7 @@ def main() -> int:
         pit.put(record)
     histories = _histories(pit, days)
     ledger = ExperimentLedger(Path(tmp) / "runs.db")
+    pack = LocalEvidencePack(Path(tmp) / "evidence")
     trials = []
     for proposal in propose(7, 8) + evolve(4, generations=2, population=4):
         ev = evaluate_proposal(proposal, histories)
@@ -56,6 +59,7 @@ def main() -> int:
             "lane": proposal.lane_id, "run_id": done.run_id, "status": done.status.value,
             "valid": ev.valid, "score": ev.score, "violation": ev.violation_class,
         })
+        pack.commit(evidence_commit_for_run(done, pit.snapshot_pin(), "SearchTrial"))
     ledger.close()
     pit.close()
     print(json.dumps({
