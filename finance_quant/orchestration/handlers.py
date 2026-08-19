@@ -36,6 +36,25 @@ def feature_eval(work_order: WorkOrder) -> Tuple[dict, dict]:
     return {"sma3": value, "fold": float(len(work_order.fold_id or ""))}, {}
 
 
+def lean_replay(work_order: WorkOrder) -> Tuple[dict, dict]:
+    """Generate a pinned LEAN algorithm stub. Does not execute LEAN."""
+    from ..execution.lean import ExecutionContract, StrategyManifest, generate_algorithm
+    from ..orchestration.contracts import content_hash
+    contract = ExecutionContract()
+    manifest = StrategyManifest(
+        strategy_id=work_order.campaign_id,
+        dataset_manifest_hash=work_order.dataset_snapshot_id,
+        signal_artifact_hash=work_order.factor_hash or "none",
+        symbols=("AAA", "BBB"),
+        execution_contract=contract,
+    )
+    code = generate_algorithm(manifest)
+    return {
+        "bytes": float(len(code)),
+        "contract": float(len(contract.hash)),
+    }, {"algorithm": content_hash(code)}
+
+
 def env_probe(work_order: WorkOrder) -> Tuple[dict, dict]:
     """Reports which forbidden handles are visible; used by authority tests."""
     forbidden = [v for v in ("FQ_EXPERIMENT_LEDGER_URI", "FQ_PROMOTION_API",
