@@ -68,3 +68,20 @@ def score_rank_ic(store: PITStore, symbols: Sequence[str], days: Sequence[str],
         if cutoff in series:
             rets[s] = series[cutoff]
     return rank_ic(signals, rets)
+
+
+def returns_at_cutoff(store: PITStore, symbols: Sequence[str], days: Sequence[str],
+                      cutoff: str) -> dict[str, float]:
+    try:
+        i = list(days).index(cutoff)
+    except ValueError:
+        return {}
+    if i + 1 >= len(days):
+        return {}
+    label_kt = days[i + 1]
+    rets = {}
+    for s in symbols:
+        series = next_day_returns(store, s, days, label_kt)
+        if cutoff in series:
+            rets[s] = series[cutoff]
+    return rets
