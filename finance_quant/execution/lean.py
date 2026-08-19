@@ -39,6 +39,13 @@ def generate_algorithm(manifest: StrategyManifest) -> str:
 from AlgorithmImports import *
 
 class GeneratedFinanceQuantAlgorithm(QCAlgorithm):
+    VERSION = {manifest.execution_contract.version!r}
+    FILL_MODEL = {manifest.execution_contract.fill_model!r}
+    SLIPPAGE_MODEL = {manifest.execution_contract.slippage_model!r}
+    FEE_MODEL = {manifest.execution_contract.fee_model!r}
+    ADJUSTMENT_MODE = {manifest.execution_contract.adjustment_mode!r}
+    DAILY_FILL_RULE = {manifest.execution_contract.daily_fill_rule!r}
+
     def Initialize(self):
         self.SetStartDate(2024, 1, 1)
         self.SetCash(100000)

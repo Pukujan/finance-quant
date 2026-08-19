@@ -21,5 +21,7 @@ def test_write_algorithm_roundtrip(tmp_path):
     assert f"signal_artifact_hash={'b' * 64}" in text
     assert "signal at bar t cannot fill earlier than next-bar open" in text
     assert "GeneratedFinanceQuantAlgorithm(QCAlgorithm)" in text
+    assert "FILL_MODEL = 'EquityFillModel'" in text
+    assert "DAILY_FILL_RULE = 'signal_at_bar_t_fills_no_earlier_than_t_plus_1_open'" in text
     assert "SPY" in text
     assert "QQQ" in text
