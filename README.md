@@ -18,7 +18,7 @@ Executable plumbing, not live trading:
 - Sealed-holdout commitment interface (cases stay off-repo)
 - Mechanical risk veto, same-bar fill contract, promotion-ladder conformance
 - GitHub Actions pytest on every push (`requirements-dev.txt`)
-- 130+ tests covering PIT leakage, restatements, survivorship, graph as-of, search floors
+- 170+ tests covering PIT leakage, restatements, survivorship, graph as-of, search floors
 
 ## Verify
 
