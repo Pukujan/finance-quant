@@ -65,7 +65,7 @@ def expand_campaign(spec: CampaignSpec,
     orders: list[WorkOrder] = []
     for stage_index, stage in enumerate(spec.stages):
         dim_names = [n for n, _ in stage.dimensions]
-        dim_values = [sorted(v) for _, v in stage.dimensions]
+        dim_values = [sorted(set(v)) for _, v in stage.dimensions]
         for combo in itertools.product(*dim_values):
             dims = dict(zip(dim_names, combo))
             orders.append(WorkOrder(
