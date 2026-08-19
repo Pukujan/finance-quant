@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "finance-quant"
+version = "0.0.1"
+description = "Reproducible quantitative research and trading laboratory"
+requires-python = ">=3.11"
+license = { text = "Proprietary" }
+
+[tool.setuptools.packages.find]
+include = ["finance_quant*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

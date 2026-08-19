@@ -114,8 +114,15 @@ The failure modes this boundary exists to block (all in Phase C's adversarial li
 
 ## 7. Evidence gaps before decision
 
-- Requires seeing fossil-core#176's actual property line-up to avoid duplicating
-  ontology machinery that integration already provides.
+- ~~Requires seeing fossil-core#176~~ **Done (2026-08-19).** Findings imported:
+  FOSSIL's assurance layer is property-first with a machine-readable catalog, pack
+  authority laws (`write_targets ⊆ read_mounts`, "authority cannot widen itself") are
+  among its Lean-first kernels, and promotion/lifecycle semantics freeze under #111.
+  Consequence for this spike: finance-quant lineage evidence should live in a
+  **dedicated FOSSIL pack** with narrow read/write mounts (agents mount read-only at
+  most; the owner review path holds write) — the ontology in sec. 2 becomes that
+  pack's vocabulary rather than free-floating graph writes. No machinery duplication
+  needed; we register entities/relations, FOSSIL enforces authority.
 - Owner taste call: how much FOSSIL ceremony is tolerable per experiment. Ontology
   above is minimal on purpose; going smaller is possible (`RunRecord + decidedBy` only),
   going bigger is a smell.

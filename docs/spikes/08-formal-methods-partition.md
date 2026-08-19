@@ -48,8 +48,14 @@ properties ride which tier* and which proofs are quant-specific enough to live h
 
 ## 3. Concrete artifacts the spike/Phase B should produce
 
-1. `invariants.yaml` — machine-readable partition table (property_id, tier, owner,
-   harness path). CI refuses to run a trial whose referenced property has no harness.
+1. `contracts/properties/finance-quant-properties-v1.json` — machine-readable partition
+   table. **Format aligned with fossil-core#176 (verified 2026-08-19)**: property
+   records carry stable `property_id`, statement, severity, semantic owner, executable
+   oracle/test refs, mutation scope, optional TLA+/Lean refs, hidden-acceptance flag,
+   lifecycle status. We reuse their catalog conventions (and their PR rule:
+   "Properties / Property impact: PRESERVE|STRENGTHEN|CHANGE / Oracle") instead of
+   inventing a parallel `invariants.yaml`. CI refuses a trial whose referenced property
+   has no harness.
 2. T1 suite v1: `as_of` PBT vs gold model (uses #2 fixture), risk-veto PBT vs
    adversarial order generator, ledger idempotency PBT.
 3. T3 spec v1: `PromotionLadder.tla` — states:
@@ -88,8 +94,16 @@ properties ride which tier* and which proofs are quant-specific enough to live h
 
 ## 7. Evidence gaps before decision
 
-- Read fossil-core#176 to (a) reuse its property/harness formats instead of inventing
-  `invariants.yaml` from whole cloth, (b) confirm the TLA+/Lean toolchain handoff.
+- ~~Read fossil-core#176~~ **Done (2026-08-19).** Key imports into this spike:
+  their Lean-first zones are lifecycle/pack/promotion semantic kernels ("small timeless
+  semantic laws"; explicitly NOT the whole Python implementation) — our T4 candidate
+  (checker soundness) fits the same pattern; their TLA+-first zones are durable-store/
+  redaction and projection/rebuild — our promotion/sealing spec is the quant analog
+  and should borrow their spec style (bounded TLC config, invariant IDs linked back to
+  property catalog); their holdout doctrine (properties public, cases private, only
+  aggregate receipts public) is exactly what #9 adopts. Residual gap: confirm the
+  property-catalog JSON schema file exists on fossil-core main (issue lists it as a
+  Phase-0 checkbox, possibly not yet merged) and mirror its field names.
 - Owner's appetite for TLA+ upkeep: the spec is ~200-400 lines; someone must own it.
 
 ## 8. Recommendation
