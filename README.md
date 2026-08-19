@@ -38,5 +38,6 @@ Useful scripts:
 - `scripts/run_b2_via_scheduler.py` — B2 folds as native WorkOrders
 - `scripts/run_search_scorecard.py` — RANDOM vs GP rank-IC scorecard (propose-only)
 - `scripts/run_rank_ic_report.py` — B1–B5 walk-forward rank IC
+- `scripts/run_two_stage.py` — feature_eval then lean_replay
 - `scripts/smoke.py` — pytest + bake-off + campaign + scorecard
 - `python -m finance_quant help` — list packaged command entrypoints

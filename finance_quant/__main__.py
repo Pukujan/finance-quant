@@ -13,6 +13,7 @@ COMMANDS = {
     "rank-ic": "scripts/run_rank_ic_report.py",
     "b2-scheduler": "scripts/run_b2_via_scheduler.py",
     "seal-mini": "scripts/write_seal_mini_a.py",
+    "two-stage": "scripts/run_two_stage.py",
 }
 
 
