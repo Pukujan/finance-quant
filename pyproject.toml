@@ -9,6 +9,9 @@ description = "Reproducible quantitative research and trading laboratory"
 requires-python = ">=3.11"
 license = { text = "Proprietary" }
 
+[project.optional-dependencies]
+test = ["hypothesis>=6.100", "pytest>=8"]
+
 [tool.setuptools.packages.find]
 include = ["finance_quant*"]
 
