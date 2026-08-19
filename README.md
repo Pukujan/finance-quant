@@ -17,12 +17,14 @@ Executable plumbing, not live trading:
 - Proposal-only RANDOM/GP search lanes (no promotion authority)
 - Sealed-holdout commitment interface (cases stay off-repo)
 - Mechanical risk veto, same-bar fill contract, promotion-ladder conformance
+- GitHub Actions pytest on every push (`requirements-dev.txt`)
+- 100+ tests covering PIT leakage, restatements, survivorship, graph as-of, search floors
 
 ## Verify
 
 ```text
 python -m venv .venv
-.venv\Scripts\pip install pytest hypothesis
+.venv\Scripts\pip install -r requirements-dev.txt
 .venv\Scripts\python -m pytest tests
 ```
 
@@ -31,4 +33,5 @@ Useful scripts:
 - `scripts/run_pit_bakeoff.py` — Q1–Q8 PIT harness
 - `scripts/run_b1_b5_campaign.py` — boring baseline campaign
 - `scripts/run_search_batch.py` — RANDOM+GP trials into the ledger
-- `scripts/demo_exit_campaign.py` — crash-surviving fan-in proof
+- `scripts/run_b2_via_scheduler.py` — B2 folds as native WorkOrders
+- `scripts/smoke.py` — overnight smoke (PIT + B1–B5 + search + Alpha158)
