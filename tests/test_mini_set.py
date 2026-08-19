@@ -20,8 +20,9 @@ def test_mini_set_commitment_and_receipt_publish_merkle_only(tmp_path):
     assert set(parsed.keys()) == {
         "aggregate_metrics", "candidate_artifact_hash", "case_merkle_root",
         "case_set_id", "commitment_hash", "failure_classes", "labels_hash",
-        "status", "use_number",
+        "max_uses", "status", "use_number",
     }
+
     assert parsed["case_merkle_root"] == seal.case_merkle_root
     assert parsed["labels_hash"] == seal.labels_hash
 

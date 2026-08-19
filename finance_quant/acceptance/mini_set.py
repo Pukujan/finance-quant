@@ -42,6 +42,7 @@ def write_mini_set_receipt(record: SealRecord, candidate_artifact_hash: str,
         "aggregate_metrics": dict(receipt.aggregate_metrics),
         "failure_classes": list(receipt.failure_classes),
         "use_number": receipt.use_number,
+        "max_uses": record.max_uses,
         "case_merkle_root": record.case_merkle_root,
         "labels_hash": record.labels_hash,
     }, sort_keys=True, indent=2))

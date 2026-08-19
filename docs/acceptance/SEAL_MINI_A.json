@@ -6,6 +6,7 @@
   "commitment_hash": "c2b3754ec55923a1c8f5e0dfc43c664b0ad5c9501f6f6311fc821bb6d81fcb84",
   "failure_classes": [],
   "labels_hash": "ba2f269423150c9105b0dff4dad39499a585eb877d2a6ae4d027a52e76ef3fa5",
+  "max_uses": 2,
   "status": "pass",
   "use_number": 1
 }

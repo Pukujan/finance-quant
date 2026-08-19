@@ -13,4 +13,5 @@ def test_seal_mini_cli_writes_public_commitment(tmp_path):
     assert data["candidate_artifact_hash"] == "no-candidate-yet"
     assert data["status"] == "pass"
     assert data["use_number"] == 1
+    assert data["max_uses"] == 2
     assert len(data["case_merkle_root"]) == 64
