@@ -12,6 +12,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from finance_quant.pit.fixtures import N_DAYS, START, SYMBOLS, business_days, generate
 from finance_quant.pit.labels import next_day_returns
 from finance_quant.pit.store import MemoryGoldStore
+from finance_quant.search.deflate import benjamini_hochberg, spearman_p_approx
 from finance_quant.search.evaluator import evaluate_proposal, rank_ic_for_proposal
 from finance_quant.search.gp_lane import evolve
 from finance_quant.search.overfit import search_artifact
@@ -61,6 +62,8 @@ def _lane_report(name, proposals, histories, histories_by_symbol, returns_by_sym
         "best_rank_ic": max(valid_ics) if valid_ics else None,
         "search_artifact": search_artifact(valid_ics) if len(valid_ics) > 1 else False,
         "authority": "propose_only",
+        "valid_ics": valid_ics,
+        "n_cross_section": len(returns_by_symbol),
     }
 
 
@@ -75,11 +78,19 @@ def main() -> int:
     rets = _returns_at_cutoff(store, days, cutoff)
     random_report = _lane_report("random-v0", propose(7, 16), histories, by_symbol, rets)
     gp_report = _lane_report("gp-v0", evolve(4, generations=2, population=8), histories, by_symbol, rets)
+    all_ics = random_report.pop("valid_ics") + gp_report.pop("valid_ics")
+    n_xs = random_report.pop("n_cross_section")
+    gp_report.pop("n_cross_section")
+    pvals = [spearman_p_approx(abs(ic), n_xs) for ic in all_ics]
+    discoveries = sum(benjamini_hochberg(pvals, alpha=0.05))
     print(json.dumps({
         "arena": "canonical PIT fixture",
         "cutoff": cutoff,
+        "n_cross_section": n_xs,
+        "bh_alpha": 0.05,
+        "bh_discoveries_across_all_lanes": discoveries,
         "lanes": [random_report, gp_report],
-        "rule": "neither lane may promote; RANDOM is the disgrace floor; rank IC is the comparison metric",
+        "rule": "neither lane may promote; RANDOM is the disgrace floor; BH is over ALL trials of ALL lanes",
     }, indent=2))
     return 0
 
