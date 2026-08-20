@@ -29,8 +29,11 @@ def evaluate(expr: Expr, history: Sequence[Mapping[str, float]], index: int | No
         if expr.op == "sub": return a - b
         if expr.op == "mul": return a * b
         if expr.op == "div": return a / b
+        if expr.op == "signed_power": return math.copysign(abs(a) ** b, a)
         if expr.op == "min": return min(a, b)
         if expr.op == "max": return max(a, b)
+        if expr.op == "gt": return float(a > b)
+        if expr.op == "lt": return float(a < b)
     if isinstance(expr, Lag): return evaluate(expr.arg, history, i - expr.bars)
     if isinstance(expr, Rolling):
         lo = i - expr.window + 1
@@ -42,13 +45,25 @@ def evaluate(expr: Expr, history: Sequence[Mapping[str, float]], index: int | No
             m = sum(xs) / len(xs)
             return math.sqrt(sum((x - m) ** 2 for x in xs) / len(xs))
         if expr.op == "rank": return sum(x <= xs[-1] for x in xs) / len(xs)
+        if expr.op in {"slope", "residual", "rsquare"}:
+            times = list(range(len(xs)))
+            mt = sum(times) / len(times)
+            mx = sum(xs) / len(xs)
+            cov = sum((t - mt) * (x - mx) for t, x in zip(times, xs)) / len(xs)
+            vart = sum((t - mt) ** 2 for t in times) / len(times)
+            slope = 0.0 if vart == 0 else cov / vart
+            if expr.op == "slope": return slope
+            intercept = mx - slope * mt
+            if expr.op == "residual": return xs[-1] - (slope * times[-1] + intercept)
+            varx = sum((x - mx) ** 2 for x in xs) / len(xs)
+            return 0.0 if vart == 0 or varx == 0 else cov * cov / (vart * varx)
         if expr.op == "max": return max(xs)
         if expr.op == "min": return min(xs)
         if expr.op == "idxmax": return float(xs.index(max(xs)))
         if expr.op == "idxmin": return float(xs.index(min(xs)))
         if expr.op == "quantile":
             ordered = sorted(xs)
-            k = int(0.5 * (len(ordered) - 1))
+            k = int((expr.quantile if expr.quantile is not None else 0.5) * (len(ordered) - 1))
             return ordered[k]
     if isinstance(expr, RollingPair):
         lo = i - expr.window + 1

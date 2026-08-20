@@ -36,7 +36,7 @@ class Unary:
 
 @dataclass(frozen=True)
 class Binary:
-    op: str                 # add | sub | mul | div | min | max
+    op: str                 # add | sub | mul | div | signed_power | min | max | gt | lt
     left: "Expr"
     right: "Expr"
 
@@ -50,9 +50,10 @@ class Lag:
 
 @dataclass(frozen=True)
 class Rolling:
-    op: str                 # mean | std | sum | rank | max | min | idxmax | idxmin | quantile
+    op: str                 # mean | std | sum | rank | slope | residual | rsquare | max | min | idxmax | idxmin | quantile
     arg: "Expr"
     window: int
+    quantile: float | None = None
 
 
 @dataclass(frozen=True)
@@ -91,8 +92,11 @@ def to_dict(expr: Expr) -> dict:
     if isinstance(expr, Lag):
         return {"node": "lag", "bars": expr.bars, "arg": to_dict(expr.arg)}
     if isinstance(expr, Rolling):
-        return {"node": "rolling", "op": expr.op, "window": expr.window,
-                "arg": to_dict(expr.arg)}
+        raw = {"node": "rolling", "op": expr.op, "window": expr.window,
+               "arg": to_dict(expr.arg)}
+        if expr.quantile is not None:
+            raw["quantile"] = expr.quantile
+        return raw
     if isinstance(expr, RollingPair):
         return {"node": "rolling_pair", "op": expr.op, "window": expr.window,
                 "left": to_dict(expr.left), "right": to_dict(expr.right)}
@@ -110,7 +114,7 @@ def from_dict(raw: Mapping) -> Expr:
     if n == "unary": return Unary(str(raw["op"]), from_dict(raw["arg"]))
     if n == "binary": return Binary(str(raw["op"]), from_dict(raw["left"]), from_dict(raw["right"]))
     if n == "lag": return Lag(from_dict(raw["arg"]), int(raw["bars"]))
-    if n == "rolling": return Rolling(str(raw["op"]), from_dict(raw["arg"]), int(raw["window"]))
+    if n == "rolling": return Rolling(str(raw["op"]), from_dict(raw["arg"]), int(raw["window"]), raw.get("quantile"))
     if n == "rolling_pair": return RollingPair(str(raw["op"]), from_dict(raw["left"]), from_dict(raw["right"]), int(raw["window"]))
     if n == "cross_section": return CrossSection(str(raw["op"]), from_dict(raw["arg"]), str(raw["universe"]))
     raise IRValidationError(f"unknown IR node tag {n!r}")

@@ -14,6 +14,7 @@ SCRIPTS = [
     "scripts/run_rank_ic_report.py",
     "scripts/run_two_stage.py",
     "scripts/alpha158_coverage.py",
+    "scripts/alpha158_expressiveness.py",
 ]
 
 

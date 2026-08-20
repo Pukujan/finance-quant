@@ -15,9 +15,10 @@ class QlibCompileError(ValueError):
 
 
 _UNARY = {"neg": "Neg", "abs": "Abs", "log": "Log", "sign": "Sign"}
-_BINARY = {"add": "Add", "sub": "Sub", "mul": "Mul", "div": "Div", "min": "Min", "max": "Max"}
+_BINARY = {"add": "Add", "sub": "Sub", "mul": "Mul", "div": "Div", "signed_power": "SignedPower",
+           "min": "Min", "max": "Max", "gt": "Greater", "lt": "Less"}
 _ROLLING = {"mean": "Mean", "std": "Std", "sum": "Sum", "rank": "Rank",
-            "max": "Max", "min": "Min", "idxmax": "IdxMax", "idxmin": "IdxMin",
+            "slope": "Slope", "residual": "Resi", "rsquare": "Rsquare", "max": "Max", "min": "Min", "idxmax": "IdxMax", "idxmin": "IdxMin",
             "quantile": "Quantile"}
 
 
@@ -36,7 +37,9 @@ def _emit(expr: Expr) -> str:
     if isinstance(expr, Unary): return f"{_UNARY[expr.op]}({_emit(expr.arg)})"
     if isinstance(expr, Binary): return f"{_BINARY[expr.op]}({_emit(expr.left)},{_emit(expr.right)})"
     if isinstance(expr, Lag): return f"Ref({_emit(expr.arg)},{expr.bars})"
-    if isinstance(expr, Rolling): return f"{_ROLLING[expr.op]}({_emit(expr.arg)},{expr.window})"
+    if isinstance(expr, Rolling):
+        quantile = "" if expr.quantile is None else f",{expr.quantile}"
+        return f"{_ROLLING[expr.op]}({_emit(expr.arg)},{expr.window}{quantile})"
     if isinstance(expr, RollingPair):
         name = {"corr": "Corr", "cov": "Cov", "slope": "Slope", "residual": "Resi", "rsquare": "Rsquare"}[expr.op]
         return f"{name}({_emit(expr.left)},{_emit(expr.right)},{expr.window})"

@@ -24,8 +24,8 @@ class EffectCertificate:
 
 
 _UNARY = {"neg", "abs", "log", "sign"}
-_BINARY = {"add", "sub", "mul", "div", "min", "max"}
-_ROLLING = {"mean", "std", "sum", "rank", "max", "min", "idxmax", "idxmin", "quantile"}
+_BINARY = {"add", "sub", "mul", "div", "signed_power", "min", "max", "gt", "lt"}
+_ROLLING = {"mean", "std", "sum", "rank", "slope", "residual", "rsquare", "max", "min", "idxmax", "idxmin", "quantile"}
 _ROLLING_PAIR = {"corr", "cov", "slope", "residual", "rsquare"}
 _CROSS = {"rank", "zscore"}
 
@@ -59,6 +59,10 @@ def check(expr: Expr) -> EffectCertificate:
     if isinstance(expr, Rolling):
         if expr.op not in _ROLLING or expr.window < 1:
             raise TemporalError("rolling op must be supported with window >= 1")
+        if expr.op == "quantile" and expr.quantile is not None and not 0 <= expr.quantile <= 1:
+            raise TemporalError("rolling quantile must be between zero and one")
+        if expr.op != "quantile" and expr.quantile is not None:
+            raise TemporalError("only rolling quantile accepts a quantile argument")
         e = check(expr.arg)
         return EffectCertificate(e.max_lookahead_days, e.min_lookback_bars + expr.window - 1,
                                  e.requires_universe, e.deterministic)
