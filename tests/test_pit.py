@@ -58,8 +58,11 @@ def test_immutable_history_rejects_overwrite(tmp_path):
 )
 def test_as_of_sqlite_matches_gold_on_generated_revision_histories(tmp_path, n, query_day, kt_day):
     """FQ-PROP-002 T1 oracle: arbitrary revisions, randomized query clocks."""
+    import uuid
     gold = MemoryGoldStore()
-    sqlite = SQLiteBitemporalStore(tmp_path / f"pit-{n}-{query_day}-{kt_day}.db")
+    db_dir = tmp_path / uuid.uuid4().hex
+    db_dir.mkdir()
+    sqlite = SQLiteBitemporalStore(db_dir / "pit.db")
     base = date(2024, 1, 1)
     for i in range(n):
         vt = (base + timedelta(days=i % 12)).isoformat()

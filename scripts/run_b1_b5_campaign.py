@@ -12,7 +12,9 @@ from finance_quant.baselines.cross_section import run_buy_and_hold, run_cross_se
 from finance_quant.baselines.momentum import run_momentum
 from finance_quant.baselines.walk_forward import run_walk_forward, sma3_expression
 from finance_quant.dsl.ir import to_dict
+from finance_quant.experiments.artifact import run_record_to_trial_artifact
 from finance_quant.experiments.ledger import ExperimentLedger, RunSpec, RunStatus
+from finance_quant.gate import check_trial_artifact
 from finance_quant.lineage.pack import LocalEvidencePack
 from finance_quant.lineage.runs import evidence_commit_for_run
 from finance_quant.orchestration.contracts import content_hash
@@ -34,12 +36,12 @@ def main() -> int:
     jobs = [
         ("B1-sma3", ir_hash, folds[-1]),
         ("B3-momentum", content_hash(to_dict(sma3_expression())), run_momentum(pit, SYMBOLS, days, cutoff)),
-        ("B4-xs-rank", "xs-rank", run_cross_section_rank(pit, SYMBOLS, days, cutoff)),
-        ("B5-buy-hold", "buy-hold", run_buy_and_hold(pit, SYMBOLS, days, cutoff)),
+        ("B4-xs-rank", content_hash("xs-rank-ir"), run_cross_section_rank(pit, SYMBOLS, days, cutoff)),
+        ("B5-buy-hold", content_hash("buy-hold-ir"), run_buy_and_hold(pit, SYMBOLS, days, cutoff)),
     ]
     recorded = []
     for experiment_id, model_hash, fold in jobs:
-        spec = RunSpec(experiment_id, "0" * 40, "dev-unlocked", manifest,
+        spec = RunSpec(experiment_id, content_hash(experiment_id), content_hash("dev-unlocked"), manifest,
                        ir_hash if experiment_id.startswith("B1") or experiment_id.startswith("B3") else model_hash,
                        model_hash, (0,), "fixture-cutoff-v0", "not-executed-v0")
         run = ledger.begin(spec)
@@ -47,7 +49,11 @@ def main() -> int:
                                {"n_signals": float(fold.n_signals),
                                 "mean_signal": fold.mean_signal,
                                 "rank_ic": fold.rank_ic},
-                               {"fold": fold.fold_id, "signal": fold.signal_hash})
+                               {"fold": content_hash(fold.fold_id), "signal": fold.signal_hash})
+        artifact = run_record_to_trial_artifact(done)
+        gate = check_trial_artifact(artifact)
+        if not gate.ok:
+            raise RuntimeError(f"trial gate rejected {experiment_id}: {gate.violations}")
         recorded.append({"experiment_id": experiment_id, "run_id": done.run_id,
                          "fold": fold.fold_id, "n_signals": fold.n_signals,
                          "rank_ic": fold.rank_ic})
