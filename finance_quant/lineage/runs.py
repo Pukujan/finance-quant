@@ -6,14 +6,16 @@ from finance_quant.lineage.evidence import EvidenceCommit, evidence_payload
 
 
 def evidence_commit_for_run(record: RunRecord, snapshot_hash: str,
-                            activity_type: str = "ExperimentRun") -> EvidenceCommit:
+                            activity_type: str = "ExperimentRun",
+                            known_at: str = "2026-08-19",
+                            decided_by: str | None = None) -> EvidenceCommit:
     return EvidenceCommit(
         entity_type="RunRecord",
         entity_hash=record.run_id,
         activity_type=activity_type,
-        known_at="2026-08-19",
+        known_at=known_at,
         derived_from=(snapshot_hash, record.spec.feature_ir_hash),
-        decided_by=None,
+        decided_by=decided_by,
     )
 
 
