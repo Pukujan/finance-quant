@@ -18,6 +18,7 @@ COMMANDS = {
     "two-stage": "scripts/run_two_stage.py",
     "generate-lean": "scripts/generate_lean.py",
     "verify": "scripts/verify.py",
+    "trial-gate": "scripts/trial_gate.py",
 }
 
 
