@@ -157,6 +157,43 @@ class SQLiteBitemporalStore:
         return _pin(self._rows("1=1", ()))
 
 
+def pit_depth_ok(store: PITStore, min_instruments: int = 4, min_bars: int = 10,
+                 min_namespaces: set[str] | None = None) -> tuple[bool, str]:
+    """Fast pre-flight check: does the store have enough bitemporal depth to run?
+
+    This is the Phase B PIT-depth gate: a run must fail fast with a clear message
+    if its input store is shallow, missing expected namespaces, or internally
+    inconsistent. It is intentionally cheap (no full gold-oracle comparison).
+    """
+    required = min_namespaces or {"bar", "universe"}
+    all_records = store._records if isinstance(store, MemoryGoldStore) else store._rows("1=1", ())
+
+    namespaces = {r.namespace for r in all_records}
+    missing = required - namespaces
+    if missing:
+        return False, f"missing required namespaces: {sorted(missing)}"
+
+    bar_records = [r for r in all_records if r.namespace == "bar"]
+    instruments = {r.instrument_id for r in bar_records}
+    if len(instruments) < min_instruments:
+        return False, f"only {len(instruments)} bar instruments, need >= {min_instruments}"
+
+    days = {r.vt for r in bar_records}
+    if len(days) < min_bars:
+        return False, f"only {len(days)} bar days, need >= {min_bars}"
+
+    # Knowledge-time must never precede valid-time for facts about market reality
+    # (future-dated facts are forbidden). Corporate actions and universe changes are
+    # announced before they are effective, so they legitimately have kt < vt; we skip
+    # those namespaces in this structural check.
+    bad_kt = [r for r in all_records
+              if r.kt < r.vt and r.namespace not in {"corporate_action", "universe"}]
+    if bad_kt:
+        return False, f"{len(bad_kt)} records have kt < vt"
+
+    return True, f"ok: {len(instruments)} instruments, {len(days)} days, {len(namespaces)} namespaces"
+
+
 def _decode(row: tuple) -> tuple:
     """SQL column order -> BitemporalRecord constructor order."""
     import json
