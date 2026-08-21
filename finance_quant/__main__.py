@@ -8,6 +8,7 @@ from typing import Sequence
 
 # Backward-compatible mapping used by existing tests.
 COMMANDS = {
+    "docker-drill": "scripts/run_docker_clean_runner_drill.py",
     "cost-stress": "scripts/run_cost_stress_report.py",
     "mvfi": "scripts/run_phase_b_mvfi.py",
     "fresh-env-drill": "scripts/run_fresh_environment_drill.py",
