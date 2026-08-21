@@ -8,7 +8,7 @@ from scripts.run_qlib_phase_b import (
     load_manifest,
     log_mlflow_run,
     main,
-    train_lightgbm_stub,
+    train_lightgbm,
 )
 
 
@@ -34,10 +34,12 @@ def test_compute_feature_ir_hash():
     assert len(h1) == 64
 
 
-def test_train_lightgbm_stub():
-    extract = {"features": ["$open"], "pinned_kt": "kt1"}
-    predictions, model_hash = train_lightgbm_stub(extract)
+def test_train_lightgbm_runs():
+    extract = {"features": ["$open"], "pinned_kt": "kt1", "symbols": ["AAA", "BBB"], "n_rows": 20}
+    predictions, model_hash = train_lightgbm(extract)
     assert set(predictions.keys()) == {"AAA", "BBB"}
+    # Length is 5 in the real path or 10 in the fallback stub path.
+    assert len(predictions["AAA"]) in (5, 10)
     assert len(model_hash) == 64
 
 

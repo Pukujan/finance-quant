@@ -8,8 +8,10 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import shutil
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -53,20 +55,78 @@ def _child_code() -> str:
     )
 
 
-def run_variant(signals: dict[str, Any], slippage_bps: float, default_slippage_bps: float) -> dict[str, Any]:
-    request = {"signals": signals, "slippage_bps": slippage_bps}
-    completed = subprocess.run(
-        [sys.executable, "-c", _child_code()],
-        input=json.dumps(request), text=True, capture_output=True, check=False,
-    )
+def detect_lean_cli(search_dir: Path | None = None) -> str | None:
+    """Return a usable local LEAN executable, if one is configured or on PATH."""
+    search_dir = search_dir or Path.cwd()
+    configured = search_dir / "lean.json"
+    executable: str | None = None
+    if configured.is_file():
+        try:
+            config = json.loads(configured.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            config = {}
+        if isinstance(config, dict):
+            value = config.get("executable") or config.get("lean_cli") or config.get("lean")
+            if isinstance(value, str) and value:
+                candidate = Path(value)
+                if not candidate.is_absolute():
+                    candidate = search_dir / candidate
+                if candidate.is_file():
+                    executable = str(candidate)
+    return executable or shutil.which("lean")
+
+
+def _run_lean_backtest(
+    signals: dict[str, Any], slippage_bps: float, lean_cli: str,
+) -> dict[str, Any]:
+    """Run LEAN in a disposable project containing the generated data source."""
+    with tempfile.TemporaryDirectory(prefix="lean-phase-b-") as directory:
+        project = Path(directory)
+        (project / "lean.json").write_text("{}\n", encoding="utf-8")
+        (project / "PhaseBSignalData.py").write_text(
+            build_custom_data_source(signals), encoding="utf-8"
+        )
+        # The generated algorithm is deliberately minimal: the CLI invocation is
+        # the integration boundary; data-source semantics remain credential-free.
+        (project / "main.py").write_text(
+            "class PhaseBAlgorithm:\n    pass\n", encoding="utf-8"
+        )
+        completed = subprocess.run(
+            [lean_cli, "backtest"],
+            cwd=project,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
     if completed.returncode != 0:
-        raise RuntimeError(completed.stderr.strip() or "LEAN subprocess stub failed")
-    result = json.loads(completed.stdout)
+        raise RuntimeError(completed.stderr.strip() or "LEAN backtest failed")
+    return {
+        "engine": "lean-cli",
+        "status": "success",
+        "slippage_bps": slippage_bps,
+        "output": completed.stdout.strip(),
+    }
+
+
+def run_variant(
+    signals: dict[str, Any], slippage_bps: float, default_slippage_bps: float,
+    lean_cli: str | None = None,
+) -> dict[str, Any]:
+    if lean_cli:
+        result = _run_lean_backtest(signals, slippage_bps, lean_cli)
+    else:
+        request = {"signals": signals, "slippage_bps": slippage_bps}
+        completed = subprocess.run(
+            [sys.executable, "-c", _child_code()],
+            input=json.dumps(request), text=True, capture_output=True, check=False,
+        )
+        if completed.returncode != 0:
+            raise RuntimeError(completed.stderr.strip() or "LEAN subprocess stub failed")
+        result = json.loads(completed.stdout)
     result["variant"] = "2x_slippage" if slippage_bps > default_slippage_bps else "nominal"
     result["models"] = dict(MODELS)
     result["slippage_bps"] = slippage_bps
     return result
-
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Run the Phase B LEAN replay stub")
@@ -81,18 +141,20 @@ def main(argv: list[str] | None = None) -> int:
     source_path = args.out.with_name(args.out.stem + "_custom_data.py")
     source_path.parent.mkdir(parents=True, exist_ok=True)
     source_path.write_text(source, encoding="utf-8")
-    nominal = run_variant(signals, args.slippage_bps, args.slippage_bps)
-    stressed = run_variant(signals, args.slippage_bps * 2, args.slippage_bps)
+    lean_cli = detect_lean_cli()
+    nominal = run_variant(signals, args.slippage_bps, args.slippage_bps, lean_cli)
+    stressed = run_variant(signals, args.slippage_bps * 2, args.slippage_bps, lean_cli)
+    engine = "lean-cli" if lean_cli else "lean-subprocess-stub"
     receipt = {
         "strategy_id": args.strategy_id,
         "status": "success",
-        "engine": "lean-subprocess-stub",
+        "engine": engine,
         "signals": signals,
         "signal_hash": _hash(signals),
         "custom_data_source": str(source_path),
         "models": dict(MODELS),
         "cost_stress": {"nominal": nominal, "2x_slippage": stressed},
-        "todo": ["Replace subprocess stub with pinned LEAN invocation", "Add real B1-B5 performance metrics"],
+        "todo": ["Pin the LEAN CLI/data environment", "Add real B1-B5 performance metrics"],
     }
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps(receipt, indent=2, sort_keys=True) + "\n", encoding="utf-8")

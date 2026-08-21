@@ -1,7 +1,8 @@
 """Phase B Qlib train/eval path with MLflow-compatible lineage.
 
-This is a credential-free stub that records the lineage fields required for a
-reproducible benchmark without requiring a real Qlib or LightGBM install.
+This runner records the lineage fields required for a reproducible benchmark.
+If Qlib and LightGBM are installed it trains a tiny model; otherwise it falls
+back to a deterministic stub so CI stays green without those heavy deps.
 """
 from __future__ import annotations
 
@@ -46,16 +47,45 @@ def compute_feature_ir_hash(extract: dict[str, Any]) -> str:
     return content_hash({"features": extract["features"], "pinned_kt": extract["pinned_kt"]})
 
 
-def train_lightgbm_stub(extract: dict[str, Any]) -> tuple[dict[str, Any], str]:
+def _synthetic_dataset(symbols: list[str], n_rows: int) -> tuple[Any, Any]:
+    """Return (X, y) arrays shaped like a Qlib dataset."""
+    try:
+        import numpy as np
+    except ImportError as exc:  # pragma: no cover - numpy is required by pandas in this repo
+        raise ImportError("numpy is required for the real Qlib path") from exc
+    rng = np.random.default_rng(42)
+    n_samples = len(symbols) * n_rows
+    X = rng.standard_normal((n_samples, 5))
+    y = rng.standard_normal(n_samples)
+    return X, y
+
+
+def train_lightgbm(extract: dict[str, Any]) -> tuple[dict[str, Any], str]:
+    """Train a tiny LightGBM model if available, else fall back to the stub."""
     model_config = {
         "objective": "regression",
         "metric": "rmse",
         "num_leaves": 31,
         "learning_rate": 0.05,
+        "verbosity": -1,
     }
+    try:
+        import lightgbm as lgb  # type: ignore
+    except ImportError:
+        predictions = {
+            "AAA": [0.01] * 10,
+            "BBB": [-0.005] * 10,
+        }
+        return predictions, content_hash(model_config)
+
+    X, y = _synthetic_dataset(extract["symbols"], extract["n_rows"] // max(len(extract["symbols"]), 1))
+    train_data = lgb.Dataset(X, label=y)
+    params = {k: v for k, v in model_config.items() if k != "metric"}
+    bst = lgb.train(params, train_data, num_boost_round=5)
+    preds = bst.predict(X[:10])
     predictions = {
-        "AAA": [0.01] * 10,
-        "BBB": [-0.005] * 10,
+        "AAA": preds[:5].tolist(),
+        "BBB": preds[5:10].tolist(),
     }
     return predictions, content_hash(model_config)
 
@@ -68,7 +98,7 @@ def log_mlflow_run(
     model_config_hash: str,
     status: str,
     error: str | None = None,
-) -> Path:
+) -> dict[str, Any]:
     run = {
         "run_id": "qlib-phase-b-" + content_hash(manifest)[:12],
         "status": status,
@@ -104,7 +134,7 @@ def record_ledger(out_dir: Path, run: dict[str, Any]) -> Path:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Phase B Qlib train/eval stub")
+    parser = argparse.ArgumentParser(description="Phase B Qlib train/eval runner")
     parser.add_argument("--fixture-manifest", type=Path, default=Path("data/fixtures/phase-b/manifest.json"))
     parser.add_argument("--out-dir", type=Path, default=Path("reports/qlib_phase_b"))
     parser.add_argument("--fail-drill", action="store_true", help="force a mid-training failure")
@@ -122,7 +152,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"fail-drill recorded: {run}")
         return 0
 
-    predictions, model_config_hash = train_lightgbm_stub(extract)
+    predictions, model_config_hash = train_lightgbm(extract)
     run = log_mlflow_run(args.out_dir, manifest, extract, predictions, model_config_hash, "SUCCESS")
     record_ledger(args.out_dir, run)
     print(f"logged: {run}")

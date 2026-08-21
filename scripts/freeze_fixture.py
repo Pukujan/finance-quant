@@ -8,8 +8,12 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import sqlite3
+import threading
 from pathlib import Path
 from typing import Any, Iterable
+
+from finance_quant.pit.store import SQLiteBitemporalStore
 
 
 FIXTURE_DIR = Path("data/fixtures/phase-b")
@@ -30,16 +34,76 @@ def compute_manifest_hash(records: Iterable[dict]) -> str:
     return h.hexdigest()
 
 
-def load_store(path: Path) -> "StubPITStore":
-    """Load a PIT store.  Defaults to an in-memory stub for CI/demos."""
+def load_store(path: Path | None) -> SQLiteBitemporalStore:
+    """Load a PIT store. Returns a SQLiteBitemporalStore backed by *path*,
+    or an in-memory stub when *path* is None / missing."""
     if not path or not path.exists():
-        return StubPITStore()
-    # Production path would import finance_quant.pit and open a real store.
-    raise NotImplementedError("real PITStore loading is a TODO; use default stub")
+        return _make_in_memory_dumpster()
+    return SQLiteBitemporalStore(path)
+
+
+# ---------------------------------------------------------------------------
+# In-memory drop-in: tiny SQLite database holding deterministic fixture rows.
+# ---------------------------------------------------------------------------
+
+_INMEM_SCHEMA = """
+PRAGMA journal_mode=WAL;
+CREATE TABLE IF NOT EXISTS records(
+  namespace TEXT NOT NULL, instrument_id TEXT NOT NULL,
+  vt TEXT NOT NULL, kt TEXT NOT NULL, revision INTEGER NOT NULL,
+  payload TEXT NOT NULL, source TEXT NOT NULL,
+  ingest_run_id TEXT NOT NULL, superseded_by INTEGER
+);
+CREATE INDEX IF NOT EXISTS idx_asof ON records(namespace, instrument_id, vt, kt);
+CREATE INDEX IF NOT EXISTS idx_kt ON records(kt);
+"""
+
+_FX_AAA = {
+    "instrument_id": "AAA",
+    "namespace": "bar",
+    "vt": "2024-01-02",
+    "kt": "2024-01-02",
+    "payload": {"open": 1.0, "high": 1.1, "low": 0.9, "close": 1.05, "volume": 1000},
+    "source": "polygon",
+    "revision": 1,
+    "superseded_by": None,
+}
+
+_FX_BBB = dict(_FX_AAA, instrument_id="BBB",
+               payload={"open": 2.0, "high": 2.2, "low": 1.9, "close": 2.1, "volume": 2000})
+
+
+class _Dumpster(SQLiteBitemporalStore):
+    """SQLiteBitemporalStore with an externally-provided sqlite3.Connection."""
+
+    def __init__(self, conn: sqlite3.Connection) -> None:         # pylint: disable=super-init-not-called
+        self._db = conn
+        self._lock = threading.RLock()
+
+
+def _make_in_memory_dumpster() -> SQLiteBitemporalStore:
+    """Create an in-memory SQLite-backed Dumpster initialised with the demo stubs."""
+    db = sqlite3.connect(":memory:")
+    db.executescript(_INMEM_SCHEMA)
+
+    params_map = [_FX_AAA, _FX_BBB]
+    for pm in params_map:
+        db.execute(
+            "INSERT INTO records VALUES (?,?,?,?,?,?,?,?,?)",
+            (pm["namespace"], pm["instrument_id"], pm["vt"], pm["kt"],
+             pm["revision"], json.dumps(pm["payload"], sort_keys=True),
+             pm["source"], "fixture", pm["superseded_by"]),
+        )
+    db.commit()
+    return _Dumpster(db)
 
 
 class StubPITStore:
-    """In-memory stub producing a tiny deterministic fixture."""
+    """In-memory stub producing a tiny deterministic fixture.
+
+    Kept for backwards compatibility. New callers prefer ``load_store()``.
+    Prefer ``load_store(None)`` which returns an equivalent SQLite-backed store.
+    """
 
     def as_of(self, vt: str | None = None, kt: str | None = None) -> list[dict]:
         return [

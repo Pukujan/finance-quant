@@ -76,6 +76,23 @@ class MemoryGoldStore:
     def snapshot_pin(self) -> str:
         return _pin(self._records)
 
+    def dump_records(self) -> list[dict]:
+        return [self._to_dict(r) for r in self._records]
+
+    @staticmethod
+    def _to_dict(rec: BitemporalRecord) -> dict:
+        return {
+            "namespace": rec.namespace,
+            "instrument_id": rec.instrument_id,
+            "vt": rec.vt,
+            "kt": rec.kt,
+            "payload": rec.payload,
+            "source": rec.source,
+            "revision": rec.revision,
+            "ingest_run_id": rec.ingest_run_id,
+            "superseded_by": rec.superseded_by,
+        }
+
 
 _SCHEMA = """
 PRAGMA journal_mode=WAL;
@@ -155,6 +172,24 @@ class SQLiteBitemporalStore:
 
     def snapshot_pin(self) -> str:
         return _pin(self._rows("1=1", ()))
+
+    def dump_records(self) -> list[dict]:
+        rows = self._rows("1=1", ())
+        return [self._to_dict(r) for r in rows]
+
+    @staticmethod
+    def _to_dict(rec: BitemporalRecord) -> dict:
+        return {
+            "namespace": rec.namespace,
+            "instrument_id": rec.instrument_id,
+            "vt": rec.vt,
+            "kt": rec.kt,
+            "payload": rec.payload,
+            "source": rec.source,
+            "revision": rec.revision,
+            "ingest_run_id": rec.ingest_run_id,
+            "superseded_by": rec.superseded_by,
+        }
 
 
 def pit_depth_ok(store: PITStore, min_instruments: int = 4, min_bars: int = 10,
