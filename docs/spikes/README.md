@@ -16,6 +16,7 @@ make that decision cheap. Nothing here authorizes locking the vertical slice.
 | [08-formal-methods-partition.md](08-formal-methods-partition.md) | #8 | What gets properties vs PBT vs TLA+ vs selective Lean proof? |
 | [09-sealed-holdout-adversarial.md](09-sealed-holdout-adversarial.md) | #9 | How is the sealed holdout sealed, and how does adversarial acceptance run? |
 | [10-native-orchestration.md](10-native-orchestration.md) | #10 | Native campaign orchestration: WorkOrders, attempts, local backend, fan-out/fan-in |
+| [11-fast-local-pattern-paper-trading.md](11-fast-local-pattern-paper-trading.md) | #11 | Fast local model as pre-checker / veto / proposal layer over existing baselines; Phase C gate |
 
 Conventions used in all memos:
 

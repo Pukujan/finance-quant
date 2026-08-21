@@ -4,7 +4,7 @@ from __future__ import annotations
 from typing import Sequence
 
 from ..dsl.checker import check
-from ..dsl.interpreter import evaluate, evaluate_cross_section
+from ..dsl.cs_handler import compile_cross_sectional
 from ..dsl.ir import CrossSection, Field
 from ..orchestration.contracts import content_hash
 from ..pit.store import PITStore
@@ -15,16 +15,16 @@ def rank_expression() -> CrossSection:
     return CrossSection("rank", Field("close"), "FIXIDX")
 
 
+def compute_cs_signal(expr: CrossSection, store: PITStore, symbols: Sequence[str],
+                      days: Sequence[str], cutoff: str) -> dict[str, float]:
+    return compile_cross_sectional(expr, store, symbols, days, cutoff)
+
+
 def run_cross_section_rank(store: PITStore, symbols: Sequence[str], days: Sequence[str],
                            cutoff: str) -> FoldResult:
     expr = rank_expression()
     assert check(expr).max_lookahead_days == 0
-    rows = store.as_of("bar", symbols, days[0], cutoff, cutoff)
-    histories = {s: [] for s in symbols}
-    for row in rows:
-        histories[row.instrument_id].append(row.payload)
-    usable = {s: h for s, h in histories.items() if h}
-    ranks = evaluate_cross_section(expr, usable)
+    ranks = compute_cs_signal(expr, store, symbols, days, cutoff)
     return FoldResult(
         fold_id="B4-xs-rank", cutoff=cutoff,
         signal_hash=content_hash(ranks), n_signals=len(ranks),

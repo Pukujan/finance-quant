@@ -89,7 +89,7 @@ Each slice is a PR-sized unit of work. Slices 1–3 are the critical path; slice
 - Store manifest hash in `data/fixtures/phase-b/manifest.json`.
 - Add `scripts/freeze_fixture.py` that re-ingests and verifies the manifest hash.
 - Add CI step that asserts the fixture manifest hash matches the committed value.
-- Document the `kt` contract for this fixture in `docs/plans/PHASE_B_DATA_CONTRACT.md`.
+- Document the `kt` contract for this fixture in `docs/plans/PHASE_B_DATA_CONTRACT.md` (already created).
 
 **Acceptance:**
 - Fresh runner can reproduce the fixture hash from the same adapter version + API key.
@@ -105,6 +105,8 @@ Each slice is a PR-sized unit of work. Slices 1–3 are the critical path; slice
 - Record every attempt in the SQLite attempt ledger.
 - Emit ExperimentLedger receipts with `agent_origin: human/baseline`.
 - Add `scripts/run_b1_b5_phase_b.py`.
+- Wire into the unified benchmark (`scripts/run_phase_b_benchmark.py`) and CLI (`python -m finance_quant benchmark`).
+- Add the determinism drill script (`scripts/run_phase_b_determinism_drill.py`, CLI: `python -m finance_quant drill`).
 
 **Acceptance:**
 - All B1–B5 attempts end in terminal states.
@@ -150,6 +152,8 @@ Each slice is a PR-sized unit of work. Slices 1–3 are the critical path; slice
 **Issue refs:** #1 Phase B → Phase C handoff, #9  
 **Scope:**
 - Create a small sealed holdout set (synthetic or held-out real period) in `finance-quant-holdout`.
+- Generate the holdout with `scripts/generate_phase_b_holdout.py` (output: `data/fixtures/phase-b-holdout/`).
+- Write the public seal commitment with `scripts/write_phase_b_seal.py` (output: `docs/acceptance/PHASE_B_HOLDOUT_SEAL.json`).
 - Add `SealRecord` to the public repo referencing the holdout Merkle root.
 - Add one clean-runner acceptance test that validates the Merkle root without exposing labels.
 
@@ -187,9 +191,11 @@ For corporate actions:
 ## 6. Acceptance / verification
 
 - **Property tests:** existing Hypothesis suite (`FQ-PROP-002`) runs against the new fixture.
-- **Determinism drill:** run the full Phase B pipeline three times; compare aggregate hashes.
+- **Full benchmark:** `python -m finance_quant benchmark` (or `scripts/run_phase_b_benchmark.py`) orchestrates fixture freeze/load, B1–B5, Qlib train/eval, and LEAN replay in one run, writing `reports/phase_b_benchmark.json`.
+- **Determinism drill:** `python -m finance_quant drill` (or `scripts/run_phase_b_determinism_drill.py`) runs the benchmark N times and asserts identical receipt hashes.
 - **Cost-stress drill:** run LEAN replay with 2x slippage; verify returns degrade monotonically.
 - **Fresh-runner drill:** a new venv + clean data directory reproduces the canonical fixture hash and B1–B5 receipt hashes.
+- **Sealed holdout:** `scripts/generate_phase_b_holdout.py` creates the synthetic holdout under `data/fixtures/phase-b-holdout/`; `scripts/write_phase_b_seal.py` writes the public seal to `docs/acceptance/PHASE_B_HOLDOUT_SEAL.json`. The sealed Merkle root is `cc7d65a7e660456872d029e6851c9f88cdfd450e51db80b5af139dd27f59c2c4`.
 
 ---
 

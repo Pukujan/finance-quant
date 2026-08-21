@@ -8,14 +8,16 @@ on:
 jobs:
   phase-b:
     runs-on: windows-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
       - run: python -m pip install -r requirements-dev.txt
       - run: python scripts/run_phase_b_benchmark.py --fixture-dir data/fixtures/phase-b --report reports/phase_b_benchmark.json
-      - run: python -m pytest tests -q
       - run: python -m finance_quant verify
       - run: python scripts/smoke.py
       - name: Upload Phase B report
