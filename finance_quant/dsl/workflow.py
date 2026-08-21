@@ -21,7 +21,7 @@ data_handler_config: &data_handler_config
     class: QlibDataLoader
     kwargs:
       config:
-        feature: [[{qlib_expr}, '{experiment_name}']]
+        feature: [[{qlib_expr!r}, '{experiment_name}']]
 task:
   model:
     class: LGBModel

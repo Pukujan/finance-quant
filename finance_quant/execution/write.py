@@ -8,5 +8,6 @@ from .lean import StrategyManifest, generate_algorithm
 
 def write_algorithm(manifest: StrategyManifest, out: str | Path) -> Path:
     path = Path(out)
+    path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(generate_algorithm(manifest), encoding="utf-8")
     return path
