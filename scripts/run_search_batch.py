@@ -5,38 +5,48 @@ never silently dropping failures. Lane authority is permanently propose-only.
 """
 from __future__ import annotations
 
+import argparse
 import json
 import sys
 import tempfile
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from finance_quant.experiments.ledger import ExperimentLedger, RunSpec, RunStatus
-from finance_quant.pit.fixtures import N_DAYS, START, SYMBOLS, business_days, generate
-from finance_quant.pit.store import SQLiteBitemporalStore
-from finance_quant.search.evaluator import evaluate_proposal
-from finance_quant.search.gp_lane import evolve
-from finance_quant.search.random_lane import propose
-from finance_quant.lineage.pack import LocalEvidencePack
-from finance_quant.lineage.runs import evidence_commit_for_run
+def _build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        description="Ledger-backed proposal batch: RANDOM and GP lanes."
+    )
+    return parser
 
 
-def _histories(store, days):
-    rows = store.as_of("bar", SYMBOLS, days[0], days[-1], days[-1])
-    by_symbol = {s: [] for s in SYMBOLS}
+def _histories(store, days, symbols):
+    rows = store.as_of("bar", symbols, days[0], days[-1], days[-1])
+    by_symbol = {s: [] for s in symbols}
     for row in rows:
         by_symbol[row.instrument_id].append(row.payload)
     return [h for h in by_symbol.values() if len(h) >= 3]
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
+    _build_parser().parse_args(argv)
+
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+    from finance_quant.experiments.ledger import ExperimentLedger, RunSpec, RunStatus
+    from finance_quant.pit.fixtures import N_DAYS, START, SYMBOLS, business_days, generate
+    from finance_quant.pit.store import SQLiteBitemporalStore
+    from finance_quant.search.evaluator import evaluate_proposal
+    from finance_quant.search.gp_lane import evolve
+    from finance_quant.search.random_lane import propose
+    from finance_quant.lineage.pack import LocalEvidencePack
+    from finance_quant.lineage.runs import evidence_commit_for_run
+
     days = business_days(START, N_DAYS)
     tmp = tempfile.mkdtemp(prefix="fq-search-")
     pit = SQLiteBitemporalStore(Path(tmp) / "pit.db")
     for record in generate():
         pit.put(record)
-    histories = _histories(pit, days)
+    histories = _histories(pit, days, SYMBOLS)
     ledger = ExperimentLedger(Path(tmp) / "runs.db")
     pack = LocalEvidencePack(Path(tmp) / "evidence")
     trials = []

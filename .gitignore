@@ -8,3 +8,4 @@ __pycache__/
 .runtime/
 reports/
 data/fixtures/phase-b/
+data/fixtures/phase-b-holdout/labels.jsonl

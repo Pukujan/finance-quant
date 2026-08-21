@@ -1,23 +1,33 @@
 """Two-stage campaign: feature_eval then lean_replay. Deterministic, local backend."""
 from __future__ import annotations
 
+import argparse
 import json
 import sys
 import tempfile
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from finance_quant.orchestration.backends.local import LocalBackend
-from finance_quant.orchestration.contracts import ResourceRequest
-from finance_quant.orchestration.fanin import status
-from finance_quant.orchestration.fanout import CampaignSpec, StageSpec, expand_campaign
-from finance_quant.orchestration.lifecycle import AttemptStore
-from finance_quant.orchestration.retries import RetryPolicy
-from finance_quant.orchestration.scheduler import Scheduler
+def _build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        description="Two-stage campaign: feature_eval then lean_replay. Deterministic, local backend."
+    )
+    return parser
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
+    _build_parser().parse_args(argv)
+
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+    from finance_quant.orchestration.backends.local import LocalBackend
+    from finance_quant.orchestration.contracts import ResourceRequest
+    from finance_quant.orchestration.fanin import status
+    from finance_quant.orchestration.fanout import CampaignSpec, StageSpec, expand_campaign
+    from finance_quant.orchestration.lifecycle import AttemptStore
+    from finance_quant.orchestration.retries import RetryPolicy
+    from finance_quant.orchestration.scheduler import Scheduler
+
     tmp = tempfile.mkdtemp(prefix="fq-two-stage-")
     store = AttemptStore(Path(tmp) / "attempts.db")
     spec = CampaignSpec(

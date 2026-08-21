@@ -1,0 +1,12 @@
+{
+  "aggregate_metrics": {},
+  "candidate_artifact_hash": "phase-b-holdout-features",
+  "case_merkle_root": "cc7d65a7e660456872d029e6851c9f88cdfd450e51db80b5af139dd27f59c2c4",
+  "case_set_id": "PHASE-B-HOLDOUT-20D",
+  "commitment_hash": "e39349e083df61fed3e31ad9def790705561156857e3af6bf317941403e04c55",
+  "failure_classes": [],
+  "labels_hash": "e45ae73dc759f64053168914276ef54890ca2ef7d664e8580050422b033f981c",
+  "max_uses": 2,
+  "status": "pass",
+  "use_number": 1
+}

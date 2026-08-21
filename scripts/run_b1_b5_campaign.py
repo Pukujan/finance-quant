@@ -1,28 +1,38 @@
 """Run B1-B5 boring baselines through ExperimentLedger. No search, no promotion."""
 from __future__ import annotations
 
+import argparse
 import json
 import sys
 import tempfile
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from finance_quant.baselines.cross_section import run_buy_and_hold, run_cross_section_rank
-from finance_quant.baselines.momentum import run_momentum
-from finance_quant.baselines.walk_forward import run_walk_forward, sma3_expression
-from finance_quant.dsl.ir import to_dict
-from finance_quant.experiments.artifact import run_record_to_trial_artifact
-from finance_quant.experiments.ledger import ExperimentLedger, RunSpec, RunStatus
-from finance_quant.gate import check_trial_artifact
-from finance_quant.lineage.pack import LocalEvidencePack
-from finance_quant.lineage.runs import evidence_commit_for_run
-from finance_quant.orchestration.contracts import content_hash
-from finance_quant.pit.fixtures import N_DAYS, START, SYMBOLS, business_days, generate
-from finance_quant.pit.store import SQLiteBitemporalStore
+def _build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        description="Run B1-B5 boring baselines through ExperimentLedger."
+    )
+    return parser
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
+    _build_parser().parse_args(argv)
+
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+    from finance_quant.baselines.cross_section import run_buy_and_hold, run_cross_section_rank
+    from finance_quant.baselines.momentum import run_momentum
+    from finance_quant.baselines.walk_forward import run_walk_forward, sma3_expression
+    from finance_quant.dsl.ir import to_dict
+    from finance_quant.experiments.artifact import run_record_to_trial_artifact
+    from finance_quant.experiments.ledger import ExperimentLedger, RunSpec, RunStatus
+    from finance_quant.gate import check_trial_artifact
+    from finance_quant.lineage.pack import LocalEvidencePack
+    from finance_quant.lineage.runs import evidence_commit_for_run
+    from finance_quant.orchestration.contracts import content_hash
+    from finance_quant.pit.fixtures import N_DAYS, START, SYMBOLS, business_days, generate
+    from finance_quant.pit.store import SQLiteBitemporalStore
+
     days = business_days(START, N_DAYS)
     cutoff = days[-2]  # interior bar so next-day labels exist (last bar has no IC)
     tmp = tempfile.mkdtemp(prefix="fq-b1b5-")

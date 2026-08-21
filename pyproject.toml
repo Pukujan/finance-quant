@@ -11,9 +11,13 @@ license = { text = "Proprietary" }
 
 [project.optional-dependencies]
 test = ["hypothesis>=6.100", "pytest>=8"]
+stats = ["scipy>=1.10"]
 
 [tool.setuptools.packages.find]
 include = ["finance_quant*"]
+
+[project.scripts]
+finance-quant = "finance_quant.__main__:main"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

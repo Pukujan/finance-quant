@@ -1,6 +1,7 @@
 """RANDOM vs GP bake-off scorecard. Proposal-only: no promotion, no risk mutation."""
 from __future__ import annotations
 
+import argparse
 import json
 import statistics
 import sys
@@ -17,6 +18,13 @@ from finance_quant.search.evaluator import evaluate_proposal, rank_ic_for_propos
 from finance_quant.search.gp_lane import evolve
 from finance_quant.search.overfit import search_artifact
 from finance_quant.search.random_lane import propose
+
+
+def _build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        description="RANDOM vs GP bake-off scorecard. Proposal-only: no promotion, no risk mutation."
+    )
+    return parser
 
 
 def _histories(store, days):
@@ -67,7 +75,8 @@ def _lane_report(name, proposals, histories, histories_by_symbol, returns_by_sym
     }
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
+    _build_parser().parse_args(argv)
     days = business_days(START, N_DAYS)
     store = MemoryGoldStore()
     for row in generate():
