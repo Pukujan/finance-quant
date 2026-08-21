@@ -30,6 +30,8 @@ All entrypoints are available via `python -m finance_quant <command>`:
 
 | Command | Target script |
 |---|---|
+| `mvfi` | `scripts/run_phase_b_mvfi.py` — minimum viable Polygon ingest |
+| `fresh-env-drill` | `scripts/run_fresh_environment_drill.py` — temp venv + pytest + verify |
 | `help` | List available commands |
 | `verify` | `scripts/verify.py` — pytest + smoke |
 | `benchmark` | `scripts/run_phase_b_benchmark.py` — full Phase B benchmark |
@@ -68,6 +70,8 @@ Useful scripts:
 - `scripts/smoke.py` — pytest + bake-off + campaign + scorecard
 - `scripts/run_phase_b_benchmark.py` — full Phase B benchmark (fixture + B1-B5 + Qlib + LEAN)
 - `scripts/run_phase_b_determinism_drill.py` — run benchmark N times, compare receipt hashes
+- `scripts/run_phase_b_mvfi.py` — minimum viable first Polygon ingest (requires `POLYGON_API_KEY`)
+- `scripts/run_fresh_environment_drill.py` — temp venv install + pytest + verify
 - `scripts/generate_phase_b_holdout.py` — generate synthetic holdout + Merkle root
 - `scripts/write_phase_b_seal.py` — write public seal commitment for the holdout
 - `python -m finance_quant help` — list packaged command entrypoints

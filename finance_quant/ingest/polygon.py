@@ -37,7 +37,7 @@ import json
 import time
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Any, Callable, Iterable
+from typing import TYPE_CHECKING, Any, Callable, Iterable, Mapping
 
 if TYPE_CHECKING:
     import requests
@@ -116,7 +116,7 @@ def _backoff_seconds(attempt: int, settings: RateLimitSettings) -> float:
 
 
 def _coerce_transport(
-    transport: Callable[[str, str, dict], dict] | None,
+    transport: Callable[[str, dict, str], Any] | None,
     base_url: str,
     timeout: float,
 ) -> Callable[[str, dict, str], dict]:
@@ -163,7 +163,7 @@ class PolygonAdapter:
     """
 
     api_key: str
-    transport: Callable[[str, str, dict], dict] = field(default=None)
+    transport: Callable[[str, dict, str], Any] = field(default=None)
     revision: int = 1
     source: str = "polygon"
     config: PolygonConfig | None = None
@@ -219,6 +219,64 @@ class PolygonAdapter:
             "fetched_at": _iso(_utcnow()),
         }
 
+    def _request_page(self, url: str, params: dict) -> dict:
+        """Fetch one page, retrying rate limits with exponential backoff.
+
+        Injected transports may return a response-like object (with
+        ``status_code`` and ``json``), ``(status_code, payload)``, or a plain
+        response mapping.  Supporting all three keeps HTTP behavior testable
+        without changing the adapter's record contract.
+        """
+        settings = self.config.rate_limit
+        for attempt in range(settings.max_retries + 1):
+            response = self.transport(url, dict(params), self.api_key)
+            status_code, data = self._decode_response(response)
+            if status_code in (401, 403):
+                raise RuntimeError(
+                    f"Polygon authentication failed (HTTP {status_code}); "
+                    "check POLYGON_API_KEY and its permissions"
+                )
+            if status_code == 429:
+                if attempt >= settings.max_retries:
+                    raise RuntimeError(
+                        "Polygon rate limit exceeded (HTTP 429) after "
+                        f"{settings.max_retries} retries"
+                    )
+                if settings.sleep_enabled:
+                    time.sleep(self._backoff(attempt + 1))
+                continue
+            if status_code is not None and status_code >= 400:
+                raise RuntimeError(f"Polygon request failed (HTTP {status_code})")
+            if not isinstance(data, Mapping):
+                raise ValueError("Malformed Polygon response: expected a JSON object")
+            if "results" not in data:
+                raise ValueError("Malformed Polygon response: missing 'results' field")
+            if not isinstance(data["results"], list):
+                raise ValueError("Malformed Polygon response: 'results' must be a list")
+            return dict(data)
+        raise RuntimeError("Polygon request failed unexpectedly")
+
+    @staticmethod
+    def _decode_response(response: Any) -> tuple[int | None, Any]:
+        """Extract an optional HTTP status and JSON body from a transport result."""
+        if isinstance(response, tuple) and len(response) == 2:
+            return int(response[0]), response[1]
+        if isinstance(response, Mapping):
+            status_code = response.get("status_code")
+            if status_code is not None:
+                body = response.get("json", response.get("body", response))
+                return int(status_code), body
+            return None, response
+        status_code = getattr(response, "status_code", None)
+        json_method = getattr(response, "json", None)
+        if callable(json_method):
+            try:
+                body = json_method()
+            except Exception as exc:
+                raise ValueError("Malformed Polygon response: invalid JSON") from exc
+            return (int(status_code) if status_code is not None else None), body
+        return None, response
+
     def _fetch_all_pages(
         self,
         url: str,
@@ -242,10 +300,10 @@ class PolygonAdapter:
         next_params: dict | None = params
         while next_url:
             self._throttle()
-            data = self.transport(next_url, dict(next_params or {}), self.api_key)
+            data = self._request_page(next_url, next_params or {})
             pages.append(data)
-            all_rows.extend(data.get("results", []) or [])
-            next_url = data.get("next_url")
+            all_rows.extend(data["results"])
+            next_url = data.get("next_url") or None
             if next_url:
                 # next_url is a fully-qualified URL; the next call should
                 # not re-send the original params.
@@ -259,6 +317,15 @@ class PolygonAdapter:
         params: dict[str, Any] = {"adjusted": "true", "limit": 50000}
         rows, _pages = self._fetch_all_pages(url, params, "/v2/aggs/ticker/range")
         return self._map_bars(symbol, {"results": rows}, params)
+
+    def fetch_bars_mvfi(
+        self, symbols: Iterable[str], start: str, end: str
+    ) -> list[dict]:
+        """Fetch daily bars for the small minimum-viable first-ingest batch."""
+        records: list[dict] = []
+        for symbol in symbols:
+            records.extend(self.fetch_bars(symbol, start, end))
+        return records
 
     def fetch_corporate_actions(self, symbol: str, start: str, end: str) -> list[dict]:
         # Note: Polygon v3 dividends/splits endpoints accept the date range

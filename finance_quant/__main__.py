@@ -8,6 +8,8 @@ from typing import Sequence
 
 # Backward-compatible mapping used by existing tests.
 COMMANDS = {
+    "mvfi": "scripts/run_phase_b_mvfi.py",
+    "fresh-env-drill": "scripts/run_fresh_environment_drill.py",
     "verify": "scripts/verify.py",
     "benchmark": "scripts/run_phase_b_benchmark.py",
     "freeze": "scripts/freeze_fixture.py",
