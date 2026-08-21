@@ -30,6 +30,7 @@ All entrypoints are available via `python -m finance_quant <command>`:
 
 | Command | Target script |
 |---|---|
+| `cost-stress` | `scripts/run_cost_stress_report.py` — nominal vs 2x-slippage cost comparison |
 | `mvfi` | `scripts/run_phase_b_mvfi.py` — minimum viable Polygon ingest |
 | `fresh-env-drill` | `scripts/run_fresh_environment_drill.py` — temp venv + pytest + verify |
 | `help` | List available commands |
@@ -68,6 +69,7 @@ Useful scripts:
 - `scripts/run_rank_ic_report.py` — B1–B5 walk-forward rank IC
 - `scripts/run_two_stage.py` — feature_eval then lean_replay
 - `scripts/smoke.py` — pytest + bake-off + campaign + scorecard
+- `scripts/run_cost_stress_report.py` — compare nominal vs 2x slippage cost stress
 - `scripts/run_phase_b_benchmark.py` — full Phase B benchmark (fixture + B1-B5 + Qlib + LEAN)
 - `scripts/run_phase_b_determinism_drill.py` — run benchmark N times, compare receipt hashes
 - `scripts/run_phase_b_mvfi.py` — minimum viable first Polygon ingest (requires `POLYGON_API_KEY`)
