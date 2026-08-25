@@ -13,7 +13,7 @@
     "preserve_evidence": true
   },
   "next_issue": 16,
-  "next_exact_action": "Start issue #15 by writing the A1 SDD/PDD execution-runtime conformance contract and hidden/differential fixture plan before adding or selecting NautilusTrader/LEAN implementation code.",
+  "next_exact_action": "Finish validating the A1 property-binding/reference-oracle slice on exact head, then add the first thin candidate adapter behind the runtime-conformance contract and compare it against the reference subset; do not select a primary runtime until all A1 gates pass.",
   "authority": {
     "trading": "NONE",
     "paper_trading_enabled": false,
