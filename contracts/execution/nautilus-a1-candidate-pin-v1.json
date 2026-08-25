@@ -1,0 +1,21 @@
+{
+  "schema_version": "1.0.0",
+  "issue": 15,
+  "phase": "A1",
+  "candidate": "NautilusTrader",
+  "repository": "nautechsystems/nautilus_trader",
+  "source_commit": "8160730c7c550480b0a439fb11086a4c4de15f0b",
+  "release_tag": "v1.230.0",
+  "license_spdx": "LGPL-3.0-only",
+  "evidence_mode": "SOURCE_PRODUCTION_MATCHING_PREFLIGHT",
+  "cli_used": false,
+  "credentials_required": false,
+  "runtime_disposition": "PENDING",
+  "authority": {
+    "trading": "NONE",
+    "paper_trading": "DISABLED",
+    "live_capital": "DISABLED",
+    "sealed_holdout_access": "DENIED_TO_ORDINARY_AGENTS"
+  },
+  "scope": "Pin and fail-closed verify the production BacktestEngine/SimulatedExchange bar-matching path for the public A1 daily-bar market-on-open subset before executable production probe evidence; this is not a NautilusTrader runtime/backtest disposition."
+}
