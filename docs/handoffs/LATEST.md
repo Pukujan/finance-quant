@@ -1,4 +1,4 @@
-# Handoff — A1 executable conformance/reference-oracle slice
+# Handoff — A1 exact-head CI regression fixes
 
 Date: 2026-08-25  
 Branch: `bootstrap/oss-autonomous-trader-replatform`  
@@ -9,31 +9,28 @@ Project status: `A1_ORACLE_SLICE`
 
 ## Completed this session
 
-Continued only the durable next action for issue #15. Added the first executable finance-quant-owned conformance/oracle slice before any NautilusTrader or LEAN adapter:
+Exact-head GitHub Actions exposed two real regressions in the new A1 oracle slice, and both were fixed without weakening tests or invariants:
 
-- bound `FQ-PROP-015`–`FQ-PROP-022` into `contracts/properties/finance-quant-properties-v1.json` with concrete executable test-node oracles;
-- added `finance_quant/execution/conformance.py` for fail-closed A1 contract validation, normalized receipt validation, forbidden identity-input detection, deterministic canonical serialization, and SHA-256 receipt identity;
-- added `finance_quant/execution/reference.py`, a deliberately tiny independent daily-bar reference simulator for contract-level differential testing only;
-- added `tests/test_execution_conformance.py` and `tests/test_execution_reference.py` covering contract authority drift, required receipt fields, canonical hash stability, normalized order states, next-event fill timing, partial-liquidity bounds, accounting reconciliation, duplicate idempotency, ambiguous duplicate failure, future-known-event isolation, three-run determinism, and zero-liquidity rejection;
-- updated machine state and current-state documentation with the next bounded A1 action.
+- restored the explicit `BOOTSTRAP_COMPLETE` machine-status marker in `docs/CURRENT_STATE.md`, keeping the completed A0 state coherent with the bootstrap contract validator while A1 remains active;
+- changed the independent reference oracle to hash its normalized semantic input (ordered/deduplicated events plus deterministic intent ordering), so exact duplicate events preserve execution effects **and** receipt identity under `FQ-PROP-018`; conflicting duplicate IDs still fail closed.
 
-No candidate adapter was added or selected. Trading authority remains NONE; autonomous paper trading and live capital remain DISABLED; sealed holdout exact cases/labels remain inaccessible to ordinary agents.
+The failing authoritative test run was `32865330332`: **2 failed, 908 passed, 25 skipped**. The failures were the bootstrap marker check and duplicate-event receipt hashes; both were diagnosed directly from the Actions job log.
+
+No candidate adapter was added or selected. Trading authority remains NONE; autonomous paper trading and live capital remain DISABLED; sealed holdout exact cases/labels were not accessed.
 
 ## Validation status
 
-Local clone/test execution was attempted again and failed before clone because the automation environment could not resolve `github.com`. This remains an execution-environment network blocker, not a repository test failure.
+The implementation/doc fixes were committed through `62950f99e370585215e3f5ca5115d2afdb9083ca`; subsequent durable handoff commits move branch HEAD but do not change implementation semantics. GitHub Actions for the repaired branch are running/queued and must be checked on the final exact handoff head before any adapter work begins.
 
-GitHub Actions run `32865148522` was queued for implementation/property-binding head `fabb737032a7cf423836bd921b0d06539d9af46a` when durable docs were written. Because subsequent durable-state/handoff commits changed HEAD, the next session/run must verify CI on the **exact current head** and fix any failures without weakening tests or invariants.
-
-No A1 phase completion is claimed. Hidden acceptance, candidate differential evidence, mutation threshold evidence, complete metamorphic coverage, candidate clean-environment evidence, and chaos/fault campaigns are still outstanding.
+No A1 phase completion is claimed. Hidden acceptance, candidate differential evidence, mutation threshold evidence, complete metamorphic coverage, candidate clean-environment evidence, and chaos/fault campaigns remain outstanding.
 
 ## Next exact action
 
-1. Verify exact-current-head GitHub Actions and fix any failing conformance/reference tests or bootstrap regressions.
-2. If green, add the first **thin** candidate adapter behind `contracts/execution/runtime-conformance-v1.json`, limited to the semantic subset already implemented by `finance_quant/execution/reference.py`.
+1. Verify GitHub Actions on the exact current branch head and fix any remaining failure without weakening tests or invariants.
+2. If the oracle/property slice is green, add the first **thin** candidate adapter behind `contracts/execution/runtime-conformance-v1.json`, limited to the semantic subset already implemented by `finance_quant/execution/reference.py`.
 3. Add field-class differential comparison and explicit permitted-difference recording before widening candidate coverage.
-4. Continue required A1 hidden/mutation/metamorphic/determinism/clean-env/chaos evidence for both candidates.
+4. Continue hidden/mutation/metamorphic/determinism/clean-env/chaos evidence for both candidates before any runtime disposition.
 
 Do not select a primary runtime until every required A1 gate passes. Do not start #16 and do not enable paper/live capital authority.
 
-Append-only record: `docs/handoffs/2026-08-25-a1-oracle-slice.md`.
+Append-only record: `docs/handoffs/2026-08-25-a1-ci-regression-fix.md`.
