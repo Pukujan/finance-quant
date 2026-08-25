@@ -9,6 +9,7 @@ permissions:
 
 env:
   LEAN_SHA: 185c691b89f28bd68e48d53c02147415134975f0
+  NAUTILUS_SHA: 8160730c7c550480b0a439fb11086a4c4de15f0b
 
 jobs:
   lean-production-fill-probe:
@@ -117,4 +118,91 @@ jobs:
         with:
           name: a1-lean-production-fill-probe
           path: finance-quant/artifacts/a1-lean/
+          if-no-files-found: warn
+
+  nautilus-production-matching-preflight:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout finance-quant
+        uses: actions/checkout@v4
+        with:
+          path: finance-quant
+
+      - name: Checkout pinned NautilusTrader source
+        uses: actions/checkout@v4
+        with:
+          repository: nautechsystems/nautilus_trader
+          ref: 8160730c7c550480b0a439fb11086a4c4de15f0b
+          path: nautilus-trader
+          fetch-depth: 1
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Verify candidate pin, license, and production bar path
+        working-directory: finance-quant
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C "$GITHUB_WORKSPACE/nautilus-trader" rev-parse HEAD)" = "$NAUTILUS_SHA"
+          grep -q "GNU LESSER GENERAL PUBLIC LICENSE" "$GITHUB_WORKSPACE/nautilus-trader/LICENSE"
+          python - <<'PY'
+          import hashlib
+          import json
+          from pathlib import Path
+
+          pin = json.loads(Path("contracts/execution/nautilus-a1-candidate-pin-v1.json").read_text())
+          assert pin["source_commit"] == "8160730c7c550480b0a439fb11086a4c4de15f0b"
+          assert pin["release_tag"] == "v1.230.0"
+          assert pin["license_spdx"] == "LGPL-3.0-only"
+          assert pin["credentials_required"] is False
+          assert pin["cli_used"] is False
+          assert pin["runtime_disposition"] == "PENDING"
+
+          engine_path = Path("../nautilus-trader/nautilus_trader/backtest/engine.pyx")
+          source = engine_path.read_text(encoding="utf-8")
+          required = [
+              "exchange.process_bar(data)",
+              "self._data_engine.process(data)",
+              "self._process_trade_bar_open(bar, tick)",
+              "self._fill_at_market = True  # Gap from previous bar",
+              "self.iterate(tick.ts_init)",
+          ]
+          for marker in required:
+              assert marker in source, marker
+          assert source.index("exchange.process_bar(data)") < source.index("self._data_engine.process(data)")
+
+          evidence = {
+              "schema_version": "1.0.0",
+              "issue": 15,
+              "phase": "A1",
+              "candidate": "NautilusTrader",
+              "source_commit": pin["source_commit"],
+              "engine_source_sha256": hashlib.sha256(engine_path.read_bytes()).hexdigest(),
+              "production_path": "BacktestEngine -> SimulatedExchange -> process_bar -> trade-bar-open",
+              "exchange_bar_processed_before_strategy_delivery": True,
+              "bar_open_processed_first": True,
+              "gap_market_fill_enabled": True,
+              "matching_iteration_uses_bar_ts_init": True,
+              "production_probe_status": "NOT_YET_EXECUTED",
+              "runtime_disposition": "PENDING",
+              "authority": pin["authority"],
+          }
+          out = Path("artifacts/a1-nautilus")
+          out.mkdir(parents=True, exist_ok=True)
+          (out / "production-matching-preflight.json").write_text(
+              json.dumps(evidence, indent=2, sort_keys=True) + "\n",
+              encoding="utf-8",
+          )
+          PY
+          cat artifacts/a1-nautilus/production-matching-preflight.json
+
+      - name: Upload A1 NautilusTrader preflight receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: a1-nautilus-production-matching-preflight
+          path: finance-quant/artifacts/a1-nautilus/
           if-no-files-found: warn
