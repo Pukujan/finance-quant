@@ -1,0 +1,91 @@
+{
+  "schema_version": "1.0.0",
+  "issue": 15,
+  "phase": "A1",
+  "status": "SPECIFIED",
+  "authority": {
+    "trading": "NONE",
+    "paper_trading": "DISABLED",
+    "live_capital": "DISABLED",
+    "sealed_holdout_access": "DENIED_TO_ORDINARY_AGENTS"
+  },
+  "event_order": ["event_time", "sequence", "event_id"],
+  "daily_bar_rule": "An intent derived from bar t cannot fill on bar t; earliest eligible fill is the next tradable event after the decision boundary.",
+  "normalized_order_states": ["SUBMITTED", "ACCEPTED", "PARTIALLY_FILLED", "FILLED", "CANCELLED", "REJECTED"],
+  "receipt": {
+    "required_top_level": [
+      "contract_version", "fixture_id", "runtime", "runtime_version", "seed", "status",
+      "orders", "fills", "cash_ledger", "positions", "corporate_actions", "rejections", "faults",
+      "cash", "equity", "nav", "realized_pnl", "unrealized_pnl", "input_hash", "receipt_hash", "replay_lineage"
+    ],
+    "forbidden_identity_inputs": ["absolute_path", "wall_clock_only_identity"],
+    "deterministic_key_order": true
+  },
+  "comparison": {
+    "exact": ["event_identity", "order_identity", "lifecycle_transitions", "quantities", "terminal_state", "cash_ledger_identity", "normalized_hashes"],
+    "tolerance_bounded": ["declared_decimal_price_fields", "declared_decimal_pnl_fields"],
+    "default_for_unlisted_semantic_difference": "FAIL"
+  },
+  "minimum_repeated_runs": 3,
+  "hidden_case_classes": [
+    "same_bar_impossible_fill", "gap", "partial_fill", "duplicate_event", "out_of_order_event",
+    "split", "dividend", "delisting", "missing_liquidity", "zero_liquidity", "short_borrow_constraint",
+    "fee_boundary", "slippage_boundary", "retry_restart", "account_reconciliation", "future_knowledge_poisoning"
+  ],
+  "fault_classes": [
+    "crash_before_commit", "crash_after_commit", "duplicate_delivery", "invalid_reorder", "dropped_event",
+    "malformed_payload", "runtime_exception", "restart_replay", "persisted_state_corruption"
+  ],
+  "properties": [
+    {
+      "property_id": "FQ-PROP-015",
+      "severity": "critical",
+      "statement": "No intent fills before its eligible execution boundary; daily bar-t decisions cannot fill on bar t.",
+      "techniques": ["STATIC_IR", "UNIT_REGRESSION", "PROPERTY_STATEFUL", "HIDDEN_ACCEPTANCE", "DIFFERENTIAL", "MUTATION"]
+    },
+    {
+      "property_id": "FQ-PROP-016",
+      "severity": "critical",
+      "statement": "Order lifecycle is monotone and cumulative filled quantity never exceeds accepted quantity.",
+      "techniques": ["PROPERTY_STATEFUL", "HIDDEN_ACCEPTANCE", "MUTATION"]
+    },
+    {
+      "property_id": "FQ-PROP-017",
+      "severity": "critical",
+      "statement": "Normalized accounting reconciles fills, fees, and corporate actions to cash, positions, equity, and NAV.",
+      "techniques": ["UNIT_REGRESSION", "PROPERTY_STATEFUL", "HIDDEN_ACCEPTANCE", "DIFFERENTIAL", "MUTATION"]
+    },
+    {
+      "property_id": "FQ-PROP-018",
+      "severity": "critical",
+      "statement": "Duplicate, retry, and replay cannot double-apply authoritative execution effects.",
+      "techniques": ["PROPERTY_STATEFUL", "METAMORPHIC", "CHAOS_FAULT", "MUTATION"]
+    },
+    {
+      "property_id": "FQ-PROP-019",
+      "severity": "critical",
+      "statement": "Future-known events cannot influence earlier execution decisions or normalized receipt prefixes.",
+      "techniques": ["STATIC_IR", "PROPERTY_STATEFUL", "HIDDEN_ACCEPTANCE", "METAMORPHIC", "MUTATION"]
+    },
+    {
+      "property_id": "FQ-PROP-020",
+      "severity": "high",
+      "statement": "Identical normalized fixture, runtime pin, and seed yields equivalent receipts across at least three independent runs.",
+      "techniques": ["DETERMINISM", "CLEAN_ENV"]
+    },
+    {
+      "property_id": "FQ-PROP-021",
+      "severity": "high",
+      "statement": "Candidate-specific semantics outside the explicit permitted-difference list fail conformance.",
+      "techniques": ["DIFFERENTIAL", "HIDDEN_ACCEPTANCE", "MUTATION"]
+    },
+    {
+      "property_id": "FQ-PROP-022",
+      "severity": "critical",
+      "statement": "Fault and corruption handling fails closed, and restart from a committed boundary converges to uninterrupted authoritative state.",
+      "techniques": ["CHAOS_FAULT", "DIFFERENTIAL", "HIDDEN_ACCEPTANCE"]
+    }
+  ],
+  "candidate_dispositions": ["ADOPT", "ADOPT_WITH_CONSTRAINTS", "REFERENCE_ONLY", "REJECT"],
+  "primary_runtime_selection_allowed_when": "ALL_A1_REQUIRED_GATES_PASS"
+}
