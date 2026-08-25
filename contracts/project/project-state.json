@@ -13,7 +13,7 @@
     "preserve_evidence": true
   },
   "next_issue": 16,
-  "next_exact_action": "Finish validating the A1 property-binding/reference-oracle slice on exact head, then add the first thin candidate adapter behind the runtime-conformance contract and compare it against the reference subset; do not select a primary runtime until all A1 gates pass.",
+  "next_exact_action": "Recheck exact-head CI after the A1 LEAN adapter/differential handoff commits, then add executable candidate-run evidence for the shared daily-bar subset and the corresponding thin NautilusTrader adapter; preserve fail-closed differential semantics and do not select a primary runtime until all A1 gates pass.",
   "authority": {
     "trading": "NONE",
     "paper_trading_enabled": false,
