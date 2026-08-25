@@ -1,60 +1,97 @@
-# Latest handoff
+# Handoff — A0 complete, A1 ready
 
 Date: 2026-08-25  
 Branch: `bootstrap/oss-autonomous-trader-replatform`  
 Base: `main@cdf69afadf473359d0eb6d4db3d18cbc96c03d32`  
 Active epic: #12  
-Active issue: #13  
-Assurance phase: A0
+Active issue: #15  
+Assurance phase: A1  
+Project status: `BOOTSTRAP_COMPLETE`
 
-## Goal
+## Goal reached
 
-Complete the governance/resumability/assurance bootstrap before any execution-runtime or autonomous-trader implementation.
+The governance/resumability/assurance bootstrap (#13 / A0) is complete. The repository is now durably pointed at issue #15: the NautilusTrader-vs-LEAN execution/runtime conformance bakeoff.
 
-## Completed in this bootstrap session
+No autonomous trader, brokerage authority, paper-trading authority, or live-capital authority was introduced during bootstrap.
 
-- Created durable replatform issue hierarchy #12–#23.
-- Parked legacy Phase-B execution issue #11 while preserving its evidence.
-- Defined phase assurance issue #14 with A0–A8 validation obligations.
-- Began repository bootstrap artifacts: `AGENTS.md`, machine project state, machine assurance contract, current-state/assurance docs, handoff, validators and CI.
+## A0 validation evidence
 
-## Decisions
+Validated implementation head before the semantic A0→A1 state-transition edits:
 
-- Mature OSS is replaceable implementation machinery; `finance-quant` owns policy/contracts/evidence.
-- Future capabilities are backend+API/events+evidence+operator-UI vertical slices.
-- Frontend authority is operator-only.
-- Autonomous Trader v0 is born at A2 after A1 selects the runtime.
-- Hidden acceptance, mutation, chaos/fault, differential/metamorphic, repeatability, clean environment and formal obligations are phase gates where declared.
-- Existing TLA+ T3 obligations must be non-skippable in authoritative CI.
-- SMT is selective; Lean 4 is selective/deferred until a phase explicitly requires a proof.
+`b01e9be2c6dd9eb27a1189dc5454f0e7a61db2ef`
 
-## Validation status
+Successful workflow runs on that head:
 
-Not yet complete at the time this handoff record is authored. The bootstrap PR must run GitHub Actions and record/fix all results before #13 can be closed.
+- `tests` run `32850720334`: full pytest + smoke — PASS.
+- `phase-b` run `32850720245`: Phase-B benchmark + 3-run determinism drill + `verify --phase-b` — PASS.
+- `bootstrap-assurance` run `32850720179`:
+  - bootstrap/project contracts — PASS;
+  - generated README status freshness — PASS;
+  - property catalog/oracle validation — PASS;
+  - pinned TLA2Tools/TLC promotion-ladder model check — PASS, non-skippable;
+  - Windows full regression — PASS;
+  - smoke — PASS;
+  - 3-run determinism drill — PASS;
+  - preserved Phase-B verifier — PASS;
+  - isolated fresh-venv install/test/verify — PASS.
 
-Required A0 evidence:
+The final A0→A1 state-transition commit must also pass the repository CI before PR #24 is merged.
 
-- full pytest suite;
-- smoke/verify;
-- bootstrap contract tests;
-- README status regeneration freshness check;
-- TLA/TLC with pinned toolchain and no skip;
-- at least 3 deterministic Phase-B verification runs where supported;
-- fresh-environment drill.
+## Defects found and fixed by A0 gates
 
-## Known blockers / risks
+The gates found real defects; none were bypassed or weakened:
 
-- `main` branch protection was previously off; connector support for configuring rulesets/protection still needs to be checked. Do not claim it is enforced unless verified.
-- The bootstrap branch has not yet passed CI at this handoff point.
+- legacy TLA+ syntax that had previously been hidden by a skip path;
+- promotion protocol allowing an already-approved immutable candidate identity to re-enter promotion;
+- fresh-environment drill installing dependencies but not the project package, breaking subprocess workers;
+- generated README freshness check depending on platform line endings;
+- B1–B5 receipts embedding repository-relative assumptions that failed for temp drill paths;
+- LEAN receipts embedding per-run absolute temp paths, breaking deterministic receipt equality.
+
+## Durable decisions
+
+- `finance-quant` owns policy, contracts, evidence, validation, promotion, PIT semantics, and risk authority.
+- Mature OSS owns replaceable machinery behind thin adapters.
+- Future product capabilities are vertical slices: domain/backend → typed API/events → evidence/observability → thin operator/research UI → E2E validation.
+- Frontend authority remains `OPERATOR_ONLY`.
+- Sealed holdout exact cases/labels remain inaccessible to ordinary agents.
+- Required assurance gates are conjunctive; a failed critical invariant cannot be averaged away.
+- A2 Autonomous Trader v0 (#16) cannot begin until A1 (#15) has an explicit runtime disposition and all A1 gates pass.
+
+## A1 required assurance
+
+Issue #15 is governed by A1 and requires: SDD, PDD, static/IR validation, unit/regression, property/state-machine tests, hidden acceptance, mutation testing, differential testing, metamorphic testing, repeated determinism, clean-environment validation, and chaos/fault injection.
+
+## Known blocker outside repository code
+
+`main` branch protection / required-check enforcement is tracked in issue #25. The available GitHub connector did not expose a branch-protection/ruleset write operation, so do not claim server-side protection is enabled until #25 is resolved through an admin-capable surface.
 
 ## Next exact action
 
-Finish committing the bootstrap contracts/workflows, open the bootstrap PR, inspect every CI job, fix failures without weakening tests, rerun until all A0 gates pass, then update durable state to `BOOTSTRAP_COMPLETE`. After that, a fresh session should start issue #15 (NautilusTrader vs LEAN A1 bakeoff), not #16.
+Start **issue #15** by writing the A1 execution-runtime conformance SDD/PDD contract before installing/selecting either runtime.
+
+The first A1 artifact should define one shared semantic fixture and normalized receipt contract covering at least:
+
+1. clock/event ordering and same-bar rules;
+2. order lifecycle, cancellation, rejection, partial fills, duplicate events and idempotency;
+3. fees, spread/slippage and cost stress;
+4. account/position/cash/NAV invariants;
+5. PIT data boundary and no-future-information rules;
+6. restart/recovery and persisted state;
+7. hidden execution cases and mutation targets;
+8. differential comparison rules for NautilusTrader vs LEAN;
+9. chaos/fault scenarios;
+10. deterministic repeated-run evidence.
+
+Only after the contract/oracles exist should the next session add thin NautilusTrader and LEAN adapters and execute the bakeoff.
 
 ## Read next
 
 1. `AGENTS.md`
 2. `docs/CURRENT_STATE.md`
-3. GitHub #12, #13 and #14
-4. `contracts/assurance/capability-assurance-v1.json`
-5. bootstrap PR checks/logs
+3. GitHub #12, #14 and active #15
+4. this handoff
+5. `contracts/assurance/capability-assurance-v1.json`
+6. existing execution/IR/property contracts and reference interpreter
+
+Do not start #16 in this session unless #15 is explicitly completed and promoted by durable project state.
