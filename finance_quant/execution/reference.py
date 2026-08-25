@@ -48,6 +48,10 @@ def run_daily_reference(fixture: Mapping[str, Any], contract: Mapping[str, Any],
         (dict(item) for item in fixture.get("intents", [])),
         key=lambda i: (i["created_at"], i["intent_id"]),
     )
+    normalized_input = dict(fixture)
+    normalized_input["events"] = events
+    normalized_input["intents"] = intents
+
     initial_cash = D(str(fixture.get("initial_cash", "0")))
     cash = initial_cash
     positions: dict[str, D] = {}
@@ -129,7 +133,7 @@ def run_daily_reference(fixture: Mapping[str, Any], contract: Mapping[str, Any],
         "nav": str(nav),
         "realized_pnl": "0",
         "unrealized_pnl": str(nav - initial_cash),
-        "input_hash": _canonical_hash(fixture),
+        "input_hash": _canonical_hash(normalized_input),
         "receipt_hash": "",
         "replay_lineage": {"parent_receipt_hash": None, "committed_event_count": len(events)},
     }
