@@ -1,9 +1,10 @@
 ----------------------------- MODULE PromotionLadder -----------------------------
 EXTENDS Naturals
 
-\* A deliberately small TLC model of FQ-PROP-005.  Retry is observable, but it
+\* A deliberately small TLC model of FQ-PROP-005. Retry is observable, but it
 \* cannot advance the ladder or create an authority record. Authority records are
 \* durable historical receipts; pre-review constraints apply to the active candidate.
+\* Candidate identity is immutable: an already-approved identity cannot be resealed.
 CONSTANTS Candidates, MaxRetries
 States == {"IDLE", "SEALED", "CAMPAIGN_RUNNING", "SCORED", "REVIEW",
            "PAPER_APPROVED", "TINY_LIVE_APPROVED", "REJECTED"}
@@ -17,6 +18,7 @@ Init == /\ state = "IDLE"
 
 Seal(c) == /\ state = "IDLE"
            /\ c \in Candidates
+           /\ authorityRecords[c] = 0
            /\ state' = "SEALED"
            /\ current' = c
            /\ retries' = 0
