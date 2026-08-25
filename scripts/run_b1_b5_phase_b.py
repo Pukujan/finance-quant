@@ -33,6 +33,19 @@ def content_hash(value: Any) -> str:
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
+def artifact_ref(path: Path) -> str:
+    """Return a stable, platform-independent artifact reference.
+
+    Repository-owned artifacts keep their repo-relative path. Temporary drill
+    artifacts deliberately omit the nondeterministic absolute temp directory and
+    retain only their logical artifact name.
+    """
+    try:
+        return path.resolve().relative_to(ROOT.resolve()).as_posix()
+    except ValueError:
+        return path.name
+
+
 def load_canonical_fixture_manifest(path: Path | None = None) -> dict[str, Any]:
     """Load a canonical manifest when supplied, otherwise use the fixed fixture."""
     candidates = [path] if path else [ROOT / "fixtures" / "canonical_fixture_manifest.json"]
@@ -184,7 +197,7 @@ def main() -> int:
 
     report = {"campaign": "B1-B5", "phase": "B", "manifest": manifest,
               "manifest_hash": manifest_hash, "n_days": len(days), "runs": runs,
-              "ledger_receipts": str(RECEIPT_PATH.relative_to(ROOT))}
+              "ledger_receipts": artifact_ref(RECEIPT_PATH)}
     REPORT_PATH.parent.mkdir(parents=True, exist_ok=True)
     REPORT_PATH.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
     print(json.dumps(report, indent=2))
