@@ -1,0 +1,96 @@
+name: a1-runtime-candidates
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  LEAN_SHA: 185c691b89f28bd68e48d53c02147415134975f0
+
+jobs:
+  lean-production-fill-probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout finance-quant
+        uses: actions/checkout@v4
+        with:
+          path: finance-quant
+
+      - name: Checkout pinned LEAN source
+        uses: actions/checkout@v4
+        with:
+          repository: QuantConnect/Lean
+          ref: 185c691b89f28bd68e48d53c02147415134975f0
+          path: lean
+          fetch-depth: 1
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Verify candidate pin and license
+        working-directory: finance-quant
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C "$GITHUB_WORKSPACE/lean" rev-parse HEAD)" = "$LEAN_SHA"
+          grep -q "Apache License" "$GITHUB_WORKSPACE/lean/LICENSE"
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          pin = json.loads(Path("contracts/execution/lean-a1-candidate-pin-v1.json").read_text())
+          assert pin["source_commit"] == "185c691b89f28bd68e48d53c02147415134975f0"
+          assert pin["license_spdx"] == "Apache-2.0"
+          assert pin["credentials_required"] is False
+          assert pin["cli_used"] is False
+          assert pin["runtime_disposition"] == "PENDING"
+          PY
+
+      - name: Build production LEAN fill-model probe
+        working-directory: finance-quant
+        shell: bash
+        run: |
+          set -euo pipefail
+          dotnet build tools/lean_a1_probe/LeanA1Probe.csproj \
+            --configuration Release \
+            -p:LeanRoot="$GITHUB_WORKSPACE/lean"
+
+      - name: Run three deterministic candidate probes
+        working-directory: finance-quant
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/a1-lean
+          for run in 1 2 3; do
+            dotnet run --project tools/lean_a1_probe/LeanA1Probe.csproj \
+              --configuration Release \
+              --no-build \
+              -p:LeanRoot="$GITHUB_WORKSPACE/lean" \
+              -- fixtures/execution/a1-lean-fill-probe-v1.json \
+              > "artifacts/a1-lean/raw-probe-${run}.json"
+            python -m scripts.run_lean_a1_fill_probe \
+              --fixture fixtures/execution/a1-lean-fill-probe-v1.json \
+              --pin contracts/execution/lean-a1-candidate-pin-v1.json \
+              --probe-result "artifacts/a1-lean/raw-probe-${run}.json" \
+              --out "artifacts/a1-lean/evidence-${run}.json"
+          done
+          cmp artifacts/a1-lean/raw-probe-1.json artifacts/a1-lean/raw-probe-2.json
+          cmp artifacts/a1-lean/raw-probe-1.json artifacts/a1-lean/raw-probe-3.json
+          cmp artifacts/a1-lean/evidence-1.json artifacts/a1-lean/evidence-2.json
+          cmp artifacts/a1-lean/evidence-1.json artifacts/a1-lean/evidence-3.json
+
+      - name: Upload A1 LEAN probe receipts
+        uses: actions/upload-artifact@v4
+        with:
+          name: a1-lean-production-fill-probe
+          path: finance-quant/artifacts/a1-lean/
+          if-no-files-found: error
