@@ -50,19 +50,42 @@ def validate() -> list[str]:
     if project.get("architecture") != "OSS_FIRST_AUTONOMOUS_TRADER_REPLATFORM":
         errors.append("project architecture is not the OSS-first replatform")
     if project.get("active_epic") != 12:
-        errors.append("active_epic must be #12 during bootstrap")
-    if project.get("active_issue") != 13:
-        errors.append("active_issue must be #13 until bootstrap is marked complete")
-    if project.get("assurance_issue") != 14 or project.get("assurance_phase") != "A0":
-        errors.append("bootstrap must be governed by issue #14 / phase A0")
+        errors.append("active_epic must remain #12")
+    if project.get("assurance_issue") != 14:
+        errors.append("assurance authority must remain issue #14")
+
+    status = project.get("status")
+    if status == "BOOTSTRAP_IN_PROGRESS":
+        expected_issue = 13
+        expected_phase = "A0"
+        expected_capability = "BOOTSTRAP_ONLY"
+        current_tokens = ("#12", "#13", "A0", "BOOTSTRAP")
+    elif status == "BOOTSTRAP_COMPLETE":
+        expected_issue = 15
+        expected_phase = "A1"
+        expected_capability = "OSS_RUNTIME_BAKEOFF"
+        current_tokens = ("#12", "#15", "A1", "BOOTSTRAP_COMPLETE")
+    else:
+        errors.append(f"unsupported bootstrap project status: {status!r}")
+        expected_issue = project.get("active_issue")
+        expected_phase = project.get("assurance_phase")
+        expected_capability = project.get("current_capability")
+        current_tokens = ("#12",)
+
+    if project.get("active_issue") != expected_issue:
+        errors.append(f"active_issue must be #{expected_issue} for status {status}")
+    if project.get("assurance_phase") != expected_phase:
+        errors.append(f"assurance_phase must be {expected_phase} for status {status}")
+    if project.get("current_capability") != expected_capability:
+        errors.append(f"current_capability must be {expected_capability} for status {status}")
 
     authority = project.get("authority", {})
     if authority.get("trading") != "NONE":
-        errors.append("bootstrap trading authority must be NONE")
+        errors.append("bootstrap/A1 trading authority must remain NONE")
     if authority.get("paper_trading_enabled") is not False:
-        errors.append("paper trading must remain disabled during bootstrap")
+        errors.append("paper trading must remain disabled before Autonomous Trader v0")
     if authority.get("live_capital_enabled") is not False:
-        errors.append("live capital must remain disabled during bootstrap")
+        errors.append("live capital must remain disabled")
     if authority.get("frontend") != "OPERATOR_ONLY":
         errors.append("frontend authority must be OPERATOR_ONLY")
 
@@ -101,6 +124,12 @@ def validate() -> list[str]:
         if missing:
             errors.append(f"{phase_id} missing required assurance techniques {sorted(missing)}")
 
+    if status == "BOOTSTRAP_COMPLETE":
+        if phase_map.get("A0", {}).get("completion_status") != "COMPLETE":
+            errors.append("A0 must be COMPLETE when bootstrap project state is complete")
+        if phase_map.get("A1", {}).get("completion_status") != "IN_PROGRESS":
+            errors.append("A1 must be IN_PROGRESS after bootstrap completion")
+
     mutation = assurance.get("mutation_policy", {})
     if mutation.get("critical_minimum_valid_mutant_kill_rate", 0) < 0.98:
         errors.append("critical mutation threshold must be >= 0.98")
@@ -125,13 +154,13 @@ def validate() -> list[str]:
             errors.append(f"AGENTS.md missing operating-contract concept: {token}")
 
     current = (ROOT / "docs" / "CURRENT_STATE.md").read_text()
-    for token in ("#12", "#13", "A0", "BOOTSTRAP"):
+    for token in current_tokens:
         if token not in current:
             errors.append(f"CURRENT_STATE.md missing {token}")
 
     handoff = (ROOT / "docs" / "handoffs" / "LATEST.md").read_text()
     if "Next exact action" not in handoff or "#15" not in handoff:
-        errors.append("LATEST handoff must contain next exact action and point to #15 after bootstrap")
+        errors.append("LATEST handoff must contain next exact action and point to #15")
 
     return errors
 
