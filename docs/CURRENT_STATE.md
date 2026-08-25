@@ -1,6 +1,6 @@
 # Current project state
 
-<!-- MACHINE-STATE: architecture=OSS_FIRST_AUTONOMOUS_TRADER_REPLATFORM status=BOOTSTRAP_COMPLETE assurance=A1 active_issue=15 -->
+<!-- MACHINE-STATE: architecture=OSS_FIRST_AUTONOMOUS_TRADER_REPLATFORM status=A1_SPECIFIED assurance=A1 active_issue=15 -->
 
 ## Active direction
 
@@ -12,7 +12,7 @@ The old Phase-B execution plan (#11) remains **PARKED**. Its PIT, IR, property c
 
 ## Current capability
 
-- Project status: **BOOTSTRAP_COMPLETE**
+- Project status: **A1_SPECIFIED**
 - Assurance phase: **A1 — OSS execution/runtime bakeoff**
 - Trading authority: **NONE**
 - Autonomous paper trading: **DISABLED**
@@ -38,11 +38,21 @@ Issue #15 must select the execution/runtime substrate by evidence, not preferenc
 
 A1 requires, at minimum, SDD/PDD, static/IR validation, unit/regression, property/state-machine testing, hidden acceptance, mutation testing, differential and metamorphic testing, repeated determinism, clean-environment validation, and chaos/fault injection.
 
+The initial A1 SDD/PDD is now defined in `docs/plans/A1_EXECUTION_RUNTIME_CONFORMANCE.md` and `contracts/execution/runtime-conformance-v1.json`. It establishes stable properties `FQ-PROP-015` through `FQ-PROP-022`, a common event/intent fixture model, normalized execution receipts, PIT/accounting/restart semantics, differential rules, hidden-case classes, metamorphic relations, and the fault campaign. This specification does not select a runtime and grants no trading authority.
+
 Do **not** start Autonomous Trader v0 (#16) until #15 has an explicit A1 disposition and every required A1 gate passes.
+
+## Validation status for current A1 work
+
+The SDD/PDD commit is `66a27de58d1192a4bfb658df6f2cbc8dc26ca362` on `bootstrap/oss-autonomous-trader-replatform`.
+
+No GitHub Actions workflow run was visible for that commit at handoff time. A local clone/test attempt could not start because the execution environment could not resolve `github.com`; this is an environment/network blocker, not a repository test result. Therefore no A1 gate is claimed complete beyond specification authoring.
 
 ## Next exact action
 
-Start **#15** by writing the execution-runtime conformance specification and property map **before adding/selecting runtime implementation code**. Define common deterministic fixtures, normalized order/fill/account receipts, hidden execution cases, differential comparison rules, mutation targets, and failure-injection scenarios for NautilusTrader and LEAN.
+Bind `FQ-PROP-015`–`FQ-PROP-022` into the global property catalog and add executable contract validators/tests for `contracts/execution/runtime-conformance-v1.json` and canonical receipt normalization. Then implement the smallest independent reference-simulator slice needed to exercise the shared deterministic fixture **before** adding thin NautilusTrader and LEAN adapters.
+
+Do not select a primary runtime until differential, hidden, mutation, determinism, clean-environment, and chaos evidence exists for both candidates where semantics overlap.
 
 ## Required read order for a fresh session
 
@@ -51,4 +61,6 @@ Start **#15** by writing the execution-runtime conformance specification and pro
 3. GitHub issue #12 and active issue #15
 4. `docs/handoffs/LATEST.md`
 5. `contracts/assurance/capability-assurance-v1.json`
-6. relevant execution/IR/property specs and tests
+6. `docs/plans/A1_EXECUTION_RUNTIME_CONFORMANCE.md`
+7. `contracts/execution/runtime-conformance-v1.json`
+8. relevant execution/IR/property specs and tests
