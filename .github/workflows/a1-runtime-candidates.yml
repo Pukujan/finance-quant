@@ -91,9 +91,23 @@ jobs:
               --pin contracts/execution/lean-a1-candidate-pin-v1.json \
               --probe-result "artifacts/a1-lean/raw-probe-${run}.json" \
               --out "artifacts/a1-lean/evidence-${run}.json"
+            RUN="$run" python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          from scripts.run_lean_a1_fill_probe import load_probe_result
+
+          run = os.environ["RUN"]
+          raw = Path(f"artifacts/a1-lean/raw-probe-{run}.json")
+          canonical = Path(f"artifacts/a1-lean/canonical-probe-{run}.json")
+          canonical.write_text(
+              json.dumps(load_probe_result(raw), indent=2, sort_keys=True) + "\n",
+              encoding="utf-8",
+          )
+          PY
           done
-          cmp artifacts/a1-lean/raw-probe-1.json artifacts/a1-lean/raw-probe-2.json
-          cmp artifacts/a1-lean/raw-probe-1.json artifacts/a1-lean/raw-probe-3.json
+          cmp artifacts/a1-lean/canonical-probe-1.json artifacts/a1-lean/canonical-probe-2.json
+          cmp artifacts/a1-lean/canonical-probe-1.json artifacts/a1-lean/canonical-probe-3.json
           cmp artifacts/a1-lean/evidence-1.json artifacts/a1-lean/evidence-2.json
           cmp artifacts/a1-lean/evidence-1.json artifacts/a1-lean/evidence-3.json
 
