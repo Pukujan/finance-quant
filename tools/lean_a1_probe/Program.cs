@@ -77,7 +77,8 @@ static class Program
         var close = decimal.Parse(payload.GetProperty("close").GetString()!, System.Globalization.CultureInfo.InvariantCulture);
 
         var exchangeHours = CreateWeekdayHours();
-        var symbol = Symbol.Create(instrument, SecurityType.Equity, Market.USA);
+        var sid = SecurityIdentifier.GenerateEquity(instrument, Market.USA, mapSymbol: false);
+        var symbol = new Symbol(sid, instrument);
         var config = new SubscriptionDataConfig(
             typeof(TradeBar),
             symbol,
