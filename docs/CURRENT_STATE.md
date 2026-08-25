@@ -1,6 +1,6 @@
 # Current project state
 
-<!-- MACHINE-STATE: architecture=OSS_FIRST_AUTONOMOUS_TRADER_REPLATFORM status=A1_SPECIFIED assurance=A1 active_issue=15 -->
+<!-- MACHINE-STATE: architecture=OSS_FIRST_AUTONOMOUS_TRADER_REPLATFORM status=A1_ORACLE_SLICE assurance=A1 active_issue=15 -->
 
 ## Active direction
 
@@ -12,7 +12,7 @@ The old Phase-B execution plan (#11) remains **PARKED**. Its PIT, IR, property c
 
 ## Current capability
 
-- Project status: **A1_SPECIFIED**
+- Project status: **A1_ORACLE_SLICE**
 - Assurance phase: **A1 — OSS execution/runtime bakeoff**
 - Trading authority: **NONE**
 - Autonomous paper trading: **DISABLED**
@@ -22,7 +22,7 @@ The old Phase-B execution plan (#11) remains **PARKED**. Its PIT, IR, property c
 
 ## A0 bootstrap evidence
 
-A0 completed after the bootstrap branch passed the full validation stack on 2026-08-25. The validated implementation head was `b01e9be2c6dd9eb27a1189dc5454f0e7a61db2ef` before this semantic state-transition commit.
+A0 completed after the bootstrap branch passed the full validation stack on 2026-08-25. The validated implementation head was `b01e9be2c6dd9eb27a1189dc5454f0e7a61db2ef` before the semantic state-transition commit.
 
 Authoritative successful workflow runs for that validated implementation head:
 
@@ -38,21 +38,33 @@ Issue #15 must select the execution/runtime substrate by evidence, not preferenc
 
 A1 requires, at minimum, SDD/PDD, static/IR validation, unit/regression, property/state-machine testing, hidden acceptance, mutation testing, differential and metamorphic testing, repeated determinism, clean-environment validation, and chaos/fault injection.
 
-The initial A1 SDD/PDD is now defined in `docs/plans/A1_EXECUTION_RUNTIME_CONFORMANCE.md` and `contracts/execution/runtime-conformance-v1.json`. It establishes stable properties `FQ-PROP-015` through `FQ-PROP-022`, a common event/intent fixture model, normalized execution receipts, PIT/accounting/restart semantics, differential rules, hidden-case classes, metamorphic relations, and the fault campaign. This specification does not select a runtime and grants no trading authority.
+The A1 SDD/PDD is defined in `docs/plans/A1_EXECUTION_RUNTIME_CONFORMANCE.md` and `contracts/execution/runtime-conformance-v1.json`. Stable properties `FQ-PROP-015` through `FQ-PROP-022` are now also bound into the global property catalog.
 
-Do **not** start Autonomous Trader v0 (#16) until #15 has an explicit A1 disposition and every required A1 gate passes.
+The first executable finance-quant-owned oracle slice now exists:
+
+- `finance_quant/execution/conformance.py` fail-closes on A1 authority/contract drift and validates/canonicalizes normalized receipts;
+- `finance_quant/execution/reference.py` is a deliberately tiny independent daily-bar semantic oracle, not a production runtime;
+- `tests/test_execution_conformance.py` verifies contract binding, required receipt fields, deterministic canonical hashes, normalized order states, and forbidden identity inputs;
+- `tests/test_execution_reference.py` exercises next-event fill timing, partial-liquidity bounds, accounting reconciliation, duplicate idempotency, ambiguous-duplicate rejection, future-known-event isolation, three-run determinism, and zero-liquidity rejection.
+
+This slice does **not** select NautilusTrader or LEAN and grants no paper/live trading authority.
 
 ## Validation status for current A1 work
 
-The SDD/PDD commit is `66a27de58d1192a4bfb658df6f2cbc8dc26ca362` on `bootstrap/oss-autonomous-trader-replatform`.
+The implementation/property-binding head before durable-state documentation updates was `fabb737032a7cf423836bd921b0d06539d9af46a`.
 
-No GitHub Actions workflow run was visible for that commit at handoff time. A local clone/test attempt could not start because the execution environment could not resolve `github.com`; this is an environment/network blocker, not a repository test result. Therefore no A1 gate is claimed complete beyond specification authoring.
+Local clone/test execution remains unavailable because the automation execution environment cannot resolve `github.com`; this is an environment/network blocker, not a repository test result. GitHub Actions run `32865148522` was queued for that implementation head at the time of this handoff. Exact-head CI must be rechecked after the documentation commits; no A1 gate is claimed complete solely from queued CI.
+
+A1 remains **IN_PROGRESS**. Hidden acceptance, candidate differential evidence, mutation threshold evidence, complete metamorphic coverage, candidate clean-environment evidence, and chaos/fault campaigns remain outstanding. No primary runtime may be selected yet.
 
 ## Next exact action
 
-Bind `FQ-PROP-015`–`FQ-PROP-022` into the global property catalog and add executable contract validators/tests for `contracts/execution/runtime-conformance-v1.json` and canonical receipt normalization. Then implement the smallest independent reference-simulator slice needed to exercise the shared deterministic fixture **before** adding thin NautilusTrader and LEAN adapters.
+1. Verify the exact current branch head in GitHub Actions and fix any regression without weakening tests or invariants.
+2. Once the property-binding/reference-oracle slice is green, add the first **thin** candidate adapter behind `contracts/execution/runtime-conformance-v1.json` and exercise only the semantic subset implemented by the independent reference oracle.
+3. Add field-class differential comparison and candidate-specific permitted-difference recording before expanding adapter scope.
+4. Continue hidden, mutation, metamorphic, repeated determinism, clean-environment, and chaos evidence for both candidates before any runtime disposition.
 
-Do not select a primary runtime until differential, hidden, mutation, determinism, clean-environment, and chaos evidence exists for both candidates where semantics overlap.
+Do not select a primary runtime until all A1 required gates pass. Do **not** start Autonomous Trader v0 (#16) until #15 has explicit runtime dispositions and every required A1 gate passes.
 
 ## Required read order for a fresh session
 
@@ -63,4 +75,6 @@ Do not select a primary runtime until differential, hidden, mutation, determinis
 5. `contracts/assurance/capability-assurance-v1.json`
 6. `docs/plans/A1_EXECUTION_RUNTIME_CONFORMANCE.md`
 7. `contracts/execution/runtime-conformance-v1.json`
-8. relevant execution/IR/property specs and tests
+8. `contracts/properties/finance-quant-properties-v1.json`
+9. `finance_quant/execution/conformance.py` and `finance_quant/execution/reference.py`
+10. relevant execution/IR/property specs and tests
