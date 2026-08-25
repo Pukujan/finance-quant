@@ -7,15 +7,17 @@
   "source_commit": "8160730c7c550480b0a439fb11086a4c4de15f0b",
   "release_tag": "v1.230.0",
   "license_spdx": "LGPL-3.0-only",
-  "evidence_mode": "SOURCE_PRODUCTION_MATCHING_PREFLIGHT",
+  "evidence_mode": "PRODUCTION_EXECUTABLE_NONCONFORMANCE",
   "cli_used": false,
   "credentials_required": false,
   "runtime_disposition": "PENDING",
+  "semantic_conformance": "FAIL",
+  "failed_property": "FQ-PROP-015",
   "authority": {
     "trading": "NONE",
     "paper_trading": "DISABLED",
     "live_capital": "DISABLED",
     "sealed_holdout_access": "DENIED_TO_ORDINARY_AGENTS"
   },
-  "scope": "Pin and fail-closed verify the production BacktestEngine/SimulatedExchange bar-matching path for the public A1 daily-bar market-on-open subset before executable production probe evidence; this is not a NautilusTrader runtime/backtest disposition."
+  "scope": "Pinned production BacktestEngine/SimulatedExchange evidence for the public A1 daily-bar next-open subset. Three deterministic GTC market probes fill on the decision bar rather than the next eligible bar, and the exact pinned production matching source rejects AT_THE_OPEN time-in-force as unsupported. This records semantic nonconformance without assigning a final A1 runtime disposition or changing authority."
 }

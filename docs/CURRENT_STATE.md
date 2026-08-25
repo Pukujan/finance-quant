@@ -20,7 +20,7 @@ The old Phase-B execution plan (#11) remains **PARKED** and preserved as a legac
 
 ## A1 objective and mandatory gates
 
-Issue #15 must select the execution/runtime substrate by evidence, not preference. LEAN and NautilusTrader must be exercised through the same finance-quant contracts and normalized receipts. A1 is conjunctive: SDD/PDD, static/IR validation, unit/regression, property/state-machine testing, hidden acceptance, mutation testing, differential/metamorphic testing, repeated determinism, clean-environment validation, and chaos/fault injection must all pass before disposition or promotion.
+Issue #15 must select the execution/runtime substrate by evidence, not preference. LEAN and NautilusTrader must be exercised through the same finance-quant contracts and normalized receipts. A1 is conjunctive: SDD/PDD, static/IR validation, unit/regression, property/state-machine testing, hidden acceptance, mutation testing, differential/metamorphic testing, repeated determinism, clean-environment validation, and chaos/fault injection must all pass before final candidate dispositions or promotion.
 
 The A1 SDD/PDD is `docs/plans/A1_EXECUTION_RUNTIME_CONFORMANCE.md`; the executable runtime contract is `contracts/execution/runtime-conformance-v1.json`. Stable properties `FQ-PROP-015` through `FQ-PROP-022` remain bound in the property catalog.
 
@@ -28,33 +28,35 @@ The A1 SDD/PDD is `docs/plans/A1_EXECUTION_RUNTIME_CONFORMANCE.md`; the executab
 
 The finance-quant LEAN slice directly exercises pinned LEAN commit `185c691b89f28bd68e48d53c02147415134975f0` through production `EquityFillModel.MarketOnOpenFill`, without brokerage credentials or the LEAN CLI, against `fixtures/execution/a1-lean-fill-probe-v1.json`. Candidate evidence remains `runtime_disposition: PENDING` and `authority: NONE`.
 
-Exact-head runtime-candidates run `32884104244` completed **SUCCESSFULLY** on implementation head `aeb5cd4ab6f53a966bbc344e45afde1b2a552573`. Its `lean-production-fill-probe` job verified the candidate pin/license, built the production LEAN fill-model probe, ran three deterministic candidate probes, and uploaded A1 receipts. The semantic evidence is the contracted fill (`quantity=5`, `price=11`, `fill_time=2026-06-02T13:30:00Z`, source `bar-2`) with identical canonical candidate/reference receipt hashes across repeated runs.
-
-This is a genuine LEAN production-slice pass, but it is **not** an A1 runtime disposition. NautilusTrader evidence and all remaining conjunctive A1 gates are still required.
+Runtime-candidates run `32905724960` again completed the LEAN production job successfully on implementation head `9cdd7cdc9cd4d43bea7ac6f7b9589d9f2d14c0c0`. It built the exact pinned source and reproduced the contracted three-run fill (`quantity=5`, `price=11`, `fill_time=2026-06-02T13:30:00Z`, source `bar-2`). This remains production-slice evidence, not a final runtime disposition.
 
 ## NautilusTrader production candidate status
 
-The candidate is pinned to NautilusTrader release `v1.230.0`, upstream commit `8160730c7c550480b0a439fb11086a4c4de15f0b`, with LGPL-3.0-only source licensing recorded in `contracts/execution/nautilus-a1-candidate-pin-v1.json`. Credentials and the Nautilus CLI are not required for the intended A1 production backtest/matching probe.
+NautilusTrader remains pinned to release `v1.230.0`, exact upstream commit `8160730c7c550480b0a439fb11086a4c4de15f0b`, LGPL-3.0-only, with no credentials or Nautilus CLI required and authority NONE.
 
-Exact pinned-source analysis of `nautilus_trader/backtest/engine.pyx` establishes the production ordering needed by the unchanged A1 daily-bar contract: external bar data is first sent to `SimulatedExchange.process_bar` and only afterward delivered through the data engine to strategies; trade-bar matching processes the bar open first; an opening gap enables market filling; and matching iteration uses the bar `ts_init`. Therefore a market order submitted from the prior bar can be resting before the next bar's open is auctioned.
+The executable production probe now reaches the pinned `BacktestEngine` / `SimulatedExchange` matching path using the same public two-bar fixture and unchanged finance-quant market intent. With native GTC market semantics, an intent submitted from bar 1 is filled immediately on bar 1 at `10.00` and `2026-06-01T20:00:00Z`, rather than at the next eligible bar open `11.00` at `2026-06-02T13:30:00Z`. This violates critical property `FQ-PROP-015`; the oracle was not weakened or normalized to accept the candidate behavior.
 
-The runtime-candidate workflow now contains a fail-closed **source-production-matching preflight** which checks the exact upstream commit, license, these production source-path invariants, and emits a deterministic provenance receipt. This preflight is deliberately marked `production_probe_status: NOT_YET_EXECUTED`: it is not executable Nautilus fill evidence and cannot be used to select or disposition the runtime.
+The remaining obvious production-native market-on-open semantic is also unavailable in the pinned version: exact `nautilus_trader/backtest/engine.pyx` rejects `AT_THE_OPEN` and `AT_THE_CLOSE` time-in-force as “not currently supported.” An attempted `AT_THE_OPEN` probe therefore produced no fill, confirming that switching time-in-force is not a conforming workaround.
+
+Runtime-candidates run `32905724960` now treats this as candidate-evaluation evidence rather than a broken test: it verifies the exact pin/source facts, runs the native GTC production probe three times, requires identical same-bar observations, writes `semantic_conformance: FAIL` / `failed_property: FQ-PROP-015`, and leaves `runtime_disposition: PENDING`. The workflow itself is green because it correctly detects and records the candidate’s deterministic semantic failure; green workflow status does **not** mean Nautilus conforms.
+
+The A1 specification permits candidate-specific same-bar defaults to be disabled or normalized away, but any such adapter must remain PIT-safe and must still use production matching. No adapter workaround has yet been accepted. Final `REFERENCE_ONLY` or `REJECT` disposition is therefore deferred until the A1 gate process reaches the candidate-disposition gate.
 
 ## Validation status
 
-- Prior durable head `854773bc45614907e2c53c395a1f87b3cc3d8f85` is explicitly green: tests run `32888794288`, legacy phase-b run `32888794305`, bootstrap-assurance run `32888794317`, and A1 runtime-candidates run `32888794347` all completed successfully.
-- Runtime-candidates run `32884104244`: **PASS** for the credential-free LEAN production fill probe and three-run canonical determinism.
-- The previous handoff-format defect (`Next:` instead of required `Next exact action`) was repaired without changing runtime semantics, tests, properties, mutation thresholds, PIT invariants, or authority.
-- The newly added Nautilus production-matching preflight still requires exact-head CI validation after this state update.
+- Prior durable head `35e3b57d21687e2e040324ce9d48abec50512b6c` was fully green across tests, legacy phase-b, bootstrap assurance, and runtime candidates before executable Nautilus work began.
+- Runtime-candidates run `32905724960`: **PASS as an evaluation workflow** on implementation head `9cdd7cdc9cd4d43bea7ac6f7b9589d9f2d14c0c0`; LEAN production conformance passed and Nautilus deterministic production nonconformance was correctly detected and recorded.
+- Earlier Nautilus execution run `32905286137` produced the decisive native-GTC observation: `5 @ 10.00` on `bar-1`. Run `32905508650` then verified that `AT_THE_OPEN` does not produce a conforming fill; exact pinned source explains this by explicitly rejecting that TIF.
+- Ordinary tests, legacy phase-b, and bootstrap-assurance for implementation head `9cdd7cdc9cd4d43bea7ac6f7b9589d9f2d14c0c0` were still running when this durable state was written. The documentation/state commit itself must also be validated before the baseline can be called fully green.
 
-A1 remains **IN_PROGRESS**. Executable NautilusTrader production candidate evidence, hidden acceptance, mutation-threshold evidence, broader metamorphic coverage, complete candidate chaos/fault campaigns, and final conjunctive gate receipts remain outstanding. No primary runtime may be selected yet.
+A1 remains **IN_PROGRESS**. Hidden acceptance, mutation-threshold evidence, broader metamorphic coverage, complete clean-environment/determinism evidence for the surviving conforming path, chaos/fault campaigns, and final candidate dispositions remain outstanding. No primary runtime may be selected yet.
 
 ## Next exact action
 
-1. Require exact-head tests/bootstrap-assurance/runtime-candidates to remain green with the pinned Nautilus source-production preflight; fix any real failure without weakening tests or invariants.
-2. Implement the minimal credential-free **executable NautilusTrader production fill probe** against exactly the same public daily-bar decision/fill semantics and normalized comparison classes used by LEAN/reference. Do not substitute a custom/synthetic fill path for the production matching engine.
-3. Run three canonical deterministic Nautilus probes and differential receipts, then continue the remaining A1 hidden, mutation, metamorphic, clean-environment, and chaos/fault evidence for both candidates.
-4. Only after every conjunctive A1 gate passes may #15 record candidate dispositions and select a primary runtime.
+1. Require exact-head tests, legacy phase-b, bootstrap-assurance, and runtime-candidates to finish green after this durable-state update; fix any genuine failure without weakening an invariant.
+2. Before finalizing Nautilus as `REFERENCE_ONLY` or `REJECT`, evaluate only production-matching, PIT-safe thin-adapter mechanisms permitted by the A1 SDD/PDD for eliminating same-bar submission. Do not use a custom fill model, future bar values, hidden cases, or semantic waivers. If no such mechanism satisfies the unchanged public differential, retain the deterministic `FQ-PROP-015` failure as the candidate result.
+3. Continue the remaining conjunctive A1 hidden-acceptance, mutation, metamorphic, determinism/clean-environment, and chaos/fault gates for the runtime path(s) still eligible under the contract, while preserving Nautilus negative evidence.
+4. Only after every required A1 gate is green may #15 assign final candidate dispositions and select a primary runtime.
 
 Do not start #16, enable autonomous paper authority, enable live capital, or inspect sealed-holdout exact cases/labels while A1 remains incomplete.
 
