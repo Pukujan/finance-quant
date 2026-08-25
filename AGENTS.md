@@ -87,4 +87,4 @@ A session is not considered durably complete if the next worker must ask what th
 
 ## Current execution direction
 
-The active master plan is GitHub issue #12. Bootstrap/governance is #13 and the assurance contract is #14. Do not begin the execution-runtime bakeoff (#15) until bootstrap A0 gates pass and durable state marks bootstrap complete.
+The active master plan is GitHub issue #12 and the assurance authority is #14. Bootstrap #13 is complete. The active implementation issue is **#15 — A1 NautilusTrader-vs-LEAN execution/runtime conformance bakeoff**. Do not begin Autonomous Trader v0 (#16) until #15 has an explicit runtime disposition and every required A1 gate passes.
