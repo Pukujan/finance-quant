@@ -137,7 +137,7 @@ def run(fixture: dict[str, object]) -> dict[str, object]:
         oms_type=OmsType.NETTING,
         account_type=AccountType.CASH,
         starting_balances=[Money(float(str(fixture["initial_cash"])), USDT)],
-        base_currency=USDT,
+        base_currency=None,
         default_leverage=Decimal("1"),
     )
     engine.add_instrument(instrument)
