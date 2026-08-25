@@ -28,7 +28,7 @@ EXPECTED_TECHNIQUES = {
 
 
 def _load(path: Path) -> dict:
-    return json.loads(path.read_text())
+    return json.loads(path.read_text(encoding="utf-8"))
 
 
 def validate() -> list[str]:
@@ -148,17 +148,17 @@ def validate() -> list[str]:
         elif not (ROOT / ref).is_file():
             errors.append(f"{prop.get('property_id')} TLA artifact missing: {ref}")
 
-    agents = (ROOT / "AGENTS.md").read_text()
+    agents = (ROOT / "AGENTS.md").read_text(encoding="utf-8")
     for token in ("docs/CURRENT_STATE.md", "docs/handoffs/LATEST.md", "HITL", "TLA", "holdout"):
         if token.lower() not in agents.lower():
             errors.append(f"AGENTS.md missing operating-contract concept: {token}")
 
-    current = (ROOT / "docs" / "CURRENT_STATE.md").read_text()
+    current = (ROOT / "docs" / "CURRENT_STATE.md").read_text(encoding="utf-8")
     for token in current_tokens:
         if token not in current:
             errors.append(f"CURRENT_STATE.md missing {token}")
 
-    handoff = (ROOT / "docs" / "handoffs" / "LATEST.md").read_text()
+    handoff = (ROOT / "docs" / "handoffs" / "LATEST.md").read_text(encoding="utf-8")
     if "Next exact action" not in handoff or "#15" not in handoff:
         errors.append("LATEST handoff must contain next exact action and point to #15")
 
