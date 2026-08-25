@@ -1,0 +1,139 @@
+name: a1-nautilus-adapter-evaluation
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  NAUTILUS_SHA: 8160730c7c550480b0a439fb11086a4c4de15f0b
+
+jobs:
+  deferred-next-bar-callback:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout finance-quant
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install pinned NautilusTrader release
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check "nautilus_trader==1.230.0"
+          python - <<'PY'
+          import nautilus_trader
+          assert nautilus_trader.__version__ == "1.230.0", nautilus_trader.__version__
+          PY
+
+      - name: Run three deterministic PIT-safe deferred-callback probes
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/a1-nautilus-adapter
+          for run in 1 2 3; do
+            set +e
+            python tools/nautilus_a1_probe/probe.py \
+              fixtures/execution/a1-lean-fill-probe-v1.json \
+              --submission-bar 2 \
+              > "artifacts/a1-nautilus-adapter/raw-probe-${run}.json" \
+              2> "artifacts/a1-nautilus-adapter/raw-probe-${run}.stderr.txt"
+            probe_status=$?
+            set -e
+            cat "artifacts/a1-nautilus-adapter/raw-probe-${run}.json"
+            if test -s "artifacts/a1-nautilus-adapter/raw-probe-${run}.stderr.txt"; then
+              cat "artifacts/a1-nautilus-adapter/raw-probe-${run}.stderr.txt" >&2
+            fi
+            test "$probe_status" -eq 0
+            RUN="$run" python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          run = os.environ["RUN"]
+          path = Path(f"artifacts/a1-nautilus-adapter/raw-probe-{run}.json")
+          value = json.loads(path.read_text(encoding="utf-8"))
+          assert value["engine"] == "NautilusTrader"
+          assert value["probe_scope"] == "BacktestEngine.SimulatedExchange.process_bar"
+          assert value["time_in_force"] == "GTC"
+          assert value["submission_policy"] == "DEFER_TO_NEXT_BAR_CALLBACK"
+          assert value["submission_bar"] == "bar-2"
+          canonical = Path(f"artifacts/a1-nautilus-adapter/canonical-probe-{run}.json")
+          canonical.write_text(json.dumps(value, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+          PY
+          done
+          cmp artifacts/a1-nautilus-adapter/canonical-probe-1.json artifacts/a1-nautilus-adapter/canonical-probe-2.json
+          cmp artifacts/a1-nautilus-adapter/canonical-probe-1.json artifacts/a1-nautilus-adapter/canonical-probe-3.json
+
+      - name: Evaluate unchanged next-bar-open differential
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          from decimal import Decimal
+          from pathlib import Path
+
+          fixture = json.loads(Path("fixtures/execution/a1-lean-fill-probe-v1.json").read_text(encoding="utf-8"))
+          observed = json.loads(Path("artifacts/a1-nautilus-adapter/canonical-probe-1.json").read_text(encoding="utf-8"))
+          next_bar = fixture["events"][1]
+          expected = {
+              "fill_quantity": str(fixture["intents"][0]["quantity"]),
+              "fill_price": str(next_bar["payload"]["open"]),
+              "fill_time": str(next_bar["event_time"]),
+              "source_event_id": str(next_bar["event_id"]),
+          }
+          semantic_conformance = (
+              observed.get("status") == "FILLED"
+              and Decimal(str(observed.get("fill_quantity"))) == Decimal(expected["fill_quantity"])
+              and Decimal(str(observed.get("fill_price"))) == Decimal(expected["fill_price"])
+              and observed.get("fill_time") == expected["fill_time"]
+              and observed.get("source_event_id") == expected["source_event_id"]
+          )
+          failed_property = None
+          if not semantic_conformance:
+              if (
+                  observed.get("fill_time") != expected["fill_time"]
+                  or observed.get("source_event_id") != expected["source_event_id"]
+              ):
+                  failed_property = "FQ-PROP-015"
+              else:
+                  failed_property = "FQ-PROP-021"
+          evidence = {
+              "schema_version": "1.0.0",
+              "issue": 15,
+              "phase": "A1",
+              "candidate": "NautilusTrader",
+              "candidate_source_commit": "8160730c7c550480b0a439fb11086a4c4de15f0b",
+              "adapter": "defer-existing-intent-to-next-bar-callback",
+              "adapter_scope": "strategy submission timing only",
+              "production_matching": True,
+              "custom_fill_model": False,
+              "future_bar_payload_read_before_submission": False,
+              "semantic_conformance": "PASS" if semantic_conformance else "FAIL",
+              "failed_property": failed_property,
+              "expected": expected,
+              "observed": observed,
+              "runtime_disposition": "PENDING",
+              "authority": "NONE",
+          }
+          Path("artifacts/a1-nautilus-adapter/deferred-callback-evidence.json").write_text(
+              json.dumps(evidence, indent=2, sort_keys=True) + "\n",
+              encoding="utf-8",
+          )
+          PY
+          cat artifacts/a1-nautilus-adapter/deferred-callback-evidence.json
+
+      - name: Upload deferred-callback evaluation receipts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: a1-nautilus-deferred-callback-evaluation
+          path: artifacts/a1-nautilus-adapter/
+          if-no-files-found: warn

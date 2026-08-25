@@ -1,8 +1,8 @@
 """Credential-free A1 probe of pinned NautilusTrader production bar matching."""
 from __future__ import annotations
 
+import argparse
 import json
-import sys
 from datetime import datetime, timezone
 from decimal import Decimal
 from pathlib import Path
@@ -63,10 +63,13 @@ def _instrument(symbol: str) -> CurrencyPair:
 
 
 class ProbeStrategy(Strategy):
-    def __init__(self, bar_type: BarType, intent: dict[str, object]):
+    def __init__(self, bar_type: BarType, intent: dict[str, object], submission_bar: int):
         super().__init__()
+        if submission_bar not in {1, 2}:
+            raise ValueError("submission_bar must be 1 or 2")
         self.bar_type = bar_type
         self.intent = intent
+        self.submission_bar = submission_bar
         self.bar_count = 0
         self.fill_events: list[object] = []
 
@@ -75,7 +78,7 @@ class ProbeStrategy(Strategy):
 
     def on_bar(self, bar: Bar) -> None:
         self.bar_count += 1
-        if self.bar_count != 1:
+        if self.bar_count != self.submission_bar:
             return
         side = str(self.intent["side"]).upper()
         order_side = OrderSide.BUY if side == "BUY" else OrderSide.SELL
@@ -91,11 +94,13 @@ class ProbeStrategy(Strategy):
         self.fill_events.append(event)
 
 
-def run(fixture: dict[str, object]) -> dict[str, object]:
+def run(fixture: dict[str, object], *, submission_bar: int = 1) -> dict[str, object]:
     events = list(fixture.get("events", []))
     intents = list(fixture.get("intents", []))
     if len(events) != 2 or len(intents) != 1:
         raise ValueError("initial Nautilus production probe requires exactly two bars and one intent")
+    if submission_bar not in {1, 2}:
+        raise ValueError("submission_bar must be 1 or 2")
     intent = dict(intents[0])
     symbol = str(intent["instrument_id"])
     if any(str(dict(item)["instrument_id"]) != symbol for item in events):
@@ -142,8 +147,13 @@ def run(fixture: dict[str, object]) -> dict[str, object]:
     )
     engine.add_instrument(instrument)
     engine.add_data(bars)
-    strategy = ProbeStrategy(bar_type=bar_type, intent=intent)
+    strategy = ProbeStrategy(bar_type=bar_type, intent=intent, submission_bar=submission_bar)
     engine.add_strategy(strategy)
+    submission_policy = (
+        "IMMEDIATE_ON_DECISION_BAR_CALLBACK"
+        if submission_bar == 1
+        else "DEFER_TO_NEXT_BAR_CALLBACK"
+    )
     try:
         engine.run()
         fills = strategy.fill_events
@@ -152,6 +162,8 @@ def run(fixture: dict[str, object]) -> dict[str, object]:
                 "engine": "NautilusTrader",
                 "probe_scope": "BacktestEngine.SimulatedExchange.process_bar",
                 "time_in_force": "GTC",
+                "submission_policy": submission_policy,
+                "submission_bar": f"bar-{submission_bar}",
                 "status": "UNFILLED" if not fills else "AMBIGUOUS_MULTIFILL",
                 "fill_count": len(fills),
                 "instrument_id": symbol,
@@ -165,6 +177,8 @@ def run(fixture: dict[str, object]) -> dict[str, object]:
             "engine": "NautilusTrader",
             "probe_scope": "BacktestEngine.SimulatedExchange.process_bar",
             "time_in_force": "GTC",
+            "submission_policy": submission_policy,
+            "submission_bar": f"bar-{submission_bar}",
             "status": "FILLED",
             "instrument_id": symbol,
             "fill_quantity": str(signed_quantity),
@@ -177,10 +191,12 @@ def run(fixture: dict[str, object]) -> dict[str, object]:
 
 
 def main() -> int:
-    if len(sys.argv) != 2:
-        raise SystemExit("usage: probe.py FIXTURE.json")
-    fixture = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
-    print(json.dumps(run(fixture), sort_keys=True))
+    parser = argparse.ArgumentParser()
+    parser.add_argument("fixture", type=Path)
+    parser.add_argument("--submission-bar", type=int, choices=(1, 2), default=1)
+    args = parser.parse_args()
+    fixture = json.loads(args.fixture.read_text(encoding="utf-8"))
+    print(json.dumps(run(fixture, submission_bar=args.submission_bar), sort_keys=True))
     return 0
 
 
