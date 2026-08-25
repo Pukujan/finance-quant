@@ -1,10 +1,13 @@
+import json
 from pathlib import Path
 
+import scripts.run_b1_b5_phase_b as b1b5
 from scripts.run_b1_b5_phase_b import (
     CANONICAL_MANIFEST,
     ExperimentLedger,
     LocalWorkOrderOrchestrator,
     WorkOrder,
+    artifact_ref,
     content_hash,
     load_canonical_fixture_manifest,
     main,
@@ -56,6 +59,14 @@ def test_ledger_record(tmp_path):
     assert "ExperimentLedger" in lines[0]
 
 
+def test_artifact_ref_repo_relative_and_temp_stable(tmp_path):
+    repo_ref = artifact_ref(b1b5.ROOT / "reports" / "receipt.jsonl")
+    assert repo_ref == "reports/receipt.jsonl"
+
+    temp_receipt = tmp_path / "experiment_ledger_receipts.jsonl"
+    assert artifact_ref(temp_receipt) == "experiment_ledger_receipts.jsonl"
+
+
 def test_main_creates_report(tmp_path):
     report_path = tmp_path / "b1_b5_rank_ic.json"
     receipt_path = tmp_path / "experiment_ledger_receipts.jsonl"
@@ -66,9 +77,20 @@ def test_main_creates_report(tmp_path):
 
 def test_main_report_has_all_strategies(tmp_path):
     from scripts.run_b1_b5_phase_b import REPORT_PATH
-    import json
     code = main()
     assert code == 0
     report = json.loads(REPORT_PATH.read_text())
     ids = {r["experiment_id"] for r in report["runs"]}
     assert ids == {"B1-sma3", "B2-walk-forward", "B3-momentum", "B4-xs-rank", "B5-buy-hold"}
+
+
+def test_main_supports_temp_output_paths(monkeypatch, tmp_path):
+    report_path = tmp_path / "nested" / "b1_b5_rank_ic.json"
+    receipt_path = tmp_path / "nested" / "experiment_ledger_receipts.jsonl"
+    monkeypatch.setattr(b1b5, "REPORT_PATH", report_path)
+    monkeypatch.setattr(b1b5, "RECEIPT_PATH", receipt_path)
+
+    assert b1b5.main() == 0
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    assert report["ledger_receipts"] == "experiment_ledger_receipts.jsonl"
+    assert receipt_path.exists()
