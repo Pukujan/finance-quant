@@ -6,7 +6,7 @@ EXTENDS Naturals
 CONSTANTS Candidates, MaxRetries
 States == {"IDLE", "SEALED", "CAMPAIGN_RUNNING", "SCORED", "REVIEW",
            "PAPER_APPROVED", "TINY_LIVE_APPROVED", "REJECTED"}
-variables state, current, authorityRecords, retries, reviewed
+VARIABLES state, current, authorityRecords, retries, reviewed
 
 Init == /\ state = "IDLE"
         /\ current = ""
