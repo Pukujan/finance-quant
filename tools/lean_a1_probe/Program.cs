@@ -98,11 +98,14 @@ static class Program
             Exchange.ARCA);
 
         // The public fixture's decision boundary is the first bar close: 16:00 New York.
+        // LEAN Order.Time is UTC. Mirror the pinned upstream EquityFillModel tests rather
+        // than passing a local wall-clock DateTime through a UTC-valued contract.
         var decisionLocal = new DateTime(2026, 6, 1, 16, 0, 0, DateTimeKind.Unspecified);
-        var timeKeeper = new TimeKeeper(decisionLocal.ConvertToUtc(TimeZones.NewYork), TimeZones.NewYork);
+        var decisionUtc = decisionLocal.ConvertToUtc(TimeZones.NewYork);
+        var timeKeeper = new TimeKeeper(decisionUtc, TimeZones.NewYork);
         equity.SetLocalTimeKeeper(timeKeeper.GetLocalTimeKeeper(TimeZones.NewYork));
 
-        var order = new MarketOnOpenOrder(symbol, quantity, decisionLocal);
+        var order = new MarketOnOpenOrder(symbol, quantity, decisionUtc);
         var nextOpen = exchangeHours.GetNextMarketOpen(decisionLocal, false);
         timeKeeper.SetUtcDateTime(nextOpen.ConvertToUtc(TimeZones.NewYork));
 
@@ -129,7 +132,8 @@ static class Program
             fill_price = fill.FillPrice.ToString(System.Globalization.CultureInfo.InvariantCulture),
             fill_time = fill.UtcTime.ToUniversalTime().ToString("O"),
             source_event_id = sourceEvent.GetProperty("event_id").GetString(),
-            instrument_id = instrument
+            instrument_id = instrument,
+            fill_message = fill.Message
         };
         Console.WriteLine(JsonSerializer.Serialize(result));
         return fill.Status == OrderStatus.Filled ? 0 : 3;
