@@ -186,7 +186,7 @@ jobs:
               "bar_open_processed_first": True,
               "gap_market_fill_enabled": True,
               "matching_iteration_uses_bar_ts_init": True,
-              "production_probe_status": "NOT_YET_EXECUTED",
+              "production_probe_status": "EXECUTION_REQUIRED",
               "runtime_disposition": "PENDING",
               "authority": pin["authority"],
           }
@@ -199,10 +199,62 @@ jobs:
           PY
           cat artifacts/a1-nautilus/production-matching-preflight.json
 
-      - name: Upload A1 NautilusTrader preflight receipt
+      - name: Install pinned NautilusTrader release
+        working-directory: finance-quant
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check "nautilus_trader==1.230.0"
+          python - <<'PY'
+          import nautilus_trader
+          assert nautilus_trader.__version__ == "1.230.0", nautilus_trader.__version__
+          PY
+
+      - name: Run three production matching probes
+        working-directory: finance-quant
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/a1-nautilus
+          for run in 1 2 3; do
+            set +e
+            python tools/nautilus_a1_probe/probe.py fixtures/execution/a1-lean-fill-probe-v1.json \
+              > "artifacts/a1-nautilus/raw-probe-${run}.json" \
+              2> "artifacts/a1-nautilus/raw-probe-${run}.stderr.txt"
+            probe_status=$?
+            set -e
+            cat "artifacts/a1-nautilus/raw-probe-${run}.json"
+            if test -s "artifacts/a1-nautilus/raw-probe-${run}.stderr.txt"; then
+              cat "artifacts/a1-nautilus/raw-probe-${run}.stderr.txt" >&2
+            fi
+            test "$probe_status" -eq 0
+            RUN="$run" python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          run = os.environ["RUN"]
+          path = Path(f"artifacts/a1-nautilus/raw-probe-{run}.json")
+          value = json.loads(path.read_text(encoding="utf-8"))
+          assert value["engine"] == "NautilusTrader"
+          assert value["probe_scope"] == "BacktestEngine.SimulatedExchange.process_bar"
+          assert value["status"] == "FILLED", value
+          assert value["instrument_id"] == "AAA", value
+          assert value["fill_quantity"] == "5", value
+          assert value["fill_price"] in {"11", "11.00"}, value
+          assert value["fill_time"] == "2026-06-02T13:30:00Z", value
+          assert value["source_event_id"] == "bar-2", value
+          canonical = Path(f"artifacts/a1-nautilus/canonical-probe-{run}.json")
+          canonical.write_text(json.dumps(value, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+          PY
+          done
+          cmp artifacts/a1-nautilus/canonical-probe-1.json artifacts/a1-nautilus/canonical-probe-2.json
+          cmp artifacts/a1-nautilus/canonical-probe-1.json artifacts/a1-nautilus/canonical-probe-3.json
+
+      - name: Upload A1 NautilusTrader probe receipts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: a1-nautilus-production-matching-preflight
+          name: a1-nautilus-production-fill-probe
           path: finance-quant/artifacts/a1-nautilus/
           if-no-files-found: warn
