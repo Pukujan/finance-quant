@@ -83,7 +83,7 @@ class ProbeStrategy(Strategy):
             instrument_id=self.bar_type.instrument_id,
             order_side=order_side,
             quantity=Quantity.from_str(str(self.intent["quantity"])),
-            time_in_force=TimeInForce.GTC,
+            time_in_force=TimeInForce.AT_THE_OPEN,
         )
         self.submit_order(order)
 
