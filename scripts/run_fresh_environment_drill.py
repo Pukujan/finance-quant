@@ -1,4 +1,4 @@
-"""Run a full fresh-environment drill: create temp venv, install deps, run tests + verify.
+"""Run a full fresh-environment drill: create temp venv, install project+deps, run tests + verify.
 
 Usage:
     python scripts/run_fresh_environment_drill.py
@@ -38,9 +38,18 @@ def _venv_pip(venv_dir: Path) -> Path:
 
 
 def _install_deps(venv_dir: Path, repo: Path) -> subprocess.CompletedProcess:
+    """Install dev dependencies and the package itself into the isolated venv.
+
+    The subprocess backend launches ``python -m finance_quant...`` from isolated
+    worker directories, so merely running pytest from the repository root is not a
+    valid fresh-environment test: the package must actually be installed.
+    """
     pip = _venv_pip(venv_dir)
     req = repo / "requirements-dev.txt"
-    return _run([str(pip), "install", "-r", str(req)], cwd=repo)
+    return _run(
+        [str(pip), "install", "-r", str(req), "-e", str(repo)],
+        cwd=repo,
+    )
 
 
 def _run_tests(venv_dir: Path, repo: Path) -> subprocess.CompletedProcess:
@@ -82,7 +91,7 @@ def drill(
 
         install_r = _install_deps(venv_dir, repo)
         if install_r.returncode != 0:
-            result["pytest_output"] = f"pip install failed:\n{install_r.stderr}"
+            result["pytest_output"] = f"pip install failed:\n{install_r.stdout}\n{install_r.stderr}"
             return result
 
         pytest_r = _run_tests(venv_dir, repo)
@@ -107,7 +116,7 @@ def drill(
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        description="Fresh-environment drill: temp venv -> install -> pytest -> verify",
+        description="Fresh-environment drill: temp venv -> install project+deps -> pytest -> verify",
     )
     parser.add_argument(
         "--repo-path",
@@ -141,7 +150,7 @@ def main(argv: list[str] | None = None) -> int:
         print("Overall: PASS (venv cleaned up)")
         return 0
     else:
-        print(f"Overall: FAIL (venv kept at {result['venv_dir']})")
+        print(f"Overall: FAIL (venv {'kept' if args.keep_venv_on_failure else 'cleaned up'} at {result['venv_dir']})")
         return 1
 
 
