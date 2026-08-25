@@ -169,6 +169,8 @@ jobs:
               "self._process_trade_bar_open(bar, tick)",
               "self._fill_at_market = True  # Gap from previous bar",
               "self.iterate(tick.ts_init)",
+              "# Check AT_THE_OPEN/AT_THE_CLOSE time in force",
+              '"is not currently supported"',
           ]
           for marker in required:
               assert marker in source, marker
@@ -186,7 +188,8 @@ jobs:
               "bar_open_processed_first": True,
               "gap_market_fill_enabled": True,
               "matching_iteration_uses_bar_ts_init": True,
-              "production_probe_status": "EXECUTION_REQUIRED",
+              "at_the_open_tif_supported": False,
+              "production_probe_status": "EXECUTABLE_NONCONFORMANCE_EXPECTED",
               "runtime_disposition": "PENDING",
               "authority": pin["authority"],
           }
@@ -210,7 +213,7 @@ jobs:
           assert nautilus_trader.__version__ == "1.230.0", nautilus_trader.__version__
           PY
 
-      - name: Run three production matching probes
+      - name: Run three deterministic production nonconformance probes
         working-directory: finance-quant
         shell: bash
         run: |
@@ -238,18 +241,49 @@ jobs:
           value = json.loads(path.read_text(encoding="utf-8"))
           assert value["engine"] == "NautilusTrader"
           assert value["probe_scope"] == "BacktestEngine.SimulatedExchange.process_bar"
+          assert value["time_in_force"] == "GTC"
           assert value["status"] == "FILLED", value
           assert value["instrument_id"] == "AAA", value
           assert value["fill_quantity"] == "5", value
-          assert value["fill_price"] in {"11", "11.00"}, value
-          assert value["fill_time"] == "2026-06-02T13:30:00Z", value
-          assert value["source_event_id"] == "bar-2", value
+          assert value["fill_price"] in {"10", "10.00"}, value
+          assert value["fill_time"] == "2026-06-01T20:00:00Z", value
+          assert value["source_event_id"] == "bar-1", value
           canonical = Path(f"artifacts/a1-nautilus/canonical-probe-{run}.json")
           canonical.write_text(json.dumps(value, indent=2, sort_keys=True) + "\n", encoding="utf-8")
           PY
           done
           cmp artifacts/a1-nautilus/canonical-probe-1.json artifacts/a1-nautilus/canonical-probe-2.json
           cmp artifacts/a1-nautilus/canonical-probe-1.json artifacts/a1-nautilus/canonical-probe-3.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          observed = json.loads(Path("artifacts/a1-nautilus/canonical-probe-1.json").read_text())
+          evidence = {
+              "schema_version": "1.0.0",
+              "issue": 15,
+              "phase": "A1",
+              "candidate": "NautilusTrader",
+              "candidate_source_commit": "8160730c7c550480b0a439fb11086a4c4de15f0b",
+              "fixture_id": "a1-lean-fill-probe-v1",
+              "semantic_conformance": "FAIL",
+              "failed_property": "FQ-PROP-015",
+              "expected": {
+                  "fill_price": "11",
+                  "fill_time": "2026-06-02T13:30:00Z",
+                  "source_event_id": "bar-2",
+              },
+              "observed": observed,
+              "at_the_open_tif_supported": False,
+              "runtime_disposition": "PENDING",
+              "authority": "NONE",
+          }
+          Path("artifacts/a1-nautilus/production-nonconformance.json").write_text(
+              json.dumps(evidence, indent=2, sort_keys=True) + "\n",
+              encoding="utf-8",
+          )
+          PY
+          cat artifacts/a1-nautilus/production-nonconformance.json
 
       - name: Upload A1 NautilusTrader probe receipts
         if: always()
