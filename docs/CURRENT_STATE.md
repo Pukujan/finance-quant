@@ -4,11 +4,12 @@
 
 ## Active direction
 
-Current work is GitHub issue **#15 — NautilusTrader vs LEAN execution/runtime conformance bakeoff**, assurance phase **A1**. The legacy Phase-B plan remains parked and preserved only as an oracle.
+The active master plan is GitHub issue **#12 — OSS-first autonomous trader + visual research console**. Current work is GitHub issue **#15 — NautilusTrader vs LEAN execution/runtime conformance bakeoff**, assurance phase **A1**. The legacy Phase-B plan remains parked and preserved only as an oracle.
 
 ## Current capability and authority
 
 - Project status: **A1_LEAN_DIFFERENTIAL_SLICE**
+- Bootstrap machine status: **BOOTSTRAP_COMPLETE**
 - Assurance phase: **A1 — OSS execution/runtime bakeoff**
 - Runtime selection: **NONE / PENDING**
 - Trading authority: **NONE**
@@ -31,7 +32,7 @@ A PIT-safe thin callback-deferral adapter has now also been executed. It buffers
 
 Durable pre-adapter head `8deb8d7e6106dbaef2e12f28fa8687fc6ca280f9` is fully green: tests `32906305762`, runtime-candidates `32906305711`, phase-b `32906305810`, and bootstrap-assurance `32906305786`, including full-validation and fresh-environment.
 
-Adapter implementation head `faafc0ce616d07d7d99fc623ba0ceddb20912406` has a green outcome-neutral adapter evaluation (`32907656115`). Its ordinary tests, legacy phase-b, bootstrap-assurance, and unchanged runtime-candidates checks were still running when this state was persisted. The durable-state commit itself must also be validated.
+Adapter implementation head `faafc0ce616d07d7d99fc623ba0ceddb20912406` has a green outcome-neutral adapter evaluation (`32907656115`). The first durable-state commit `beb633fc4a0898f39222c8b6ae44436b342caa6d` correctly triggered the state validator, which found this document had accidentally omitted required durable markers `#12` and `BOOTSTRAP_COMPLETE`; this commit restores them without changing any execution semantic or validator.
 
 A1 remains **IN_PROGRESS**. Hidden acceptance, mutation-threshold evidence, broader metamorphic coverage, complete determinism/clean-environment evidence, chaos/fault campaigns, and final candidate dispositions remain outstanding. No primary runtime may be selected yet.
 
@@ -48,7 +49,7 @@ Do not start issue #16 or change any authority/holdout restriction while A1 rema
 
 1. `AGENTS.md`
 2. this file
-3. active GitHub issue #15
+3. GitHub issue #12 and active issue #15
 4. `docs/handoffs/LATEST.md`
 5. `contracts/assurance/capability-assurance-v1.json`
 6. `docs/plans/A1_EXECUTION_RUNTIME_CONFORMANCE.md`
