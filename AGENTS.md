@@ -66,7 +66,9 @@ Every material capability/authority change must:
 
 `contracts/assurance/capability-assurance-v1.json` is the phase assurance authority. Required gates are conjunctive; an aggregate score cannot compensate for a failed critical gate.
 
-Use the cheapest technique that can credibly falsify the property, with deeper methods where required: static/IR checks, unit/regression, property/stateful, hidden acceptance, mutation, differential/metamorphic, repeated determinism, clean environment, chaos/fault injection, soak, TLA+, selective SMT, and selective Lean 4.
+Use the cheapest technique that can credibly falsify the property, with deeper methods where required: static/IR checks, unit/regression, property/stateful, hidden acceptance, mutation, differential/metamorphic, repeated determinism, clean environment, chaos/fault injection, soak, TLA+, selective SMT, selective Lean 4, and HITL promotion.
+
+**HITL (`HITL_PROMOTION`) is a capability/promotion gate, not per-trade manual control and not a substitute for automated validation.**
 
 T3/TLA obligations must not silently skip in authoritative CI. Hidden acceptance cases remain hidden. Surviving mutations that bypass a critical invariant are gate failures.
 
