@@ -13,6 +13,7 @@ The old Phase-B execution plan (#11) remains **PARKED**. Its PIT, IR, property c
 ## Current capability
 
 - Project status: **A1_ORACLE_SLICE**
+- Bootstrap machine status: **BOOTSTRAP_COMPLETE**
 - Assurance phase: **A1 — OSS execution/runtime bakeoff**
 - Trading authority: **NONE**
 - Autonomous paper trading: **DISABLED**
