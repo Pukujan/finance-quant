@@ -83,7 +83,7 @@ class ProbeStrategy(Strategy):
             instrument_id=self.bar_type.instrument_id,
             order_side=order_side,
             quantity=Quantity.from_str(str(self.intent["quantity"])),
-            time_in_force=TimeInForce.AT_THE_OPEN,
+            time_in_force=TimeInForce.GTC,
         )
         self.submit_order(order)
 
@@ -151,6 +151,7 @@ def run(fixture: dict[str, object]) -> dict[str, object]:
             return {
                 "engine": "NautilusTrader",
                 "probe_scope": "BacktestEngine.SimulatedExchange.process_bar",
+                "time_in_force": "GTC",
                 "status": "UNFILLED" if not fills else "AMBIGUOUS_MULTIFILL",
                 "fill_count": len(fills),
                 "instrument_id": symbol,
@@ -163,6 +164,7 @@ def run(fixture: dict[str, object]) -> dict[str, object]:
         return {
             "engine": "NautilusTrader",
             "probe_scope": "BacktestEngine.SimulatedExchange.process_bar",
+            "time_in_force": "GTC",
             "status": "FILLED",
             "instrument_id": symbol,
             "fill_quantity": str(signed_quantity),
