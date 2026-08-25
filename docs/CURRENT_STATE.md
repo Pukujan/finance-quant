@@ -1,6 +1,6 @@
 # Current project state
 
-<!-- MACHINE-STATE: architecture=OSS_FIRST_AUTONOMOUS_TRADER_REPLATFORM status=A1_ORACLE_SLICE assurance=A1 active_issue=15 -->
+<!-- MACHINE-STATE: architecture=OSS_FIRST_AUTONOMOUS_TRADER_REPLATFORM status=A1_LEAN_DIFFERENTIAL_SLICE assurance=A1 active_issue=15 -->
 
 ## Active direction
 
@@ -12,7 +12,7 @@ The old Phase-B execution plan (#11) remains **PARKED**. Its PIT, IR, property c
 
 ## Current capability
 
-- Project status: **A1_ORACLE_SLICE**
+- Project status: **A1_LEAN_DIFFERENTIAL_SLICE**
 - Bootstrap machine status: **BOOTSTRAP_COMPLETE**
 - Assurance phase: **A1 — OSS execution/runtime bakeoff**
 - Trading authority: **NONE**
@@ -39,30 +39,39 @@ Issue #15 must select the execution/runtime substrate by evidence, not preferenc
 
 A1 requires, at minimum, SDD/PDD, static/IR validation, unit/regression, property/state-machine testing, hidden acceptance, mutation testing, differential and metamorphic testing, repeated determinism, clean-environment validation, and chaos/fault injection.
 
-The A1 SDD/PDD is defined in `docs/plans/A1_EXECUTION_RUNTIME_CONFORMANCE.md` and `contracts/execution/runtime-conformance-v1.json`. Stable properties `FQ-PROP-015` through `FQ-PROP-022` are now also bound into the global property catalog.
+The A1 SDD/PDD is defined in `docs/plans/A1_EXECUTION_RUNTIME_CONFORMANCE.md` and `contracts/execution/runtime-conformance-v1.json`. Stable properties `FQ-PROP-015` through `FQ-PROP-022` are bound into the global property catalog.
 
-The first executable finance-quant-owned oracle slice now exists:
+The executable finance-quant-owned oracle/candidate slice now includes:
 
 - `finance_quant/execution/conformance.py` fail-closes on A1 authority/contract drift and validates/canonicalizes normalized receipts;
 - `finance_quant/execution/reference.py` is a deliberately tiny independent daily-bar semantic oracle, not a production runtime;
-- `tests/test_execution_conformance.py` verifies contract binding, required receipt fields, deterministic canonical hashes, normalized order states, and forbidden identity inputs;
-- `tests/test_execution_reference.py` exercises next-event fill timing, partial-liquidity bounds, accounting reconciliation, duplicate idempotency, ambiguous-duplicate rejection, future-known-event isolation, three-run determinism, and zero-liquidity rejection.
+- `finance_quant/execution/lean_a1.py` is the first thin candidate adapter. It normalizes already-produced, credential-free LEAN evidence for only the shared daily-bar subset, replaces candidate-native order/fill/ledger IDs with deterministic finance-quant semantic identities, and rejects same-bar, future-known, ambiguous-lineage, unsupported-status, and unsupported-ledger semantics;
+- `finance_quant/execution/differential.py` classifies every required normalized receipt field as exact, tolerance-bounded, or explicitly permitted top-level runtime metadata and fails closed if a new required field has no comparison class;
+- `tests/test_execution_conformance.py` and `tests/test_execution_reference.py` cover the contract/reference invariants;
+- `tests/test_execution_lean_a1.py` covers LEAN normalization and fail-closed adapter behavior;
+- `tests/test_execution_differential.py` proves the public shared-subset reference/LEAN fixtures converge semantically and detects exact/numeric drift.
 
-This slice does **not** select NautilusTrader or LEAN and grants no paper/live trading authority.
+This slice does **not** run a production LEAN engine, select LEAN or NautilusTrader, or grant paper/live trading authority. Candidate runtime execution evidence remains required before disposition.
 
 ## Validation status for current A1 work
 
-The implementation/property-binding head before durable-state documentation updates was `fabb737032a7cf423836bd921b0d06539d9af46a`.
+The first thin LEAN adapter head `c3c4ca1cb411c6b3700505044e30f85f424efb61` passed all three GitHub workflows:
 
-Local clone/test execution remains unavailable because the automation execution environment cannot resolve `github.com`; this is an environment/network blocker, not a repository test result. GitHub Actions run `32865148522` was queued for that implementation head at the time of this handoff. Exact-head CI must be rechecked after the documentation commits; no A1 gate is claimed complete solely from queued CI.
+- tests run `32872417271`: **PASS**, including `python -m pytest tests -q` with **916 passed, 25 skipped**, plus `python scripts/smoke.py`;
+- Phase-B legacy oracle run `32872417669`: **PASS**;
+- bootstrap-assurance run `32872417964`: **PASS**, including contracts/status/property checks, fresh-environment full pytest+verify, full regression+smoke+three-run legacy determinism, and non-skipped TLA/TLC.
 
-A1 remains **IN_PROGRESS**. Hidden acceptance, candidate differential evidence, mutation threshold evidence, complete metamorphic coverage, candidate clean-environment evidence, and chaos/fault campaigns remain outstanding. No primary runtime may be selected yet.
+The subsequent field-class differential implementation head is `9e91ff07b97c82b45be38ab70b913743920c3a40`. On that exact implementation head, bootstrap-assurance fresh-environment, contract/property checks, full regression, smoke, and TLA/TLC have passed, and Phase-B run `32873391446` passed. Tests run `32873391360` and bootstrap-assurance run `32873391294` were still finishing wrapper/legacy steps when durable documentation began; recheck exact final branch-head CI after these documentation commits before widening scope.
+
+Local clone/test execution remains unavailable because this automation environment cannot resolve `github.com`; GitHub Actions are the executable validation source for this session.
+
+A1 remains **IN_PROGRESS**. Actual candidate-runtime execution evidence, NautilusTrader adapter/evidence, hidden acceptance, mutation threshold evidence, broader metamorphic coverage, candidate repeated determinism, and chaos/fault campaigns remain outstanding. No primary runtime may be selected yet.
 
 ## Next exact action
 
-1. Verify the exact current branch head in GitHub Actions and fix any regression without weakening tests or invariants.
-2. Once the property-binding/reference-oracle slice is green, add the first **thin** candidate adapter behind `contracts/execution/runtime-conformance-v1.json` and exercise only the semantic subset implemented by the independent reference oracle.
-3. Add field-class differential comparison and candidate-specific permitted-difference recording before expanding adapter scope.
+1. Verify GitHub Actions on the exact current branch head and fix any regression without weakening tests or invariants.
+2. Add executable credential-free **LEAN candidate-run evidence** for the same public daily-bar subset and feed its normalized receipt through `assert_normalized_receipts_conform`; do not treat the historical Phase-B subprocess stub as candidate proof.
+3. Add the corresponding thin NautilusTrader adapter for exactly the same subset and comparison classes before widening either candidate.
 4. Continue hidden, mutation, metamorphic, repeated determinism, clean-environment, and chaos evidence for both candidates before any runtime disposition.
 
 Do not select a primary runtime until all A1 required gates pass. Do **not** start Autonomous Trader v0 (#16) until #15 has explicit runtime dispositions and every required A1 gate passes.
@@ -77,5 +86,5 @@ Do not select a primary runtime until all A1 required gates pass. Do **not** sta
 6. `docs/plans/A1_EXECUTION_RUNTIME_CONFORMANCE.md`
 7. `contracts/execution/runtime-conformance-v1.json`
 8. `contracts/properties/finance-quant-properties-v1.json`
-9. `finance_quant/execution/conformance.py` and `finance_quant/execution/reference.py`
+9. `finance_quant/execution/conformance.py`, `reference.py`, `lean_a1.py`, and `differential.py`
 10. relevant execution/IR/property specs and tests
