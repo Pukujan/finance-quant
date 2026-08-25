@@ -1,23 +1,27 @@
-# Handoff — A1 Nautilus deferred-callback nonconformance
+# Handoff — A1 Nautilus published latency API ineligible
 
 Date: 2026-08-25
 Branch: `bootstrap/oss-autonomous-trader-replatform`
 Active issue: #15
 Assurance phase: A1
 
-Required governance/state files were read before changes. Pre-adapter head `8deb8d7e6106dbaef2e12f28fa8687fc6ca280f9` was fully green across tests, legacy Phase-B, runtime-candidates, and bootstrap assurance.
+Required governance/state files were read before changes. Starting durable head `0caffcf8bcc164a282960c6bbf2cf6aeddce8378` was re-verified green across ordinary tests, legacy Phase-B, bootstrap assurance, runtime candidates, and the prior negative Nautilus callback-adapter evaluator before this slice began.
 
-Implementation commit `faafc0ce616d07d7d99fc623ba0ceddb20912406` added an outcome-neutral production evaluation for a thin NautilusTrader timing adapter. The existing bar-1 MARKET intent is buffered until the bar-2 strategy callback; the path still uses pinned NautilusTrader `v1.230.0` / commit `8160730c7c550480b0a439fb11086a4c4de15f0b`, production `BacktestEngine` / `SimulatedExchange`, native GTC matching, no custom fill model, and no future bar payload before submission.
+This slice evaluated the remaining obvious production-native timing path for pinned NautilusTrader `v1.230.0` / source commit `8160730c7c550480b0a439fb11086a4c4de15f0b`: submit the unchanged bar-1 MARKET/GTC intent through production `BacktestEngine` / `SimulatedExchange` with native insert latency, then use a strategy-clock alert at a session-known timestamp strictly before the next open so the command queue can settle without reading bar-2 payload. No custom fill model or private binding was permitted.
 
-Run `32907656115` completed successfully as an evaluator. Three independent runs were identical: quantity `5`, price `12.00`, time `2026-06-02T13:30:00Z`, source `bar-2`. The unchanged oracle requires price `11` at that same time/source. Evidence therefore records `semantic_conformance: FAIL` and `failed_property: FQ-PROP-021`. This supplements, rather than replaces, the earlier native-GTC `FQ-PROP-015` failure.
+Exact pinned source exposes the inflight queue surface (`has_pending_commands`, `generate_inflight_command`, `process(...)`) and its generated public stub plus source unit test advertise `StaticLatencyModel` through `nautilus_trader.execution`. The exact published CPython 3.12 Linux wheel for `nautilus_trader==1.230.0` does not export that public symbol. Importing it raises `ImportError: cannot import name 'StaticLatencyModel' from 'nautilus_trader.execution'`.
 
-A1 remains IN_PROGRESS. Candidate dispositions remain PENDING. Authority remains NONE and all existing capital/holdout restrictions remain unchanged.
+Outcome-neutral evaluator run `32910563339` completed successfully and uploaded `a1-nautilus-native-latency-preopen-evaluation`. Its receipt records `mechanism_status: INELIGIBLE_PUBLISHED_API_UNAVAILABLE`, `semantic_conformance: NOT_EXECUTED`, `source_release_skew: true`, `runtime_disposition: PENDING`, and authority `NONE`. The unchanged next-open expectation remains quantity `5`, price `11`, time `2026-06-02T13:30:00Z`, source `bar-2`. This mechanism is not recorded as an FQ property failure because the production semantic probe was not executable through the pinned release's public API.
+
+Two earlier workflow failures in this slice were integration-only and were fixed without weakening semantics: the first used a wrong source-marker name; the second directly exposed the published-wheel import failure. The evaluator now converts that release/API mismatch into explicit fail-closed ineligibility instead of bypassing the public package via `_libnautilus`.
+
+A1 remains IN_PROGRESS. Nautilus retains the native-GTC `FQ-PROP-015` failure, callback-deferral `FQ-PROP-021` failure, and now this published-latency-API ineligibility receipt. LEAN's public two-bar production differential remains positive evidence only. Candidate dispositions remain PENDING; runtime selection remains NONE; authority remains NONE; autonomous paper/live execution remains disabled; sealed-holdout contents were not accessed.
 
 ## Next exact action
 
-1. Require the exact durable-state head to pass tests, legacy phase-b, bootstrap-assurance, runtime-candidates, and the Nautilus adapter-evaluation workflow.
-2. Evaluate a production-native queue/latency mechanism only if its release boundary is derivable PIT-safely from contract-known/session information without future event payloads while preserving the MARKET intent and production matching; otherwise record it as ineligible.
-3. Preserve both Nautilus negative receipts and continue the remaining A1 hidden-acceptance, mutation, metamorphic, determinism/clean-environment, and chaos/fault gates before final candidate disposition.
-4. Do not advance to issue #16 while A1 remains incomplete.
+1. Require the exact durable-state head to pass tests, legacy phase-b, bootstrap-assurance, runtime-candidates, `a1-nautilus-adapter-evaluation`, and `a1-nautilus-preopen-evaluation`.
+2. Preserve all three Nautilus receipts and do not use private bindings to manufacture a public production mechanism.
+3. Establish whether any remaining public production-native Nautilus mechanism can realize the unchanged next-bar-open MARKET semantics without future event payload or custom fill logic; otherwise record candidate-path exhaustion explicitly.
+4. Continue the remaining A1 hidden-acceptance, mutation, metamorphic, determinism/clean-environment, and chaos/fault gates. Do not advance to issue #16 until every conjunctive A1 gate passes and durable state explicitly permits promotion.
 
-Append-only record: `docs/handoffs/2026-08-25-a1-nautilus-deferred-callback-nonconformance.md`.
+Append-only record: `docs/handoffs/2026-08-25-a1-nautilus-published-latency-api-ineligible.md`.
