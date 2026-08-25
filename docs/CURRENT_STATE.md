@@ -28,29 +28,25 @@ The A1 SDD/PDD is `docs/plans/A1_EXECUTION_RUNTIME_CONFORMANCE.md`; the executab
 
 The finance-quant LEAN slice directly exercises pinned LEAN commit `185c691b89f28bd68e48d53c02147415134975f0` through production `EquityFillModel.MarketOnOpenFill`, without brokerage credentials or the LEAN CLI, against `fixtures/execution/a1-lean-fill-probe-v1.json`. Candidate evidence remains `runtime_disposition: PENDING` and `authority: NONE`.
 
-During 2026-08-25 continuation, two additional harness defects were found and corrected without changing the oracle, fixture, fill expectation, PIT timing rule, acceptance threshold, or authority boundary:
+During 2026-08-25 continuation, harness defects were corrected without changing the oracle, fixture, fill expectation, PIT timing rule, acceptance threshold, or authority boundary. The final determinism workflow preserves raw LEAN stdout/stderr but compares canonical extracted probe JSON plus normalized evidence across three independent runs.
 
-1. Run `32876861792` showed the standalone probe reached LEAN `Symbol.Create` without an `IMapFileProvider`. The harness now constructs an equity SID explicitly with `SecurityIdentifier.GenerateEquity(..., mapSymbol: false)` and `new Symbol(sid, value)`, preserving the equity type/market while excluding unrelated map-file lookup. Commit: `30936a2d6381ea4fa7a5f7a20c5d4ed07959dfcd`.
-2. Run `32883152940` then proved the production fill itself succeeded, but LEAN emitted a TRACE line before the JSON result. `scripts/run_lean_a1_fill_probe.py` now tolerates non-JSON runtime log lines while requiring exactly one JSON object with the expected LEAN engine/scope; zero or multiple matches fail closed. Targeted tests cover TRACE-prefix, missing-result, and duplicate-result cases. Commits: `0c3a30523388334fc2161635531de38efafad259`, `625059cf04e400531b535cd8495d5a2329b2b070`.
+Exact-head runtime-candidates run `32884104244` completed **SUCCESSFULLY** on implementation head `aeb5cd4ab6f53a966bbc344e45afde1b2a552573`. Its `lean-production-fill-probe` job verified the candidate pin/license, built the production LEAN fill-model probe, ran three deterministic candidate probes, and uploaded A1 receipts. The prior semantic evidence remained the contracted fill (`quantity=5`, `price=11`, `fill_time=2026-06-02T13:30:00Z`, source `bar-2`) with identical canonical candidate/reference receipt hashes across repeated runs.
 
-On exact head `625059cf04e400531b535cd8495d5a2329b2b070`, runtime-candidates run `32883830248` produced three successful semantic evidence files. Each had `semantic_conformance: PASS`, identical candidate receipt hash `8b216968a95ad42fcc308d182d8420a63590a0841b26e04d5874b17fdca9d1cc`, identical reference receipt hash `a99fe8251b79ccfad3df44a067f2964af6655d15f054eb32d200378f53532555`, and the expected LEAN fill (`quantity=5`, `price=11`, `fill_time=2026-06-02T13:30:00Z`, source `bar-2`). The workflow nevertheless failed because it byte-compared raw stdout files whose LEAN TRACE prefixes contain different wall-clock timestamps.
-
-Commit `aeb5cd4ab6f53a966bbc344e45afde1b2a552573` preserves every raw stdout/stderr artifact but moves the three-run determinism assertion to canonical extracted probe JSON plus normalized evidence. This does not weaken the determinism gate: all semantic candidate fields and normalized receipt evidence must still be byte-identical across all three independent runs, while nondeterministic diagnostic timestamps are retained rather than treated as runtime semantics.
-
-Exact-head runtime-candidates run `32884104244` was still **IN_PROGRESS** when this state was written. Do not claim the LEAN candidate workflow is green until that exact run completes successfully.
+This is a genuine LEAN production-slice pass, but it is **not** an A1 runtime disposition. NautilusTrader evidence and all remaining conjunctive A1 gates are still required.
 
 ## Validation status
 
-- Prior exact-head ordinary tests before the final determinism-workflow correction passed on `30936a2d6381ea4fa7a5f7a20c5d4ed07959dfcd` via tests run `32883152941`.
-- Head `625059cf04e400531b535cd8495d5a2329b2b070` launched tests `32883830252`, Phase-B `32883830258`, and bootstrap-assurance runs while the candidate evidence above was collected.
-- Final implementation head before this durable-state commit is `aeb5cd4ab6f53a966bbc344e45afde1b2a552573`; exact-head runtime-candidates `32884104244` and the ordinary assurance workflows are still running/rechecking.
+- Runtime-candidates run `32884104244`: **PASS** for the credential-free LEAN production fill probe and three-run canonical determinism.
+- Durable-state head `30b957c1f1b51d771177f5b686aaacd57bed74a9` ordinary tests run `32884427022`: `927 passed, 25 skipped, 2 failed`; both failures were caused by `docs/handoffs/LATEST.md` using `Next:` instead of the validator-required literal `Next exact action` heading.
+- Bootstrap-assurance run `32884427008`: failed in fresh-environment/full-validation/contracts for the same handoff-format contract; the formal TLA job passed.
+- Commit `99ee4a1574d00ba4eff67b5e24aeb806cbe11a57` repaired the durable handoff heading and recorded the LEAN green receipt without modifying runtime semantics, tests, properties, or authority.
 
 A1 remains **IN_PROGRESS**. NautilusTrader production candidate evidence, hidden acceptance, mutation-threshold evidence, broader metamorphic coverage, complete candidate chaos/fault campaigns, and final conjunctive gate receipts remain outstanding. No primary runtime may be selected yet.
 
 ## Next exact action
 
-1. Re-read the authority chain and recheck exact-head runtime-candidates run `32884104244` plus exact-head tests, Phase-B, and bootstrap-assurance workflows. If the LEAN run fails, inspect the preserved `a1-lean-production-fill-probe` artifact and fix only the harness/runtime integration; do not weaken the oracle, three-run semantic determinism, PIT, or authority invariants.
-2. If the exact LEAN candidate run passes, record that receipt and implement the corresponding thin credential-free **NautilusTrader** production candidate evidence for exactly the same public daily-bar subset and comparison classes.
+1. Recheck the exact-head CI triggered by the durable handoff/state repair and require ordinary tests/bootstrap-assurance to return green; fix any real failure without weakening tests or invariants.
+2. If that baseline is green, implement the corresponding thin credential-free **NautilusTrader** production candidate evidence for exactly the same public daily-bar subset and normalized comparison classes.
 3. Continue the remaining A1 hidden, mutation, metamorphic, deterministic/clean-environment, and chaos/fault evidence for both candidates.
 4. Only after every conjunctive A1 gate passes may #15 record candidate dispositions and select a primary runtime.
 
