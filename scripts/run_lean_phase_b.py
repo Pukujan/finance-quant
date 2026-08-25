@@ -128,6 +128,7 @@ def run_variant(
     result["slippage_bps"] = slippage_bps
     return result
 
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Run the Phase B LEAN replay stub")
     parser.add_argument("--signals", type=Path, help="JSON file containing B1-B5 signals")
@@ -151,7 +152,9 @@ def main(argv: list[str] | None = None) -> int:
         "engine": engine,
         "signals": signals,
         "signal_hash": _hash(signals),
-        "custom_data_source": str(source_path),
+        # The generated source is always colocated with the receipt. Store only
+        # its logical filename so receipts remain independent of temp/root paths.
+        "custom_data_source": source_path.name,
         "models": dict(MODELS),
         "cost_stress": {"nominal": nominal, "2x_slippage": stressed},
         "todo": ["Pin the LEAN CLI/data environment", "Add real B1-B5 performance metrics"],
