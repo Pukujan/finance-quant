@@ -42,8 +42,9 @@ jobs:
           exchange = Path("nautilus-trader/crates/backtest/src/exchange.rs").read_text(encoding="utf-8")
           engine = Path("nautilus-trader/crates/backtest/src/engine.rs").read_text(encoding="utf-8")
           latency = Path("nautilus-trader/crates/execution/src/python/latency.rs").read_text(encoding="utf-8")
-          assert "process_inflight_queue" in exchange
-          assert "has_pending_commands" in exchange
+          assert "pub fn has_pending_commands" in exchange
+          assert "fn generate_inflight_command" in exchange
+          assert "pub fn process(&mut self, ts_now: UnixNanos)" in exchange
           assert "advance_time" in engine
           assert "insert_latency_nanos" in latency
           assert "StaticLatencyModel" in latency
