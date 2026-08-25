@@ -15,6 +15,9 @@ from finance_quant.execution.reference import run_daily_reference
 
 D = Decimal
 
+_EXPECTED_ENGINE = "LEAN"
+_EXPECTED_SCOPE = "EquityFillModel.MarketOnOpenFill"
+
 
 def _instant(value: str) -> datetime:
     text = value[:-1] + "+00:00" if value.endswith("Z") else value
@@ -24,12 +27,49 @@ def _instant(value: str) -> datetime:
     return result.astimezone(timezone.utc)
 
 
+def load_probe_result(path: Path) -> dict[str, Any]:
+    """Extract exactly one LEAN result object while tolerating non-JSON runtime log lines."""
+    text = path.read_text(encoding="utf-8")
+    candidates: list[dict[str, Any]] = []
+
+    try:
+        whole = json.loads(text)
+    except json.JSONDecodeError:
+        whole = None
+    if isinstance(whole, dict):
+        candidates.append(whole)
+    else:
+        for line in text.splitlines():
+            stripped = line.strip()
+            if not stripped:
+                continue
+            try:
+                value = json.loads(stripped)
+            except json.JSONDecodeError:
+                continue
+            if isinstance(value, dict):
+                candidates.append(value)
+
+    matches = [
+        value
+        for value in candidates
+        if value.get("engine") == _EXPECTED_ENGINE
+        and value.get("probe_scope") == _EXPECTED_SCOPE
+    ]
+    if len(matches) != 1:
+        raise ValueError(
+            "probe output must contain exactly one LEAN EquityFillModel.MarketOnOpenFill JSON object; "
+            f"found {len(matches)}"
+        )
+    return matches[0]
+
+
 def build_raw_lean_result(
     probe: Mapping[str, Any], fixture: Mapping[str, Any], pin: Mapping[str, Any]
 ) -> dict[str, Any]:
-    if probe.get("engine") != "LEAN":
+    if probe.get("engine") != _EXPECTED_ENGINE:
         raise ValueError("probe engine must be LEAN")
-    if probe.get("probe_scope") != "EquityFillModel.MarketOnOpenFill":
+    if probe.get("probe_scope") != _EXPECTED_SCOPE:
         raise ValueError("unexpected LEAN probe scope")
     if str(probe.get("status", "")).upper() != "FILLED":
         raise ValueError(f"LEAN probe did not fill: {probe.get('status')!r}")
@@ -160,7 +200,7 @@ def main(argv: list[str] | None = None) -> int:
 
     fixture = json.loads(args.fixture.read_text(encoding="utf-8"))
     pin = json.loads(args.pin.read_text(encoding="utf-8"))
-    probe = json.loads(args.probe_result.read_text(encoding="utf-8"))
+    probe = load_probe_result(args.probe_result)
     evidence = verify_probe(probe, fixture, pin)
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps(evidence, indent=2, sort_keys=True) + "\n", encoding="utf-8")
