@@ -1,0 +1,42 @@
+{
+  "schema_version": "1.0.0",
+  "architecture": "OSS_FIRST_AUTONOMOUS_TRADER_REPLATFORM",
+  "status": "BOOTSTRAP_IN_PROGRESS",
+  "active_epic": 12,
+  "active_issue": 13,
+  "assurance_issue": 14,
+  "assurance_phase": "A0",
+  "current_capability": "BOOTSTRAP_ONLY",
+  "legacy_phase_b": {
+    "issue": 11,
+    "status": "PARKED",
+    "preserve_evidence": true
+  },
+  "next_issue": 15,
+  "next_exact_action": "Get the bootstrap PR green under every A0 gate, merge it, mark bootstrap complete, then begin issue #15 NautilusTrader-vs-LEAN execution/runtime conformance bakeoff.",
+  "authority": {
+    "trading": "NONE",
+    "paper_trading_enabled": false,
+    "live_capital_enabled": false,
+    "frontend": "OPERATOR_ONLY"
+  },
+  "frontend": {
+    "strategy": "VERTICAL_SLICES",
+    "authority": "OPERATOR_ONLY",
+    "implementation_status": "ROADMAP_ONLY",
+    "issue": 17
+  },
+  "holdout": {
+    "repository": "Pukujan/finance-quant-holdout",
+    "sealed": true,
+    "ordinary_agents_may_read_cases": false
+  },
+  "read_order": [
+    "AGENTS.md",
+    "docs/CURRENT_STATE.md",
+    "active GitHub issue",
+    "docs/handoffs/LATEST.md",
+    "relevant contracts/ADRs/tests"
+  ],
+  "updated_date": "2026-08-25"
+}

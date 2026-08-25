@@ -1,0 +1,148 @@
+{
+  "schema_version": "1.0.0",
+  "issue": 14,
+  "policy": "Required gates are conjunctive. Use the cheapest technique that can credibly falsify each property, with deeper methods where blast radius and modelability justify them.",
+  "techniques": {
+    "SDD": "Explicit behavior/authority spec or contract before or with implementation.",
+    "PDD": "Stable property IDs mapped to executable independent oracles.",
+    "STATIC_IR": "Type/schema/static temporal-effect validation.",
+    "UNIT_REGRESSION": "Unit, integration, regression, and ordinary acceptance tests.",
+    "PROPERTY_STATEFUL": "Generative/property/state-machine testing.",
+    "HIDDEN_ACCEPTANCE": "Exact acceptance cases/oracles withheld from implementation/research agents.",
+    "MUTATION": "Mutation testing of evaluator/test strength.",
+    "DIFFERENTIAL": "Independent implementation/oracle comparison.",
+    "METAMORPHIC": "Relations that must hold under semantically valid input transformations.",
+    "DETERMINISM": "Repeated independent runs and receipt/hash equivalence where determinism is required.",
+    "CLEAN_ENV": "Fresh/containerized/clean environment rerun.",
+    "CHAOS_FAULT": "Crash/restart/timeout/corruption/duplicate/drop/reorder/resource/dependency failure injection.",
+    "SOAK": "Long-running or multi-session reliability testing.",
+    "TLA": "TLA+/TLC model checking of protocol/authority/concurrency state machines.",
+    "SMT": "Selective solver-backed checks for narrow algebraic/constraint kernels.",
+    "LEAN4": "Selective theorem proofs for small stable semantic kernels.",
+    "HITL_PROMOTION": "Explicit human authorization for capability escalation, holdout opening, or capital authority."
+  },
+  "mutation_policy": {
+    "critical_minimum_valid_mutant_kill_rate": 0.98,
+    "high_minimum_valid_mutant_kill_rate": 0.95,
+    "critical_invariant_bypass_survivor_allowed": false
+  },
+  "formal_obligations": {
+    "tla": {
+      "policy": "Required for properties assigned T3 and must not silently skip in authoritative CI.",
+      "existing": [
+        {
+          "property_id": "FQ-PROP-005",
+          "artifact": "formal/tla/PromotionLadder.tla",
+          "config": "formal/tla/PromotionLadder.cfg",
+          "required_in_phase": "A0"
+        }
+      ]
+    },
+    "smt": {
+      "status": "ADOPT_WHERE_JUSTIFIED",
+      "initial_candidates": [
+        "pure risk/portfolio constraint satisfiability",
+        "selected IR temporal/algebraic obligations"
+      ]
+    },
+    "lean4": {
+      "status": "DEFERRED_UNTIL_PHASE_REQUIRES",
+      "initial_candidates": [
+        "temporal checker soundness: accepted expression implies kt_bound <= evaluation time",
+        "pure risk-checker monotonic/non-widening law"
+      ]
+    }
+  },
+  "phases": [
+    {
+      "id": "A0",
+      "name": "Bootstrap governance and assurance",
+      "issue": 13,
+      "required": ["SDD", "PDD", "UNIT_REGRESSION", "DETERMINISM", "CLEAN_ENV", "TLA"],
+      "minimum_repeated_runs": 3,
+      "hidden_acceptance_required": false,
+      "hitl_promotion_required": false,
+      "completion_status": "IN_PROGRESS"
+    },
+    {
+      "id": "A1",
+      "name": "OSS execution/runtime bakeoff",
+      "issue": 15,
+      "required": ["SDD", "PDD", "STATIC_IR", "UNIT_REGRESSION", "PROPERTY_STATEFUL", "HIDDEN_ACCEPTANCE", "MUTATION", "DIFFERENTIAL", "METAMORPHIC", "DETERMINISM", "CLEAN_ENV", "CHAOS_FAULT"],
+      "minimum_repeated_runs": 3,
+      "hidden_acceptance_required": true,
+      "hitl_promotion_required": false,
+      "completion_status": "NOT_STARTED"
+    },
+    {
+      "id": "A2",
+      "name": "Autonomous Trader v0",
+      "issue": 16,
+      "required": ["SDD", "PDD", "STATIC_IR", "UNIT_REGRESSION", "PROPERTY_STATEFUL", "HIDDEN_ACCEPTANCE", "MUTATION", "DIFFERENTIAL", "METAMORPHIC", "DETERMINISM", "CLEAN_ENV", "CHAOS_FAULT", "HITL_PROMOTION"],
+      "minimum_repeated_runs": 5,
+      "hidden_acceptance_required": true,
+      "hitl_promotion_required": true,
+      "completion_status": "NOT_STARTED"
+    },
+    {
+      "id": "A3",
+      "name": "Multi-session autonomous paper reliability",
+      "issue": 18,
+      "required": ["SDD", "PDD", "UNIT_REGRESSION", "PROPERTY_STATEFUL", "HIDDEN_ACCEPTANCE", "MUTATION", "DIFFERENTIAL", "DETERMINISM", "CLEAN_ENV", "CHAOS_FAULT", "SOAK"],
+      "minimum_repeated_runs": 10,
+      "hidden_acceptance_required": true,
+      "hitl_promotion_required": false,
+      "completion_status": "NOT_STARTED"
+    },
+    {
+      "id": "A4",
+      "name": "Temporal KG observation",
+      "issue": 19,
+      "required": ["SDD", "PDD", "STATIC_IR", "UNIT_REGRESSION", "PROPERTY_STATEFUL", "HIDDEN_ACCEPTANCE", "MUTATION", "DIFFERENTIAL", "METAMORPHIC", "DETERMINISM", "CLEAN_ENV"],
+      "minimum_repeated_runs": 5,
+      "hidden_acceptance_required": true,
+      "hitl_promotion_required": false,
+      "completion_status": "NOT_STARTED"
+    },
+    {
+      "id": "A5",
+      "name": "KG authority escalation",
+      "issue": 20,
+      "required": ["SDD", "PDD", "STATIC_IR", "UNIT_REGRESSION", "PROPERTY_STATEFUL", "HIDDEN_ACCEPTANCE", "MUTATION", "DIFFERENTIAL", "METAMORPHIC", "DETERMINISM", "CHAOS_FAULT", "TLA", "HITL_PROMOTION"],
+      "minimum_repeated_runs": 5,
+      "hidden_acceptance_required": true,
+      "hitl_promotion_required": true,
+      "completion_status": "NOT_STARTED"
+    },
+    {
+      "id": "A6",
+      "name": "From-scratch local learner",
+      "issue": 21,
+      "required": ["SDD", "PDD", "STATIC_IR", "UNIT_REGRESSION", "PROPERTY_STATEFUL", "HIDDEN_ACCEPTANCE", "MUTATION", "DIFFERENTIAL", "METAMORPHIC", "DETERMINISM", "CLEAN_ENV", "CHAOS_FAULT", "HITL_PROMOTION"],
+      "minimum_repeated_runs": 10,
+      "hidden_acceptance_required": true,
+      "hitl_promotion_required": true,
+      "completion_status": "NOT_STARTED"
+    },
+    {
+      "id": "A7",
+      "name": "Incremental knowledge/model promotion",
+      "issue": 22,
+      "required": ["SDD", "PDD", "UNIT_REGRESSION", "PROPERTY_STATEFUL", "HIDDEN_ACCEPTANCE", "MUTATION", "DIFFERENTIAL", "METAMORPHIC", "DETERMINISM", "CLEAN_ENV", "CHAOS_FAULT", "HITL_PROMOTION"],
+      "minimum_repeated_runs": 10,
+      "hidden_acceptance_required": true,
+      "hitl_promotion_required": true,
+      "completion_status": "NOT_STARTED"
+    },
+    {
+      "id": "A8",
+      "name": "Shadow/live-readiness",
+      "issue": 23,
+      "required": ["SDD", "PDD", "UNIT_REGRESSION", "PROPERTY_STATEFUL", "HIDDEN_ACCEPTANCE", "MUTATION", "DIFFERENTIAL", "METAMORPHIC", "DETERMINISM", "CLEAN_ENV", "CHAOS_FAULT", "SOAK", "TLA", "HITL_PROMOTION"],
+      "minimum_repeated_runs": 10,
+      "hidden_acceptance_required": true,
+      "hitl_promotion_required": true,
+      "completion_status": "NOT_STARTED"
+    }
+  ]
+}

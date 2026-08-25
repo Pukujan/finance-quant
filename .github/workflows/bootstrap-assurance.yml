@@ -1,0 +1,98 @@
+name: bootstrap-assurance
+
+on:
+  push:
+    branches:
+      - main
+      - "bootstrap/**"
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  contracts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+      - run: python -m pip install -r requirements-dev.txt
+      - name: Validate bootstrap/project contracts
+        run: python scripts/validate_bootstrap_contracts.py
+      - name: Check generated project status freshness
+        run: python scripts/generate_project_status.py --check
+      - name: Validate bootstrap + property catalog oracles
+        run: python -m pytest tests/test_bootstrap_contracts.py tests/test_property_catalog.py -q
+
+  formal-tla:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - run: python -m pip install -r requirements-dev.txt
+      - name: Install pinned TLA2Tools
+        shell: bash
+        run: |
+          mkdir -p .tools/tla
+          curl --fail --location --retry 3 \
+            https://github.com/tlaplus/tlaplus/releases/download/v1.8.0/tla2tools.jar \
+            --output .tools/tla/tla2tools.jar
+          test -s .tools/tla/tla2tools.jar
+          echo "TLA2TOOLS_JAR=$GITHUB_WORKSPACE/.tools/tla/tla2tools.jar" >> "$GITHUB_ENV"
+      - name: Model-check required T3 promotion/holdout invariants
+        run: python -m pytest tests/test_tla_promotion_ladder.py -q -rs
+      - name: Assert TLA test did not skip
+        shell: bash
+        run: |
+          python - <<'PY'
+          import os, subprocess, sys
+          env = dict(os.environ)
+          p = subprocess.run([sys.executable, "-m", "pytest", "tests/test_tla_promotion_ladder.py", "-q", "-rs"], text=True, capture_output=True, env=env)
+          out = p.stdout + p.stderr
+          print(out)
+          if p.returncode != 0 or "skipped" in out.lower():
+              raise SystemExit("authoritative TLA gate failed or skipped")
+          PY
+
+  full-validation:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+      - run: python -m pip install -r requirements-dev.txt
+      - name: Full regression suite
+        run: python -m pytest tests -q
+      - name: Smoke runner
+        run: python scripts/smoke.py
+      - name: Three-run deterministic Phase-B drill
+        run: python -m finance_quant drill --runs 3 --fixture-dir data/fixtures/phase-b
+      - name: Phase-B verifier preserved as legacy oracle
+        run: python -m finance_quant verify --phase-b
+
+  fresh-environment:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Fresh venv -> install -> full pytest -> verify
+        run: python scripts/run_fresh_environment_drill.py
