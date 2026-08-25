@@ -1,4 +1,4 @@
-# Handoff — A1 LEAN production probe green; ordinary CI handoff contract repaired
+# Handoff — A1 Nautilus production-matching preflight pinned
 
 Date: 2026-08-25  
 Branch: `bootstrap/oss-autonomous-trader-replatform`  
@@ -6,19 +6,21 @@ Active issue: #15
 Assurance phase: A1  
 Project status: `A1_LEAN_DIFFERENTIAL_SLICE`
 
-The exact-head credential-free LEAN production candidate probe is now genuinely green. Runtime-candidates run `32884104244` completed successfully on implementation head `aeb5cd4ab6f53a966bbc344e45afde1b2a552573`; the `lean-production-fill-probe` job built pinned LEAN commit `185c691b89f28bd68e48d53c02147415134975f0`, ran three deterministic production probes, and uploaded the A1 receipts. This closes the prior TRACE-timestamp determinism harness defect without changing the fixture, reference oracle, PIT timing, fill expectation, or authority boundary.
+The repaired baseline at head `854773bc45614907e2c53c395a1f87b3cc3d8f85` is now explicitly verified green: tests run `32888794288`, legacy phase-b run `32888794305`, bootstrap-assurance run `32888794317`, and runtime-candidates run `32888794347` all completed successfully. The prior LEAN production fill evidence therefore remains on a clean baseline.
 
-The subsequent durable-state commit `30b957c1f1b51d771177f5b686aaacd57bed74a9` triggered ordinary PR CI. Tests run `32884427022` reached `927 passed, 25 skipped, 2 failed`; both failures were the same durable-handoff formatting contract: `docs/handoffs/LATEST.md` used `Next:` instead of the required literal `Next exact action` heading. Bootstrap-assurance run `32884427008` failed for the same reason in fresh-environment/full-validation/contracts jobs; its formal TLA job passed. No runtime, oracle, property, mutation threshold, PIT invariant, or authority rule failed.
+NautilusTrader is now pinned for the corresponding A1 slice at release `v1.230.0`, exact upstream commit `8160730c7c550480b0a439fb11086a4c4de15f0b`, with LGPL-3.0-only licensing and authority NONE recorded in `contracts/execution/nautilus-a1-candidate-pin-v1.json`.
 
-This handoff repairs that durable formatting contract and records the LEAN green receipt. A1 remains **IN_PROGRESS**. NautilusTrader production candidate evidence plus the remaining hidden acceptance, mutation, broader metamorphic, clean-environment, and chaos/fault evidence are still required before any runtime disposition or promotion.
+Exact pinned-source analysis of production `nautilus_trader/backtest/engine.pyx` resolved the previously open bar-ordering question. `BacktestEngine` sends an external `Bar` to `SimulatedExchange.process_bar` before delivering it through the data engine to strategies. The production trade-bar path processes the open first, enables market filling across an opening gap, and calls matching iteration at the bar `ts_init`. Thus a market order emitted after the prior bar can be resting when the next bar open is auctioned, which is structurally compatible with the unchanged A1 next-open contract.
 
-Trading authority remains **NONE**. Autonomous paper trading and live capital remain **DISABLED**. Sealed-holdout exact cases/labels were not accessed.
+The A1 runtime-candidate workflow now adds a credential-free, fail-closed Nautilus **source-production-matching preflight**. It checks the exact checkout SHA, license, candidate pin, and the production source-path invariants above, then uploads a deterministic provenance receipt. The receipt explicitly says `production_probe_status: NOT_YET_EXECUTED`; this source preflight is not executable fill evidence and is not a runtime disposition.
+
+A1 remains **IN_PROGRESS**. Trading authority remains **NONE**. Autonomous paper trading and live capital remain **DISABLED**. Sealed-holdout exact cases/labels were not accessed.
 
 ## Next exact action
 
-1. Recheck the CI triggered by this handoff/state repair and require ordinary tests/bootstrap-assurance to return green; fix any real failure without weakening tests or invariants.
-2. Once that exact-head baseline is green, remain within issue #15 and implement the corresponding thin credential-free **NautilusTrader** production candidate evidence for exactly the same public daily-bar subset and normalized comparison classes used by LEAN/reference.
-3. Continue the remaining A1 hidden, mutation, metamorphic, deterministic/clean-environment, and chaos/fault evidence for both candidates.
+1. Require exact-head tests/bootstrap-assurance/runtime-candidates to remain green with the Nautilus pinned-source preflight; fix any genuine failure without weakening tests or invariants.
+2. Implement the minimal credential-free executable NautilusTrader production fill probe against exactly the same public daily-bar decision/fill semantics and normalized comparison classes used by LEAN/reference. Do not replace production matching with a custom or synthetic fill model merely to satisfy the oracle.
+3. Run three canonical deterministic Nautilus executions and normalized differential receipts, then continue the remaining A1 hidden, mutation, metamorphic, clean-environment, and chaos/fault gates for both candidates.
 4. Only after every conjunctive A1 gate passes may #15 record candidate dispositions and select a primary runtime. Do not start #16.
 
-Append-only record: `docs/handoffs/2026-08-25-a1-lean-green-ci-handoff-repair.md`.
+Append-only record: `docs/handoffs/2026-08-25-a1-nautilus-production-matching-preflight.md`.
