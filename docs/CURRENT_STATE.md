@@ -45,36 +45,43 @@ The executable finance-quant-owned oracle/candidate slice now includes:
 
 - `finance_quant/execution/conformance.py` fail-closes on A1 authority/contract drift and validates/canonicalizes normalized receipts;
 - `finance_quant/execution/reference.py` is a deliberately tiny independent daily-bar semantic oracle, not a production runtime;
-- `finance_quant/execution/lean_a1.py` is the first thin candidate adapter. It normalizes already-produced, credential-free LEAN evidence for only the shared daily-bar subset, replaces candidate-native order/fill/ledger IDs with deterministic finance-quant semantic identities, and rejects same-bar, future-known, ambiguous-lineage, unsupported-status, and unsupported-ledger semantics;
+- `finance_quant/execution/lean_a1.py` normalizes credential-free LEAN evidence for only the shared daily-bar subset, replaces candidate-native order/fill/ledger IDs with deterministic finance-quant semantic identities, and rejects same-bar, future-known, ambiguous-lineage, unsupported-status, and unsupported-ledger semantics;
 - `finance_quant/execution/differential.py` classifies every required normalized receipt field as exact, tolerance-bounded, or explicitly permitted top-level runtime metadata and fails closed if a new required field has no comparison class;
-- `tests/test_execution_conformance.py` and `tests/test_execution_reference.py` cover the contract/reference invariants;
-- `tests/test_execution_lean_a1.py` covers LEAN normalization and fail-closed adapter behavior;
-- `tests/test_execution_differential.py` proves the public shared-subset reference/LEAN fixtures converge semantically and detects exact/numeric drift.
+- `tools/lean_a1_probe/` now exercises the pinned production LEAN `EquityFillModel.MarketOnOpenFill` directly, without brokerage credentials or the LEAN CLI, against `fixtures/execution/a1-lean-fill-probe-v1.json`;
+- `scripts/run_lean_a1_fill_probe.py` derives candidate accounting from the actual LEAN fill, normalizes it, compares it to the independent reference receipt with `assert_normalized_receipts_conform`, and leaves runtime disposition `PENDING`;
+- `tests/test_lean_a1_fill_probe.py` covers the pin/authority boundary, synthetic normalization/conformance, candidate-fill-derived accounting, and wrong execution-instant rejection;
+- `.github/workflows/a1-runtime-candidates.yml` checks the exact LEAN source pin/license, builds the production fill-model probe, executes three independent candidate probes, requires byte-equivalent raw/evidence outputs, and preserves raw diagnostics even on failure.
 
-This slice does **not** run a production LEAN engine, select LEAN or NautilusTrader, or grant paper/live trading authority. Candidate runtime execution evidence remains required before disposition.
+This slice is candidate evidence only. It does **not** select LEAN, grant paper/live trading authority, or satisfy the remaining A1 gates by itself.
 
 ## Validation status for current A1 work
 
-The first thin LEAN adapter head `c3c4ca1cb411c6b3700505044e30f85f424efb61` passed all three GitHub workflows:
+The first thin LEAN adapter head `c3c4ca1cb411c6b3700505044e30f85f424efb61` passed tests `32872417271`, Phase-B `32872417669`, and bootstrap-assurance `32872417964`.
 
-- tests run `32872417271`: **PASS**, including `python -m pytest tests -q` with **916 passed, 25 skipped**, plus `python scripts/smoke.py`;
-- Phase-B legacy oracle run `32872417669`: **PASS**;
-- bootstrap-assurance run `32872417964`: **PASS**, including contracts/status/property checks, fresh-environment full pytest+verify, full regression+smoke+three-run legacy determinism, and non-skipped TLA/TLC.
+The subsequent field-class differential implementation head `9e91ff07b97c82b45be38ab70b913743920c3a40` had Phase-B `32873391446` **PASS** and observed bootstrap-assurance fresh-environment/contracts/full-regression/smoke/TLA steps **PASS** before documentation began.
 
-The subsequent field-class differential implementation head is `9e91ff07b97c82b45be38ab70b913743920c3a40`. On that exact implementation head, bootstrap-assurance fresh-environment, contract/property checks, full regression, smoke, and TLA/TLC have passed, and Phase-B run `32873391446` passed. Tests run `32873391360` and bootstrap-assurance run `32873391294` were still finishing wrapper/legacy steps when durable documentation began; recheck exact final branch-head CI after these documentation commits before widening scope.
+The first credential-free production LEAN probe head `24976efc7587f83175e24442f281b9a4b7b577b3` produced:
 
-Local clone/test execution remains unavailable because this automation environment cannot resolve `github.com`; GitHub Actions are the executable validation source for this session.
+- tests `32875746688`: **PASS**;
+- Phase-B `32875746634`: **PASS**;
+- A1 runtime-candidates `32875746733`: **FAIL** specifically in `Run three deterministic candidate probes`; pin/license verification and the production LEAN probe build passed.
 
-A1 remains **IN_PROGRESS**. Actual candidate-runtime execution evidence, NautilusTrader adapter/evidence, hidden acceptance, mutation threshold evidence, broader metamorphic coverage, candidate repeated determinism, and chaos/fault campaigns remain outstanding. No primary runtime may be selected yet.
+Investigation against pinned LEAN commit `185c691b89f28bd68e48d53c02147415134975f0` found a harness contract defect: LEAN `Order.Time` is UTC and its own `EquityFillModel` tests convert the local submission instant to UTC before constructing `MarketOnOpenOrder`, while the first finance-quant probe passed a New York-local wall-clock `DateTime` directly. Commit `6e21bc0fc51f29124ada8eef7c925be88d3975fc` corrects the order timestamp to UTC without changing execution semantics or the differential oracle. Commit `57758d7d8ab81c1e6445ec42ec970c2b1c788d91` preserves raw stdout/stderr artifacts on candidate failure while still failing closed on any nonzero probe status.
+
+On exact implementation head `57758d7d8ab81c1e6445ec42ec970c2b1c788d91`, A1 runtime-candidates run `32876861792` was still **IN_PROGRESS** when this durable state was written. Exact-head Phase-B and the other ordinary workflows were also still running/rechecking after the fix. Do not record candidate conformance success until those exact runs complete successfully.
+
+Local clone/test execution remains unavailable in this automation environment because direct `github.com` resolution is unavailable; GitHub Actions is the executable validation source for the production LEAN probe.
+
+A1 remains **IN_PROGRESS**. NautilusTrader candidate evidence, hidden acceptance, mutation threshold evidence, broader metamorphic coverage, candidate fault/chaos campaigns, and complete gate receipts remain outstanding. No primary runtime may be selected yet.
 
 ## Next exact action
 
-1. Verify GitHub Actions on the exact current branch head and fix any regression without weakening tests or invariants.
-2. Add executable credential-free **LEAN candidate-run evidence** for the same public daily-bar subset and feed its normalized receipt through `assert_normalized_receipts_conform`; do not treat the historical Phase-B subprocess stub as candidate proof.
-3. Add the corresponding thin NautilusTrader adapter for exactly the same subset and comparison classes before widening either candidate.
-4. Continue hidden, mutation, metamorphic, repeated determinism, clean-environment, and chaos evidence for both candidates before any runtime disposition.
+1. Recheck GitHub Actions for exact implementation head `57758d7d8ab81c1e6445ec42ec970c2b1c788d91`. If A1 runtime-candidates fails, inspect the preserved `a1-lean-production-fill-probe` diagnostics and fix the production probe without weakening `assert_normalized_receipts_conform`, deterministic reruns, or authority/PIT invariants.
+2. If the exact LEAN candidate run passes, record its three-run raw/evidence equivalence and exact workflow receipt; then add the corresponding thin **NautilusTrader** adapter and credential-free candidate evidence for exactly the same public daily-bar subset and comparison classes before widening either runtime.
+3. Continue the remaining required A1 hidden, mutation, metamorphic, deterministic/clean-environment, and chaos/fault evidence for both candidates.
+4. Only after every conjunctive A1 gate passes may #15 record candidate dispositions and name a primary runtime.
 
-Do not select a primary runtime until all A1 required gates pass. Do **not** start Autonomous Trader v0 (#16) until #15 has explicit runtime dispositions and every required A1 gate passes.
+Do not start Autonomous Trader v0 (#16), enable autonomous paper authority, enable live capital, or inspect sealed-holdout exact cases/labels while A1 remains incomplete.
 
 ## Required read order for a fresh session
 
@@ -87,4 +94,5 @@ Do not select a primary runtime until all A1 required gates pass. Do **not** sta
 7. `contracts/execution/runtime-conformance-v1.json`
 8. `contracts/properties/finance-quant-properties-v1.json`
 9. `finance_quant/execution/conformance.py`, `reference.py`, `lean_a1.py`, and `differential.py`
-10. relevant execution/IR/property specs and tests
+10. `tools/lean_a1_probe/Program.cs`, `scripts/run_lean_a1_fill_probe.py`, `tests/test_lean_a1_fill_probe.py`, and `.github/workflows/a1-runtime-candidates.yml`
+11. relevant execution/IR/property specs and tests
