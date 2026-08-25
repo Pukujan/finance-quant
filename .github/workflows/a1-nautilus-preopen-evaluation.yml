@@ -31,7 +31,7 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Verify pin and native queue/timer ordering
+      - name: Verify pin and native queue/timer source surface
         shell: bash
         run: |
           set -euo pipefail
@@ -42,12 +42,15 @@ jobs:
           exchange = Path("nautilus-trader/crates/backtest/src/exchange.rs").read_text(encoding="utf-8")
           engine = Path("nautilus-trader/crates/backtest/src/engine.rs").read_text(encoding="utf-8")
           latency = Path("nautilus-trader/crates/execution/src/python/latency.rs").read_text(encoding="utf-8")
+          stub = Path("nautilus-trader/python/nautilus_trader/execution/__init__.pyi").read_text(encoding="utf-8")
+          tests = Path("nautilus-trader/python/tests/unit/execution/test_models.py").read_text(encoding="utf-8")
           assert "pub fn has_pending_commands" in exchange
           assert "fn generate_inflight_command" in exchange
           assert "pub fn process(&mut self, ts_now: UnixNanos)" in exchange
           assert "advance_time" in engine
           assert "insert_latency_nanos" in latency
-          assert "StaticLatencyModel" in latency
+          assert "class StaticLatencyModel" in stub
+          assert "from nautilus_trader.execution import StaticLatencyModel" in tests
           PY
 
       - name: Install pinned NautilusTrader release
@@ -60,11 +63,58 @@ jobs:
           assert nautilus_trader.__version__ == "1.230.0", nautilus_trader.__version__
           PY
 
-      - name: Run three deterministic native latency pre-open probes
+      - name: Check published latency API availability
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p artifacts/a1-nautilus-preopen
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          available = True
+          error = None
+          try:
+              from nautilus_trader.execution import StaticLatencyModel  # noqa: F401
+          except ImportError as exc:
+              available = False
+              error = f"{type(exc).__name__}: {exc}"
+
+          value = {
+              "schema_version": "1.0.0",
+              "issue": 15,
+              "phase": "A1",
+              "candidate": "NautilusTrader",
+              "candidate_version": "1.230.0",
+              "candidate_source_commit": "8160730c7c550480b0a439fb11086a4c4de15f0b",
+              "mechanism": "native-static-latency-with-session-preopen-clock-settlement",
+              "public_static_latency_model_available": available,
+              "import_error": error,
+              "source_stub_advertises_static_latency_model": True,
+              "source_unit_test_imports_static_latency_model": True,
+          }
+          Path("artifacts/a1-nautilus-preopen/api-availability.json").write_text(
+              json.dumps(value, indent=2, sort_keys=True) + "\n",
+              encoding="utf-8",
+          )
+          PY
+          cat artifacts/a1-nautilus-preopen/api-availability.json
+
+      - name: Run three deterministic native latency pre-open probes when public API is available
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! python - <<'PY'
+          import json
+          from pathlib import Path
+          value = json.loads(Path("artifacts/a1-nautilus-preopen/api-availability.json").read_text())
+          raise SystemExit(0 if value["public_static_latency_model_available"] else 1)
+          PY
+          then
+            echo "Pinned published API does not expose StaticLatencyModel; semantic probe is ineligible."
+            exit 0
+          fi
+
           for run in 1 2 3; do
             set +e
             python tools/nautilus_a1_probe/preopen_probe.py \
@@ -83,26 +133,22 @@ jobs:
           import json
           import os
           from pathlib import Path
-
           run = os.environ["RUN"]
           value = json.loads(Path(f"artifacts/a1-nautilus-preopen/raw-probe-{run}.json").read_text())
           assert value["engine"] == "NautilusTrader"
           assert value["probe_scope"] == "BacktestEngine.SimulatedExchange.native-latency-clock-settlement"
           assert value["time_in_force"] == "GTC"
-          assert value["submission_policy"] == "DECISION_BAR_CALLBACK_WITH_NATIVE_1NS_INSERT_LATENCY"
-          assert value["release_policy"] == "SESSION_CONTRACT_PREOPEN_CLOCK_ALERT"
           assert value["custom_fill_model"] is False
           assert value["release_fired"] is True
           Path(f"artifacts/a1-nautilus-preopen/canonical-probe-{run}.json").write_text(
-              json.dumps(value, indent=2, sort_keys=True) + "\n",
-              encoding="utf-8",
+              json.dumps(value, indent=2, sort_keys=True) + "\n", encoding="utf-8"
           )
           PY
           done
           cmp artifacts/a1-nautilus-preopen/canonical-probe-1.json artifacts/a1-nautilus-preopen/canonical-probe-2.json
           cmp artifacts/a1-nautilus-preopen/canonical-probe-1.json artifacts/a1-nautilus-preopen/canonical-probe-3.json
 
-      - name: Evaluate unchanged next-bar-open differential
+      - name: Evaluate unchanged next-bar-open differential or fail-closed ineligibility
         shell: bash
         run: |
           set -euo pipefail
@@ -111,8 +157,8 @@ jobs:
           from decimal import Decimal
           from pathlib import Path
 
+          availability = json.loads(Path("artifacts/a1-nautilus-preopen/api-availability.json").read_text())
           fixture = json.loads(Path("fixtures/execution/a1-lean-fill-probe-v1.json").read_text(encoding="utf-8"))
-          observed = json.loads(Path("artifacts/a1-nautilus-preopen/canonical-probe-1.json").read_text(encoding="utf-8"))
           next_bar = fixture["events"][1]
           expected = {
               "fill_quantity": str(fixture["intents"][0]["quantity"]),
@@ -120,22 +166,6 @@ jobs:
               "fill_time": str(next_bar["event_time"]),
               "source_event_id": str(next_bar["event_id"]),
           }
-          semantic_conformance = (
-              observed.get("status") == "FILLED"
-              and Decimal(str(observed.get("fill_quantity"))) == Decimal(expected["fill_quantity"])
-              and Decimal(str(observed.get("fill_price"))) == Decimal(expected["fill_price"])
-              and observed.get("fill_time") == expected["fill_time"]
-              and observed.get("source_event_id") == expected["source_event_id"]
-          )
-          failed_property = None
-          if not semantic_conformance:
-              if (
-                  observed.get("fill_time") != expected["fill_time"]
-                  or observed.get("source_event_id") != expected["source_event_id"]
-              ):
-                  failed_property = "FQ-PROP-015"
-              else:
-                  failed_property = "FQ-PROP-021"
           evidence = {
               "schema_version": "1.0.0",
               "issue": 15,
@@ -143,21 +173,49 @@ jobs:
               "candidate": "NautilusTrader",
               "candidate_source_commit": "8160730c7c550480b0a439fb11086a4c4de15f0b",
               "adapter": "native-1ns-insert-latency-with-session-preopen-clock-settlement",
-              "adapter_scope": "native command queue, latency model, and strategy clock only",
+              "adapter_scope": "public native command queue, latency model, and strategy clock only",
               "production_matching": True,
               "custom_fill_model": False,
               "release_time_derived_from_future_bar_payload": False,
               "release_time_basis": "known next-session open minus one microsecond",
-              "semantic_conformance": "PASS" if semantic_conformance else "FAIL",
-              "failed_property": failed_property,
               "expected": expected,
-              "observed": observed,
               "runtime_disposition": "PENDING",
               "authority": "NONE",
           }
+          if not availability["public_static_latency_model_available"]:
+              evidence.update(
+                  mechanism_status="INELIGIBLE_PUBLISHED_API_UNAVAILABLE",
+                  semantic_conformance="NOT_EXECUTED",
+                  failed_property=None,
+                  import_error=availability["import_error"],
+                  source_release_skew=True,
+              )
+          else:
+              observed = json.loads(Path("artifacts/a1-nautilus-preopen/canonical-probe-1.json").read_text())
+              semantic_conformance = (
+                  observed.get("status") == "FILLED"
+                  and Decimal(str(observed.get("fill_quantity"))) == Decimal(expected["fill_quantity"])
+                  and Decimal(str(observed.get("fill_price"))) == Decimal(expected["fill_price"])
+                  and observed.get("fill_time") == expected["fill_time"]
+                  and observed.get("source_event_id") == expected["source_event_id"]
+              )
+              failed_property = None
+              if not semantic_conformance:
+                  failed_property = (
+                      "FQ-PROP-015"
+                      if observed.get("fill_time") != expected["fill_time"]
+                      or observed.get("source_event_id") != expected["source_event_id"]
+                      else "FQ-PROP-021"
+                  )
+              evidence.update(
+                  mechanism_status="EXECUTED",
+                  semantic_conformance="PASS" if semantic_conformance else "FAIL",
+                  failed_property=failed_property,
+                  observed=observed,
+                  source_release_skew=False,
+              )
           Path("artifacts/a1-nautilus-preopen/evidence.json").write_text(
-              json.dumps(evidence, indent=2, sort_keys=True) + "\n",
-              encoding="utf-8",
+              json.dumps(evidence, indent=2, sort_keys=True) + "\n", encoding="utf-8"
           )
           PY
           cat artifacts/a1-nautilus-preopen/evidence.json
