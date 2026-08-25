@@ -1,0 +1,170 @@
+name: a1-nautilus-preopen-evaluation
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  NAUTILUS_SHA: 8160730c7c550480b0a439fb11086a4c4de15f0b
+  RELEASE_TIME: "2026-06-02T13:29:59.999999+00:00"
+
+jobs:
+  native-latency-preopen-timer:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout finance-quant
+        uses: actions/checkout@v4
+
+      - name: Checkout pinned NautilusTrader source
+        uses: actions/checkout@v4
+        with:
+          repository: nautechsystems/nautilus_trader
+          ref: 8160730c7c550480b0a439fb11086a4c4de15f0b
+          path: nautilus-trader
+          fetch-depth: 1
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Verify pin and native queue/timer ordering
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C "$GITHUB_WORKSPACE/nautilus-trader" rev-parse HEAD)" = "$NAUTILUS_SHA"
+          python - <<'PY'
+          from pathlib import Path
+
+          exchange = Path("nautilus-trader/crates/backtest/src/exchange.rs").read_text(encoding="utf-8")
+          engine = Path("nautilus-trader/crates/backtest/src/engine.rs").read_text(encoding="utf-8")
+          latency = Path("nautilus-trader/crates/execution/src/python/latency.rs").read_text(encoding="utf-8")
+          assert "process_inflight_queue" in exchange
+          assert "has_pending_commands" in exchange
+          assert "advance_time" in engine
+          assert "insert_latency_nanos" in latency
+          assert "StaticLatencyModel" in latency
+          PY
+
+      - name: Install pinned NautilusTrader release
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check "nautilus_trader==1.230.0"
+          python - <<'PY'
+          import nautilus_trader
+          assert nautilus_trader.__version__ == "1.230.0", nautilus_trader.__version__
+          PY
+
+      - name: Run three deterministic native latency pre-open probes
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/a1-nautilus-preopen
+          for run in 1 2 3; do
+            set +e
+            python tools/nautilus_a1_probe/preopen_probe.py \
+              fixtures/execution/a1-lean-fill-probe-v1.json \
+              --release-time "$RELEASE_TIME" \
+              > "artifacts/a1-nautilus-preopen/raw-probe-${run}.json" \
+              2> "artifacts/a1-nautilus-preopen/raw-probe-${run}.stderr.txt"
+            probe_status=$?
+            set -e
+            cat "artifacts/a1-nautilus-preopen/raw-probe-${run}.json"
+            if test -s "artifacts/a1-nautilus-preopen/raw-probe-${run}.stderr.txt"; then
+              cat "artifacts/a1-nautilus-preopen/raw-probe-${run}.stderr.txt" >&2
+            fi
+            test "$probe_status" -eq 0
+            RUN="$run" python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          run = os.environ["RUN"]
+          value = json.loads(Path(f"artifacts/a1-nautilus-preopen/raw-probe-{run}.json").read_text())
+          assert value["engine"] == "NautilusTrader"
+          assert value["probe_scope"] == "BacktestEngine.SimulatedExchange.native-latency-clock-settlement"
+          assert value["time_in_force"] == "GTC"
+          assert value["submission_policy"] == "DECISION_BAR_CALLBACK_WITH_NATIVE_1NS_INSERT_LATENCY"
+          assert value["release_policy"] == "SESSION_CONTRACT_PREOPEN_CLOCK_ALERT"
+          assert value["custom_fill_model"] is False
+          assert value["release_fired"] is True
+          Path(f"artifacts/a1-nautilus-preopen/canonical-probe-{run}.json").write_text(
+              json.dumps(value, indent=2, sort_keys=True) + "\n",
+              encoding="utf-8",
+          )
+          PY
+          done
+          cmp artifacts/a1-nautilus-preopen/canonical-probe-1.json artifacts/a1-nautilus-preopen/canonical-probe-2.json
+          cmp artifacts/a1-nautilus-preopen/canonical-probe-1.json artifacts/a1-nautilus-preopen/canonical-probe-3.json
+
+      - name: Evaluate unchanged next-bar-open differential
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          from decimal import Decimal
+          from pathlib import Path
+
+          fixture = json.loads(Path("fixtures/execution/a1-lean-fill-probe-v1.json").read_text(encoding="utf-8"))
+          observed = json.loads(Path("artifacts/a1-nautilus-preopen/canonical-probe-1.json").read_text(encoding="utf-8"))
+          next_bar = fixture["events"][1]
+          expected = {
+              "fill_quantity": str(fixture["intents"][0]["quantity"]),
+              "fill_price": str(next_bar["payload"]["open"]),
+              "fill_time": str(next_bar["event_time"]),
+              "source_event_id": str(next_bar["event_id"]),
+          }
+          semantic_conformance = (
+              observed.get("status") == "FILLED"
+              and Decimal(str(observed.get("fill_quantity"))) == Decimal(expected["fill_quantity"])
+              and Decimal(str(observed.get("fill_price"))) == Decimal(expected["fill_price"])
+              and observed.get("fill_time") == expected["fill_time"]
+              and observed.get("source_event_id") == expected["source_event_id"]
+          )
+          failed_property = None
+          if not semantic_conformance:
+              if (
+                  observed.get("fill_time") != expected["fill_time"]
+                  or observed.get("source_event_id") != expected["source_event_id"]
+              ):
+                  failed_property = "FQ-PROP-015"
+              else:
+                  failed_property = "FQ-PROP-021"
+          evidence = {
+              "schema_version": "1.0.0",
+              "issue": 15,
+              "phase": "A1",
+              "candidate": "NautilusTrader",
+              "candidate_source_commit": "8160730c7c550480b0a439fb11086a4c4de15f0b",
+              "adapter": "native-1ns-insert-latency-with-session-preopen-clock-settlement",
+              "adapter_scope": "native command queue, latency model, and strategy clock only",
+              "production_matching": True,
+              "custom_fill_model": False,
+              "release_time_derived_from_future_bar_payload": False,
+              "release_time_basis": "known next-session open minus one microsecond",
+              "semantic_conformance": "PASS" if semantic_conformance else "FAIL",
+              "failed_property": failed_property,
+              "expected": expected,
+              "observed": observed,
+              "runtime_disposition": "PENDING",
+              "authority": "NONE",
+          }
+          Path("artifacts/a1-nautilus-preopen/evidence.json").write_text(
+              json.dumps(evidence, indent=2, sort_keys=True) + "\n",
+              encoding="utf-8",
+          )
+          PY
+          cat artifacts/a1-nautilus-preopen/evidence.json
+
+      - name: Upload pre-open evaluator receipts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: a1-nautilus-native-latency-preopen-evaluation
+          path: artifacts/a1-nautilus-preopen/
+          if-no-files-found: warn
