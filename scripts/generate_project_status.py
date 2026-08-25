@@ -14,7 +14,7 @@ END = "<!-- END GENERATED PROJECT STATUS -->"
 
 
 def load_state() -> tuple[dict, dict]:
-    return json.loads(STATE_PATH.read_text()), json.loads(ASSURANCE_PATH.read_text())
+    return json.loads(STATE_PATH.read_text(encoding="utf-8")), json.loads(ASSURANCE_PATH.read_text(encoding="utf-8"))
 
 
 def render_block() -> str:
@@ -43,6 +43,19 @@ def render_block() -> str:
     )
 
 
+def _extract_block(text: str) -> str:
+    if BEGIN not in text or END not in text:
+        raise ValueError("README is missing generated project-status markers")
+    start = text.index(BEGIN)
+    end = text.index(END, start) + len(END)
+    return text[start:end]
+
+
+def _normalized_lines(text: str) -> list[str]:
+    """Compare semantic generated content independent of checkout line endings."""
+    return text.replace("\r\n", "\n").replace("\r", "\n").splitlines()
+
+
 def replace_block(text: str, block: str) -> str:
     if BEGIN not in text or END not in text:
         raise ValueError("README is missing generated project-status markers")
@@ -52,7 +65,7 @@ def replace_block(text: str, block: str) -> str:
 
 
 def expected_readme() -> str:
-    return replace_block(README_PATH.read_text(), render_block())
+    return replace_block(README_PATH.read_text(encoding="utf-8"), render_block())
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -62,16 +75,17 @@ def main(argv: list[str] | None = None) -> int:
     mode.add_argument("--write", action="store_true")
     args = parser.parse_args(argv)
 
-    current = README_PATH.read_text()
-    expected = expected_readme()
+    current = README_PATH.read_text(encoding="utf-8")
+    expected_block = render_block()
     if args.check:
-        if current != expected:
+        current_block = _extract_block(current)
+        if _normalized_lines(current_block) != _normalized_lines(expected_block):
             print("README generated project status is stale; run: python scripts/generate_project_status.py --write")
             return 1
         print("Generated project status: PASS")
         return 0
 
-    README_PATH.write_text(expected)
+    README_PATH.write_text(replace_block(current, expected_block), encoding="utf-8", newline="\n")
     print("Updated README generated project status")
     return 0
 
