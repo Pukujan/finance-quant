@@ -1,19 +1,19 @@
 {
   "schema_version": "1.0.0",
   "architecture": "OSS_FIRST_AUTONOMOUS_TRADER_REPLATFORM",
-  "status": "BOOTSTRAP_IN_PROGRESS",
+  "status": "BOOTSTRAP_COMPLETE",
   "active_epic": 12,
-  "active_issue": 13,
+  "active_issue": 15,
   "assurance_issue": 14,
-  "assurance_phase": "A0",
-  "current_capability": "BOOTSTRAP_ONLY",
+  "assurance_phase": "A1",
+  "current_capability": "OSS_RUNTIME_BAKEOFF",
   "legacy_phase_b": {
     "issue": 11,
     "status": "PARKED",
     "preserve_evidence": true
   },
-  "next_issue": 15,
-  "next_exact_action": "Get the bootstrap PR green under every A0 gate, merge it, mark bootstrap complete, then begin issue #15 NautilusTrader-vs-LEAN execution/runtime conformance bakeoff.",
+  "next_issue": 16,
+  "next_exact_action": "Start issue #15 by writing the A1 SDD/PDD execution-runtime conformance contract and hidden/differential fixture plan before adding or selecting NautilusTrader/LEAN implementation code.",
   "authority": {
     "trading": "NONE",
     "paper_trading_enabled": false,
