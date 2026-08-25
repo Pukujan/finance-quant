@@ -8,16 +8,16 @@ The active execution plan is GitHub issue #12. Project policy, architecture, ass
 ## Project status (generated)
 
 - Architecture: `OSS_FIRST_AUTONOMOUS_TRADER_REPLATFORM`
-- Status: **BOOTSTRAP_IN_PROGRESS**
-- Active epic / issue: **#12 / #13**
-- Assurance phase: **A0 — Bootstrap governance and assurance**
-- Current capability: **BOOTSTRAP_ONLY**
+- Status: **BOOTSTRAP_COMPLETE**
+- Active epic / issue: **#12 / #15**
+- Assurance phase: **A1 — OSS execution/runtime bakeoff**
+- Current capability: **OSS_RUNTIME_BAKEOFF**
 - Trading authority: **NONE**
 - Paper trading enabled: **false**
 - Live capital enabled: **false**
 - Frontend authority: **OPERATOR_ONLY**
 - Legacy Phase B: **PARKED** (evidence preserved)
-- Next planned issue after bootstrap: **#15**
+- Next planned issue: **#16**
 
 Machine source: `contracts/project/project-state.json`; assurance source: `contracts/assurance/capability-assurance-v1.json`.
 <!-- END GENERATED PROJECT STATUS -->
@@ -30,7 +30,7 @@ New capabilities are built as vertical slices:
 
 The frontend is an operator/research surface, never trading or promotion authority. The first autonomous trader will be a deliberately simple unattended local paper trader after the NautilusTrader-vs-LEAN runtime bakeoff. Knowledge graph and local learning capabilities are later controlled upgrades to an already-running autonomous paper system.
 
-Read `AGENTS.md`, `docs/CURRENT_STATE.md`, issue #12/#13/#14, and `docs/handoffs/LATEST.md` before starting material work.
+Read `AGENTS.md`, `docs/CURRENT_STATE.md`, issue #12/#14/#15, and `docs/handoffs/LATEST.md` before starting material work.
 
 ## Preserved Phase-B V0 evidence
 
@@ -95,7 +95,7 @@ python -m venv .venv
 .venv\Scripts\python -m pytest tests
 ```
 
-Bootstrap-specific checks:
+Bootstrap/project-state checks:
 
 ```text
 python scripts/validate_bootstrap_contracts.py
