@@ -69,7 +69,9 @@ def test_main_runs_detected_lean_cli(tmp_path, monkeypatch):
     out = tmp_path / "receipt.json"
     assert main(["--out", str(out)]) == 0
     assert [command[0][1] for command in calls] == ["backtest", "backtest"]
-    assert json.loads(out.read_text())["engine"] == "lean-cli"
+    receipt = json.loads(out.read_text())
+    assert receipt["engine"] == "lean-cli"
+    assert receipt["custom_data_source"] == "receipt_custom_data.py"
 
 
 def test_run_variant():
@@ -86,6 +88,7 @@ def test_main_uses_stub_when_lean_is_missing(tmp_path, monkeypatch):
     assert main(["--out", str(out)]) == 0
     receipt = json.loads(out.read_text())
     assert receipt["engine"] == "lean-subprocess-stub"
+    assert receipt["custom_data_source"] == "receipt_custom_data.py"
 
 
 def test_main_nominal_and_stress(tmp_path):
@@ -97,4 +100,5 @@ def test_main_nominal_and_stress(tmp_path):
     receipt = json.loads(out.read_text())
     assert receipt["cost_stress"]["nominal"]["variant"] == "nominal"
     assert receipt["cost_stress"]["2x_slippage"]["variant"] == "2x_slippage"
+    assert receipt["custom_data_source"] == "receipt_custom_data.py"
     assert out.with_name(out.stem + "_custom_data.py").exists()
