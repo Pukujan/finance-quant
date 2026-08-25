@@ -48,7 +48,7 @@ def _lean_result():
         "status": "COMPLETE",
         "orders": [
             {
-                "order_id": "order-1",
+                "order_id": "lean-order-73",
                 "intent_id": "intent-1",
                 "status": "Filled",
                 "quantity": "5",
@@ -57,8 +57,8 @@ def _lean_result():
         ],
         "fills": [
             {
-                "fill_id": "fill-1",
-                "order_id": "order-1",
+                "fill_id": "lean-fill-991",
+                "order_id": "lean-order-73",
                 "intent_id": "intent-1",
                 "instrument_id": "AAA",
                 "event_time": "2026-01-02T00:00:00Z",
@@ -69,7 +69,14 @@ def _lean_result():
                 "source_event_id": "bar-2",
             }
         ],
-        "cash_ledger": [{"entry_id": "cash:fill-1", "kind": "FILL", "amount": "-60"}],
+        "cash_ledger": [
+            {
+                "entry_id": "lean-ledger-1",
+                "fill_id": "lean-fill-991",
+                "kind": "FILL",
+                "amount": "-60",
+            }
+        ],
         "positions": [{"instrument_id": "AAA", "quantity": "5"}],
         "corporate_actions": [],
         "rejections": [],
@@ -87,8 +94,11 @@ def test_lean_adapter_normalizes_only_shared_daily_subset():
     contract = load_runtime_contract()
     receipt = normalize_lean_daily_result(_lean_result(), _fixture(), contract)
     assert receipt["runtime"] == "lean"
+    assert receipt["orders"][0]["order_id"] == "order:intent-1"
     assert receipt["orders"][0]["state"] == "FILLED"
+    assert receipt["fills"][0]["fill_id"] == "fill:intent-1:bar-2"
     assert receipt["fills"][0]["source_event_id"] == "bar-2"
+    assert receipt["cash_ledger"][0]["entry_id"] == "cash:fill:intent-1:bar-2"
     assert receipt["receipt_hash"]
 
 
@@ -130,4 +140,12 @@ def test_lean_adapter_rejects_ambiguous_fill_lineage():
     raw = _lean_result()
     raw["fills"][0]["intent_id"] = "other-intent"
     with pytest.raises(LeanA1AdapterError, match="lineage is ambiguous"):
+        normalize_lean_daily_result(raw, _fixture(), contract)
+
+
+def test_lean_adapter_rejects_unmapped_cash_ledger_fill():
+    contract = load_runtime_contract()
+    raw = _lean_result()
+    raw["cash_ledger"][0]["fill_id"] = "missing-fill"
+    with pytest.raises(LeanA1AdapterError, match="known LEAN fill_id"):
         normalize_lean_daily_result(raw, _fixture(), contract)
