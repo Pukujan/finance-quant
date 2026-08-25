@@ -35,7 +35,7 @@ def render_block() -> str:
             f"- Live capital enabled: **{str(state['authority']['live_capital_enabled']).lower()}**",
             f"- Frontend authority: **{state['authority']['frontend']}**",
             f"- Legacy Phase B: **{state['legacy_phase_b']['status']}** (evidence preserved)",
-            f"- Next planned issue after bootstrap: **#{state['next_issue']}**",
+            f"- Next planned issue: **#{state['next_issue']}**",
             "",
             "Machine source: `contracts/project/project-state.json`; assurance source: `contracts/assurance/capability-assurance-v1.json`.",
             END,
