@@ -2,7 +2,8 @@
 EXTENDS Naturals
 
 \* A deliberately small TLC model of FQ-PROP-005.  Retry is observable, but it
-\* cannot advance the ladder or create an authority record.
+\* cannot advance the ladder or create an authority record. Authority records are
+\* durable historical receipts; pre-review constraints apply to the active candidate.
 CONSTANTS Candidates, MaxRetries
 States == {"IDLE", "SEALED", "CAMPAIGN_RUNNING", "SCORED", "REVIEW",
            "PAPER_APPROVED", "TINY_LIVE_APPROVED", "REJECTED"}
@@ -73,8 +74,8 @@ TypeOK == /\ state \in States
           /\ reviewed \in BOOLEAN
 
 NoAuthorityBeforeReview ==
-    state \in {"IDLE", "SEALED", "CAMPAIGN_RUNNING", "SCORED", "REVIEW"}
-    => \A c \in Candidates: authorityRecords[c] = 0
+    state \in {"SEALED", "CAMPAIGN_RUNNING", "SCORED", "REVIEW"}
+    => authorityRecords[current] = 0
 NoDuplicateAuthority == \A c \in Candidates: authorityRecords[c] <= 1
 ApprovalRequiresReview == state = "PAPER_APPROVED" => reviewed
 =============================================================================
