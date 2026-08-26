@@ -17,6 +17,7 @@ D = Decimal
 
 _EXPECTED_ENGINE = "LEAN"
 _EXPECTED_SCOPE = "EquityFillModel.MarketOnOpenFill"
+_TRACE_PREFIX = "TRACE::"
 
 
 def _instant(value: str) -> datetime:
@@ -28,7 +29,7 @@ def _instant(value: str) -> datetime:
 
 
 def load_probe_result(path: Path) -> dict[str, Any]:
-    """Extract exactly one LEAN result object while tolerating non-JSON runtime log lines."""
+    """Extract exactly one LEAN result object and fail closed on unknown stdout."""
     text = path.read_text(encoding="utf-8")
     candidates: list[dict[str, Any]] = []
 
@@ -43,12 +44,17 @@ def load_probe_result(path: Path) -> dict[str, Any]:
             stripped = line.strip()
             if not stripped:
                 continue
+            if stripped.startswith(_TRACE_PREFIX):
+                continue
             try:
                 value = json.loads(stripped)
-            except json.JSONDecodeError:
-                continue
-            if isinstance(value, dict):
-                candidates.append(value)
+            except json.JSONDecodeError as exc:
+                raise ValueError(
+                    "unexpected non-JSON LEAN probe stdout; only TRACE:: diagnostics are permitted"
+                ) from exc
+            if not isinstance(value, dict):
+                raise ValueError("LEAN probe JSON stdout entries must be objects")
+            candidates.append(value)
 
     matches = [
         value
@@ -56,10 +62,10 @@ def load_probe_result(path: Path) -> dict[str, Any]:
         if value.get("engine") == _EXPECTED_ENGINE
         and value.get("probe_scope") == _EXPECTED_SCOPE
     ]
-    if len(matches) != 1:
+    if len(matches) != 1 or len(candidates) != 1:
         raise ValueError(
             "probe output must contain exactly one LEAN EquityFillModel.MarketOnOpenFill JSON object; "
-            f"found {len(matches)}"
+            f"found {len(matches)} matching of {len(candidates)} JSON object(s)"
         )
     return matches[0]
 
