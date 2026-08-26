@@ -21,6 +21,7 @@ jobs:
           tests/test_execution_conformance.py
           tests/test_execution_metamorphic.py
           tests/test_execution_faults.py
+          tests/test_a1_lean_probe_assurance.py
 
   mutation:
     runs-on: ubuntu-latest
@@ -32,10 +33,14 @@ jobs:
       - run: python -m pip install -r requirements-dev.txt
       - name: Enforce A1 mutation thresholds
         run: python scripts/a1_execution_mutation_gate.py --output a1-mutation-receipt.json
-      - name: Upload A1 mutation receipt
+      - name: Enforce LEAN production probe mutation thresholds
+        run: python scripts/a1_lean_probe_mutation_gate.py --output a1-lean-mutation-receipt.json
+      - name: Upload A1 mutation receipts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: a1-execution-mutation-receipt
-          path: a1-mutation-receipt.json
+          name: a1-execution-mutation-receipts
+          path: |
+            a1-mutation-receipt.json
+            a1-lean-mutation-receipt.json
           if-no-files-found: error
