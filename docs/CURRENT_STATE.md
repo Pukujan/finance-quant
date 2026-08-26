@@ -48,6 +48,8 @@ Independent tests cover direct and timestamped TRACE forms, arbitrary/unrecogniz
 
 A process-boundary LEAN chaos/fault campaign is implemented and wired into `a1-assurance`. It injects a nonzero candidate exit, timeout, missing dependency, corrupted candidate stdout, and corrupted persisted evidence. Every injected case must produce a `FAIL_CLOSED` disposition, authority `NONE`, and no sealed-holdout access; persisted evidence is accepted only when it exactly matches recomputed authoritative public evidence. This is an evaluator/control-boundary campaign and does not enable credentials, CLI trading authority, paper execution, or live capital.
 
+The opaque A1 hidden-acceptance **public ingress** is now implemented without accessing the private holdout. `finance_quant.acceptance.a1_hidden` accepts only the public `SealRecord` commitment and aggregate-only `SafeAcceptanceReceipt`, rejects extra fields, invalid digest identities, commitment/candidate mismatches, exhausted use numbers, non-pass status, failure classes on a passing receipt, duplicate aggregate metric names, and non-finite aggregate values. `scripts/verify_a1_hidden_acceptance.py` exposes the same fail-closed verifier, and `.github/workflows/a1-hidden-acceptance.yml` is a manual receipt-ingress workflow that has no holdout checkout or hidden-case execution path. This does **not** satisfy `HIDDEN_ACCEPTANCE` by itself: the actual A1 seal commitment and passing aggregate receipt must still be produced by an authorized external clean runner that ordinary agents cannot inspect.
+
 ## Validation status
 
 Exact path-exhaustion head `85f32858b3e4ee17cf7c1240349fe6f2e6530c05` is fully green: tests `32914556208`, legacy phase-b `32914556200`, bootstrap-assurance `32914556224`, runtime-candidates `32914556234`, callback adapter evaluation `32914556217`, and pre-open/latency evaluation `32914556199`.
@@ -58,18 +60,20 @@ Documentation head `1eb0cef3cd55b0123d7a7db853dd152ea2db7c25` exposed two ordina
 
 Repair head `b8cc43daeb7d6fc34b5b1d8e6df6948e8c8e8c25` passed `a1-assurance` run `32919112339`, including the strengthened five-mutant LEAN gate at 100%.
 
-The first process-fault implementation run, `32919228495` on head `8a23f12dd7dbc34f918b70f3b53f31b3ca618fbf`, passed all **56** independent reference/metamorphic/fault/LEAN tests and the mutation job. Its standalone process campaign failed before injection with `ModuleNotFoundError: No module named 'scripts'` because the workflow invoked the package-importing script by file path. The workflow invocation was repaired to `python -m scripts.a1_lean_process_fault_gate`; no fault semantics, oracle, or tests changed. Repair head `df2a0a2ed0395275178951663107873b4756d767` launched all seven workflows, which were queued/in progress at the durable update.
+The first process-fault implementation run, `32919228495` on head `8a23f12dd7dbc34f918b70f3b53f31b3ca618fbf`, passed all **56** independent reference/metamorphic/fault/LEAN tests and the mutation job. Its standalone process campaign failed before injection with `ModuleNotFoundError: No module named 'scripts'` because the workflow invoked the package-importing script by file path. The workflow invocation was repaired to `python -m scripts.a1_lean_process_fault_gate`; no fault semantics, oracle, or tests changed.
 
-No fully-green claim is made for the final documentation head until its own exact-head cycle completes.
+Exact repair/documentation head `0e6f3543e60a73177254ac1d6869e00588b118d4` is now fully green across all seven workflows: tests `32919496520`, legacy phase-b `32919496528`, bootstrap-assurance `32919496431`, runtime-candidates `32919496478`, callback adapter evaluation `32919496575`, pre-open evaluation `32919496514`, and `a1-assurance` `32919496473`. The `a1-assurance` metamorphic-chaos job completed the LEAN process-boundary campaign and uploaded artifact `a1-lean-process-fault-receipt` (`9589383666`, digest `sha256:51d80e6f6d3d811e17f748a02addb95e481fee1b148c15416bb776035c737c6d`); mutation receipts were also uploaded.
 
-A1 remains **IN_PROGRESS**. Hidden acceptance is still outstanding. Candidate-level repeated-determinism/clean-environment closure and any remaining metamorphic/chaos obligations must still be established before candidate dispositions. No primary runtime may be selected yet.
+The new opaque-ingress implementation reached code/workflow head `fca142ee86aa886f100b127a9e1bcc80b4657a98`; exact-head PR workflows had not yet appeared at the durable update, so no green claim is made for that implementation or the subsequent documentation head until its own validation cycle completes.
+
+A1 remains **IN_PROGRESS**. Hidden acceptance remains outstanding until an authorized external clean runner produces a passing aggregate receipt bound to an actual A1 public seal and exact candidate artifact. Candidate-level repeated-determinism/clean-environment closure and any remaining metamorphic/chaos obligations must also be established before candidate dispositions. No primary runtime may be selected yet.
 
 ## Next exact action
 
-1. Require this final durable-state head to pass tests, legacy phase-b, bootstrap-assurance, runtime-candidates, `a1-nautilus-adapter-evaluation`, `a1-nautilus-preopen-evaluation`, and `a1-assurance`; specifically confirm the process-fault campaign completes and uploads its receipt. Fix genuine failures without weakening any invariant or mutation threshold.
-2. Preserve the timestamped TRACE classifier and five-critical-mutant LEAN gate; confirm the process-fault receipt proves fail-closed handling for nonzero exit, timeout, dependency loss, candidate-output corruption, and persisted-evidence corruption.
-3. Establish the opaque hidden-acceptance execution path without reading or exposing sealed cases/labels, then run the authorized hidden corpus externally/through its permitted gate. Do not synthesize public cases and call them hidden.
-4. Close any remaining candidate-level metamorphic, repeated-determinism, clean-environment, and chaos/fault obligations. Preserve the Nautilus negative/ineligibility/path-exhaustion evidence and do not manufacture conformity through private bindings, future event payload, custom fill logic, or changed order semantics.
+1. Require the final durable-state head to pass tests, legacy phase-b, bootstrap-assurance, runtime-candidates, `a1-nautilus-adapter-evaluation`, `a1-nautilus-preopen-evaluation`, and `a1-assurance`; fix genuine failures in the new opaque verifier without weakening its exact-schema, commitment, candidate-hash, use-budget, or fail-closed rules.
+2. Preserve the now-green LEAN process-fault receipt, timestamped TRACE classifier, mutation thresholds, and Nautilus negative/ineligibility/path-exhaustion evidence.
+3. Provision/identify the authorized A1 external clean-runner path and public A1 `SealRecord` without allowing ordinary agents to inspect private cases/labels. Execute the sealed corpus externally, then feed only its aggregate `SafeAcceptanceReceipt` through `a1-hidden-acceptance`. Do not use this repository's coarse GitHub identity to read the holdout and do not fabricate a receipt.
+4. Close any remaining candidate-level metamorphic, repeated-determinism, clean-environment, and chaos/fault obligations for the still-eligible LEAN path.
 5. Only after every required A1 gate is green may issue #15 assign final candidate dispositions (`ADOPT | ADOPT_WITH_CONSTRAINTS | REFERENCE_ONLY | REJECT`), select a primary runtime, and explicitly permit promotion.
 
 Do not start issue #16 or change any authority/holdout restriction while A1 remains incomplete.
@@ -83,4 +87,5 @@ Do not start issue #16 or change any authority/holdout restriction while A1 rema
 5. `contracts/assurance/capability-assurance-v1.json`
 6. `docs/plans/A1_EXECUTION_RUNTIME_CONFORMANCE.md`
 7. `contracts/execution/runtime-conformance-v1.json`
-8. relevant A1 adapter/probe/workflow files and tests
+8. `docs/acceptance/SEALED_INTERFACE.md`
+9. relevant A1 adapter/probe/workflow files and tests
