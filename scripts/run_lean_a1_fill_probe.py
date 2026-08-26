@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 from datetime import datetime, timezone
 from decimal import Decimal
 from pathlib import Path
@@ -18,6 +19,9 @@ D = Decimal
 _EXPECTED_ENGINE = "LEAN"
 _EXPECTED_SCOPE = "EquityFillModel.MarketOnOpenFill"
 _TRACE_PREFIX = "TRACE::"
+_TRACE_LEADER_RE = re.compile(
+    r"^(?:\d{8}(?:[ T]\d{2}:\d{2}:\d{2}(?:\.\d+)?)?\s+)?"
+)
 
 
 def _instant(value: str) -> datetime:
@@ -26,6 +30,12 @@ def _instant(value: str) -> datetime:
     if result.tzinfo is None:
         raise ValueError(f"timestamp must be offset-aware: {value}")
     return result.astimezone(timezone.utc)
+
+
+def _is_trace_diagnostic(line: str) -> bool:
+    """Accept only LEAN TRACE lines with the known optional runtime timestamp leader."""
+    match = _TRACE_LEADER_RE.match(line)
+    return bool(match and line[match.end() :].startswith(_TRACE_PREFIX))
 
 
 def load_probe_result(path: Path) -> dict[str, Any]:
@@ -44,7 +54,7 @@ def load_probe_result(path: Path) -> dict[str, Any]:
             stripped = line.strip()
             if not stripped:
                 continue
-            if stripped.startswith(_TRACE_PREFIX):
+            if _is_trace_diagnostic(stripped):
                 continue
             try:
                 value = json.loads(stripped)
