@@ -1,28 +1,27 @@
-# Handoff — A1 metamorphic relation closure
+# Handoff — A1 LEAN chaos/fault closure
 
 Date: 2026-08-25
 Branch: `bootstrap/oss-autonomous-trader-replatform`
 Active issue: #15
 Assurance phase: A1
 
-Required governance/state sources were re-read before this slice. The prior durable documentation head `36f55c97b1ea1bbe532e3088ad0d082fae7c312e` was verified fully green across all eight current PR workflows before changes.
+Required governance/state sources were re-read before changes. Property impact remains **STRENGTHEN** only: candidate pins, execution semantics, PIT rules, permitted differences, runtime dispositions, trading authority, and sealed-holdout restrictions were not changed.
 
-Property impact remains **STRENGTHEN** only: the execution oracle, candidate pins, PIT boundary, permitted differences, runtime dispositions, trading authority, and sealed-holdout policy were not changed.
+The public A1 audit closed two previously implicit metamorphic relations and then found missing explicit LEAN process-boundary coverage for several contract-named fault classes. The metamorphic suite now explicitly enforces non-negative fee monotonicity and equivalent liquidity-bounded split-execution economics in addition to canonical key order, duplicate idempotence, event permutations, time shifts, future-known decoys, liquidity monotonicity, and repeated determinism.
 
-The public A1 metamorphic audit found two contract-declared relations that were not explicit in the dedicated suite: non-negative fee monotonicity and equivalent split-execution economics. Commit `e4382711b732172d938bffd2c3e2a0a013ffa9d6` adds independent reference-oracle tests requiring higher non-negative fees to never improve terminal NAV while preserving execution semantics, and requiring an equivalent liquidity-bounded `3 = 1 + 2` execution split to preserve aggregate executed quantity, terminal position, cash, and NAV.
+The LEAN chaos campaign was expanded through commits `2121870bed04907e3a524d672655a0164a0820e1` and `2ede511d00f5213fdc266003e3280b21d1252e0b`. It now injects `nonzero_exit`, `runtime_exception`, `timeout`, `dependency_missing`, `candidate_output_corruption`, `duplicate_delivery`, `malformed_payload`, `invalid_reorder`, `dropped_event`, `crash_before_commit`, `crash_after_commit`, `restart_replay`, `persisted_evidence_corruption`, and contract-named `persisted_state_corruption`.
 
-Existing independent tests already cover canonical mapping-key order, exact duplicate idempotence, future-known decoys, all public event permutations, uniform time shifts, increased eligible-liquidity monotonicity, and repeated determinism. No runtime implementation or oracle semantics changed.
+All non-committed faults must fail closed with authority `NONE`. The only recovery cases are `crash_after_commit` and `restart_replay`, which require exact persisted authoritative public evidence to revalidate against recomputed evidence before returning `RECOVERED_COMMITTED`; they grant no trading authority.
 
-`a1-assurance` run `32925860727` passed its `metamorphic-chaos` job with the new relations and passed both generic and LEAN-specific mutation gates. Both Nautilus negative evaluators on the same code head also passed. At the time this handoff was written, ordinary tests, legacy Phase-B, bootstrap assurance, runtime candidates, and LEAN clean-determinism for the code head were still executing; therefore neither the code head nor the subsequent documentation head is yet claimed fully green.
+`a1-assurance` run `32926137710` passed the expanded metamorphic/chaos job and both mutation jobs. Artifact `a1-lean-process-fault-receipt` is `9591573749`, digest `sha256:736d60345a54e626f2d39317e701600a9ac99c6ccd93d9f590bb4ecb105f6a42`. On code head `2ede511d00f5213fdc266003e3280b21d1252e0b`, ordinary tests, runtime-candidates, both Nautilus evaluators, `a1-assurance`, and LEAN clean-determinism are green; legacy Phase-B and bootstrap-assurance were still completing when this handoff was persisted, so that code head is not yet claimed fully green across all eight workflows.
 
-A1 remains **IN_PROGRESS**. Genuine hidden acceptance still requires an authorized external clean runner and an actual public A1 seal-bound aggregate `SafeAcceptanceReceipt`; ordinary agents may not inspect exact sealed cases or labels. Runtime selection remains `NONE / PENDING`; trading authority remains `NONE`; autonomous paper/live execution remains disabled.
+The public metamorphic/chaos audit is now closed for the current reference/LEAN slice. A1 remains **IN_PROGRESS** because genuine `HIDDEN_ACCEPTANCE` still requires an authorized external clean runner and actual public A1 seal-bound aggregate `SafeAcceptanceReceipt`. Ordinary agents may not inspect exact sealed cases or labels. Runtime selection remains `NONE / PENDING`; trading authority remains `NONE`; autonomous paper/live execution remains disabled.
 
 ## Next exact action
 
-1. Require the full eight-workflow exact-head validation matrix to finish green for the metamorphic code slice and final durable documentation head; fix genuine failures without weakening tests or invariants.
-2. Finish the public A1 audit for any genuinely uncovered candidate-level chaos/fault relation beyond the existing LEAN process-boundary campaign plus generic restart/corruption oracles. Add only necessary contractual coverage.
-3. Obtain `HIDDEN_ACCEPTANCE` only through the authorized external clean-runner/sealed interface and ingest only its aggregate receipt. Never inspect or fabricate hidden evidence.
-4. Preserve Nautilus negative/ineligibility/path-exhaustion evidence plus LEAN mutation, process-fault, clean-determinism, and metamorphic receipts.
-5. Only after every conjunctive A1 gate is green may issue #15 assign final candidate dispositions and select a primary runtime. Do not start issue #16 or change trading/holdout authority beforehand.
+1. Require the chaos code head and final durable documentation head to finish the full eight-workflow exact-head validation matrix; fix genuine failures without weakening tests or invariants.
+2. Once that public matrix is green, obtain genuine `HIDDEN_ACCEPTANCE` only through the authorized external clean-runner/sealed interface and ingest only its aggregate receipt. Never inspect or fabricate hidden evidence.
+3. Preserve Nautilus negative/ineligibility/path-exhaustion evidence plus LEAN production differential, mutation, metamorphic, process-fault, and clean-determinism receipts.
+4. Only after every conjunctive A1 gate, including hidden acceptance, is green may issue #15 assign final candidate dispositions and select a primary runtime. Do not start issue #16 or change trading/holdout authority beforehand.
 
-Append-only record: `docs/handoffs/2026-08-25-a1-metamorphic-relations-closure.md`.
+Append-only record: `docs/handoffs/2026-08-25-a1-lean-chaos-fault-closure.md`.
