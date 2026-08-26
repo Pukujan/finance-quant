@@ -1,0 +1,154 @@
+name: a1-lean-clean-determinism
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  LEAN_SHA: 185c691b89f28bd68e48d53c02147415134975f0
+
+jobs:
+  independent-production-run:
+    strategy:
+      fail-fast: false
+      matrix:
+        run: [1, 2, 3]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout finance-quant
+        uses: actions/checkout@v4
+        with:
+          path: finance-quant
+      - name: Checkout pinned LEAN source
+        uses: actions/checkout@v4
+        with:
+          repository: QuantConnect/Lean
+          ref: 185c691b89f28bd68e48d53c02147415134975f0
+          path: lean
+          fetch-depth: 1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Verify exact candidate pin
+        working-directory: finance-quant
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C "$GITHUB_WORKSPACE/lean" rev-parse HEAD)" = "$LEAN_SHA"
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          pin = json.loads(Path('contracts/execution/lean-a1-candidate-pin-v1.json').read_text())
+          assert pin['source_commit'] == '185c691b89f28bd68e48d53c02147415134975f0'
+          assert pin['credentials_required'] is False
+          assert pin['cli_used'] is False
+          assert pin['runtime_disposition'] == 'PENDING'
+          PY
+      - name: Build production LEAN probe in fresh runner
+        working-directory: finance-quant
+        run: >-
+          dotnet build tools/lean_a1_probe/LeanA1Probe.csproj
+          --configuration Release
+          -p:LeanRoot="$GITHUB_WORKSPACE/lean"
+      - name: Execute and normalize one independent production run
+        working-directory: finance-quant
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/a1-lean-clean-${{ matrix.run }}
+          dotnet run --project tools/lean_a1_probe/LeanA1Probe.csproj \
+            --configuration Release --no-build \
+            -p:LeanRoot="$GITHUB_WORKSPACE/lean" \
+            -- fixtures/execution/a1-lean-fill-probe-v1.json \
+            > artifacts/a1-lean-clean-${{ matrix.run }}/raw.txt \
+            2> artifacts/a1-lean-clean-${{ matrix.run }}/stderr.txt
+          python -m scripts.run_lean_a1_fill_probe \
+            --fixture fixtures/execution/a1-lean-fill-probe-v1.json \
+            --pin contracts/execution/lean-a1-candidate-pin-v1.json \
+            --probe-result artifacts/a1-lean-clean-${{ matrix.run }}/raw.txt \
+            --out artifacts/a1-lean-clean-${{ matrix.run }}/evidence.json
+          RUN=${{ matrix.run }} python - <<'PY'
+          import hashlib, json, os
+          from pathlib import Path
+          from scripts.run_lean_a1_fill_probe import load_probe_result
+          run = os.environ['RUN']
+          root = Path(f'artifacts/a1-lean-clean-{run}')
+          probe = load_probe_result(root / 'raw.txt')
+          canonical = json.dumps(probe, sort_keys=True, separators=(',', ':')) + '\n'
+          (root / 'canonical-probe.json').write_text(canonical, encoding='utf-8')
+          evidence = json.loads((root / 'evidence.json').read_text())
+          receipt = {
+              'schema_version': '1.0.0',
+              'issue': 15,
+              'phase': 'A1',
+              'candidate': 'LEAN',
+              'candidate_source_commit': evidence['candidate_source_commit'],
+              'fixture_id': evidence['fixture_id'],
+              'semantic_conformance': evidence['semantic_conformance'],
+              'candidate_receipt_hash': evidence['candidate_receipt_hash'],
+              'reference_receipt_hash': evidence['reference_receipt_hash'],
+              'canonical_probe_sha256': hashlib.sha256(canonical.encode()).hexdigest(),
+              'authority': 'NONE',
+          }
+          (root / 'independent-receipt.json').write_text(
+              json.dumps(receipt, indent=2, sort_keys=True) + '\n', encoding='utf-8')
+          PY
+      - name: Upload independent receipt
+        uses: actions/upload-artifact@v4
+        with:
+          name: a1-lean-clean-run-${{ matrix.run }}
+          path: finance-quant/artifacts/a1-lean-clean-${{ matrix.run }}/
+
+  compare-independent-runs:
+    needs: independent-production-run
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: a1-lean-clean-run-*
+          path: runs
+      - name: Require three clean-run semantic receipts to be identical
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import hashlib, json
+          from pathlib import Path
+          paths = sorted(Path('runs').glob('a1-lean-clean-run-*/independent-receipt.json'))
+          assert len(paths) == 3, paths
+          receipts = [json.loads(p.read_text()) for p in paths]
+          assert all(r == receipts[0] for r in receipts[1:]), receipts
+          assert receipts[0]['semantic_conformance'] == 'PASS'
+          assert receipts[0]['authority'] == 'NONE'
+          closure = {
+              'schema_version': '1.0.0',
+              'issue': 15,
+              'phase': 'A1',
+              'candidate': 'LEAN',
+              'techniques': ['DETERMINISM', 'CLEAN_ENV'],
+              'independent_clean_runs': 3,
+              'minimum_required_runs': 3,
+              'equivalent_receipts': True,
+              'candidate_source_commit': receipts[0]['candidate_source_commit'],
+              'fixture_id': receipts[0]['fixture_id'],
+              'candidate_receipt_hash': receipts[0]['candidate_receipt_hash'],
+              'reference_receipt_hash': receipts[0]['reference_receipt_hash'],
+              'canonical_probe_sha256': receipts[0]['canonical_probe_sha256'],
+              'authority': 'NONE',
+              'runtime_disposition': 'PENDING',
+          }
+          text = json.dumps(closure, indent=2, sort_keys=True) + '\n'
+          Path('a1-lean-clean-determinism-receipt.json').write_text(text, encoding='utf-8')
+          print(text, end='')
+          PY
+      - name: Upload clean determinism closure receipt
+        uses: actions/upload-artifact@v4
+        with:
+          name: a1-lean-clean-determinism-receipt
+          path: a1-lean-clean-determinism-receipt.json
