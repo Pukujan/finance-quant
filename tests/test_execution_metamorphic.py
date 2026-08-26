@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import copy
 from datetime import datetime, timedelta, timezone
+from decimal import Decimal
 from itertools import permutations
 
 import pytest
@@ -140,3 +141,53 @@ def test_metamorphic_more_eligible_liquidity_cannot_reduce_fill_quantity() -> No
 
     assert float(full["orders"][0]["filled_quantity"]) >= float(partial["orders"][0]["filled_quantity"])
     assert full["orders"][0]["state"] == "FILLED"
+
+
+def test_metamorphic_increasing_non_negative_fees_cannot_improve_terminal_nav() -> None:
+    contract = load_runtime_contract()
+    base = _fixture()
+    higher_fee = copy.deepcopy(base)
+    higher_fee["fee_per_unit"] = "0.35"
+
+    base_receipt = run_daily_reference(base, contract, seed=23)
+    higher_fee_receipt = run_daily_reference(higher_fee, contract, seed=23)
+
+    assert higher_fee_receipt["positions"] == base_receipt["positions"]
+    assert [
+        (fill["quantity"], fill["price"], fill["source_event_id"])
+        for fill in higher_fee_receipt["fills"]
+    ] == [
+        (fill["quantity"], fill["price"], fill["source_event_id"])
+        for fill in base_receipt["fills"]
+    ]
+    assert Decimal(higher_fee_receipt["nav"]) <= Decimal(base_receipt["nav"])
+
+
+def test_metamorphic_equivalent_fill_split_preserves_terminal_quantity_and_cash() -> None:
+    contract = load_runtime_contract()
+    single = _fixture()
+    single["intents"][0]["quantity"] = "3"
+
+    split = copy.deepcopy(single)
+    split["intents"] = [
+        {
+            **copy.deepcopy(single["intents"][0]),
+            "intent_id": "intent-1a",
+            "quantity": "1",
+        },
+        {
+            **copy.deepcopy(single["intents"][0]),
+            "intent_id": "intent-1b",
+            "quantity": "2",
+        },
+    ]
+
+    single_receipt = run_daily_reference(single, contract, seed=23)
+    split_receipt = run_daily_reference(split, contract, seed=23)
+
+    assert sum(Decimal(fill["quantity"]) for fill in split_receipt["fills"]) == sum(
+        Decimal(fill["quantity"]) for fill in single_receipt["fills"]
+    )
+    assert split_receipt["positions"] == single_receipt["positions"]
+    assert Decimal(split_receipt["cash"]) == Decimal(single_receipt["cash"])
+    assert Decimal(split_receipt["nav"]) == Decimal(single_receipt["nav"])
