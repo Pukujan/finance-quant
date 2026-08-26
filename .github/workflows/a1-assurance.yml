@@ -1,0 +1,41 @@
+name: a1-assurance
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  metamorphic-chaos:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install -r requirements-dev.txt
+      - name: A1 reference, metamorphic, and fault/restart oracles
+        run: >-
+          python -m pytest -q
+          tests/test_execution_reference.py
+          tests/test_execution_conformance.py
+          tests/test_execution_metamorphic.py
+          tests/test_execution_faults.py
+
+  mutation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install -r requirements-dev.txt
+      - name: Enforce A1 mutation thresholds
+        run: python scripts/a1_execution_mutation_gate.py --output a1-mutation-receipt.json
+      - name: Upload A1 mutation receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: a1-execution-mutation-receipt
+          path: a1-mutation-receipt.json
+          if-no-files-found: error

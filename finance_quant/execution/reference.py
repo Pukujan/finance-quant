@@ -140,3 +140,68 @@ def run_daily_reference(fixture: Mapping[str, Any], contract: Mapping[str, Any],
     validate_receipt(receipt, contract)
     receipt["receipt_hash"] = canonical_receipt_hash(receipt, contract)
     return receipt
+
+
+def restart_daily_reference_from_checkpoint(
+    fixture: Mapping[str, Any],
+    contract: Mapping[str, Any],
+    checkpoint_receipt: Mapping[str, Any],
+    *,
+    seed: int = 0,
+) -> dict[str, Any]:
+    """Validate a committed checkpoint and deterministically replay to final state.
+
+    The reference oracle deliberately favors a simple, fail-closed replay model over a
+    mutable resume implementation. A restart accepts a checkpoint only when its hash,
+    identity, seed, committed boundary, and complete normalized state exactly match the
+    deterministic prefix implied by the immutable fixture. The full fixture is then
+    replayed and linked to the validated checkpoint. This gives A1 an executable
+    restart/convergence oracle without granting production execution authority.
+    """
+    validate_receipt(checkpoint_receipt, contract)
+    checkpoint = dict(checkpoint_receipt)
+    expected_hash = canonical_receipt_hash(checkpoint, contract)
+    if checkpoint.get("receipt_hash") != expected_hash:
+        raise ReferenceExecutionError("checkpoint receipt_hash mismatch")
+    if checkpoint.get("runtime") != "finance-quant-reference" or checkpoint.get("runtime_version") != "a1-v0":
+        raise ReferenceExecutionError("checkpoint runtime identity mismatch")
+    if checkpoint.get("fixture_id") != fixture.get("fixture_id"):
+        raise ReferenceExecutionError("checkpoint fixture identity mismatch")
+    if checkpoint.get("seed") != seed:
+        raise ReferenceExecutionError("checkpoint seed mismatch")
+
+    lineage = checkpoint.get("replay_lineage")
+    if not isinstance(lineage, Mapping):
+        raise ReferenceExecutionError("checkpoint replay_lineage is invalid")
+    boundary = lineage.get("committed_event_count")
+    if type(boundary) is not int or boundary < 0:
+        raise ReferenceExecutionError("checkpoint committed_event_count is invalid")
+
+    events = _ordered_unique_events(list(fixture.get("events", [])))
+    if boundary > len(events):
+        raise ReferenceExecutionError("checkpoint committed_event_count exceeds fixture")
+
+    prefix_fixture = dict(fixture)
+    prefix_fixture["events"] = events[:boundary]
+    if boundary == 0:
+        prefix_fixture["intents"] = []
+    else:
+        boundary_time = events[boundary - 1]["event_time"]
+        prefix_fixture["intents"] = [
+            dict(intent)
+            for intent in fixture.get("intents", [])
+            if intent["created_at"] <= boundary_time
+        ]
+    expected_checkpoint = run_daily_reference(prefix_fixture, contract, seed=seed)
+    if checkpoint != expected_checkpoint:
+        raise ReferenceExecutionError("checkpoint does not match committed fixture boundary")
+
+    resumed = run_daily_reference(fixture, contract, seed=seed)
+    resumed["replay_lineage"] = {
+        "parent_receipt_hash": checkpoint["receipt_hash"],
+        "committed_event_count": len(events),
+    }
+    resumed["receipt_hash"] = ""
+    validate_receipt(resumed, contract)
+    resumed["receipt_hash"] = canonical_receipt_hash(resumed, contract)
+    return resumed
