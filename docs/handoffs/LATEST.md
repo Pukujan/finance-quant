@@ -1,25 +1,32 @@
-# Handoff — A1 Nautilus public production path exhaustion
+# Handoff — A1 restart, metamorphic, and mutation assurance
 
 Date: 2026-08-25
 Branch: `bootstrap/oss-autonomous-trader-replatform`
 Active issue: #15
 Assurance phase: A1
 
-Required governance/state files were read before changes. Starting durable head `97f0d19b1486662ca5a23aa9a902559a1c9acf22` was verified green across all six required baseline workflows: tests `32910761679`, legacy Phase-B `32910761680`, bootstrap assurance `32910761746`, runtime candidates `32910761691`, callback-adapter evaluation `32910761695`, and pre-open/latency evaluation `32910761698`. Bootstrap contracts, formal TLA, full validation, and fresh-environment jobs all succeeded.
+Required governance/state files were read before changes. The prior path-exhaustion head `85f32858b3e4ee17cf7c1240349fe6f2e6530c05` completed green across tests `32914556208`, legacy Phase-B `32914556200`, bootstrap assurance `32914556224`, runtime candidates `32914556234`, callback-adapter evaluation `32914556217`, and pre-open/latency evaluation `32914556199` before this assurance slice proceeded.
 
-This slice completed the remaining bounded source-level Nautilus timing analysis for pinned `v1.230.0` / commit `8160730c7c550480b0a439fb11086a4c4de15f0b` under the unchanged A1 next-bar-open MARKET/GTC contract. Existing executable evidence remains unchanged: native GTC is a deterministic `FQ-PROP-015` failure; PIT-safe bar-2 callback deferral fills `5 @ 12.00` at `2026-06-02T13:30:00Z` rather than the required open `11`, a `FQ-PROP-021` failure; and native insert latency is ineligible because the exact published wheel does not expose the advertised public `StaticLatencyModel` symbol.
+This slice is a **STRENGTHEN** of existing A1 properties only. No execution oracle, runtime pin, permitted semantic difference, PIT rule, authority boundary, or candidate disposition changed.
 
-The pinned `BacktestEngine` event loop closes the remaining session-clock loophole. Before routing each next data item it advances timers, drains pending commands/events, and settles exchanges. Therefore a session-known pre-open timer submission with no latency is settled against prior market state before bar 2 is routed. Waiting until the bar-2 strategy callback is already executable negative evidence and observes/fills the bar at its close. Native latency would be the production-native mechanism for delaying command settlement across that boundary, but the pinned published wheel's public API does not provide it. No private `_libnautilus` binding, future bar payload, custom fill model, or order-semantic transformation was used.
+`FQ-PROP-022` now has explicit executable restart-convergence evidence. The new reference checkpoint restart path validates the checkpoint canonical hash, reference runtime/fixture/seed identity, committed event boundary, and full deterministic prefix state implied by the immutable fixture. A checkpoint whose state was corrupted and then re-hashed is still rejected. A valid checkpoint replays to the same authoritative final orders, fills, ledgers, positions, cash, equity, and NAV as uninterrupted execution, with explicit parent receipt lineage.
 
-Accordingly, public production-native Nautilus paths are now recorded as exhausted for this specific unchanged next-open differential. This is not yet a final runtime disposition: Nautilus remains `PENDING`, LEAN remains positive evidence only, and A1 remains `IN_PROGRESS` until all conjunctive assurance gates are complete.
+The new `a1-assurance` workflow also exercises metamorphic relations covering all event-input permutations, uniform timestamp shifts, future-known decoys, and increased-liquidity monotonicity, plus fault cases for hash corruption, re-hashed state corruption, invalid committed boundaries, seed mismatch, and restart convergence.
+
+A source-level mutation gate was added for finance-quant-owned execution conformance/reference surfaces. Initial run `32915294812` failed at 9/11 critical mutants because two rapid same-size source mutations reused timestamp-valid Python bytecode. The tests themselves were not weakened. The runner was repaired to purge the mutated module's `.pyc` before each oracle execution and after restoration. Repaired run `32915409420` is green at 11/11 critical mutants killed (100% vs 98% required), 2/2 high mutants killed (100% vs 95% required), and zero critical survivors. The uploaded mutation receipt is retained in CI lineage.
+
+On implementation head `54532d38470ddf70bbbadce7ebd0ba022ffe6bf0`, `a1-assurance` `32915409420`, runtime-candidates `32915409410`, callback evaluator `32915409402`, and pre-open evaluator `32915409401` are green. The ordinary pytest step in tests run `32915409427` also passed; its smoke step, legacy Phase-B, and bootstrap assurance were still completing at the time of this durable update, so full exact-head green status has not been claimed yet.
+
+This evidence does **not** finish A1. Hidden acceptance remains outstanding, as do candidate-specific mutation/fault coverage for the LEAN normalizer/evidence path, broader candidate-level chaos/metamorphic evidence, and the final complete determinism/clean-environment evidence set. Nautilus public production-native next-open paths remain exhausted but its final disposition is still `PENDING`; LEAN remains positive evidence only; primary runtime selection remains `NONE / PENDING`.
 
 Trading authority remains `NONE`; autonomous paper/live execution remains disabled; sealed-holdout contents were not accessed.
 
 ## Next exact action
 
-1. Require the path-exhaustion documentation head to pass tests, legacy phase-b, bootstrap-assurance, runtime-candidates, `a1-nautilus-adapter-evaluation`, and `a1-nautilus-preopen-evaluation`.
-2. Preserve all Nautilus negative/ineligible/path-exhaustion evidence and do not manufacture conformity through private bindings, future payload, custom fill logic, or changed order semantics.
-3. Implement/run the remaining A1 hidden-acceptance, mutation, metamorphic, repeated-determinism, clean-environment, and chaos/fault gates for still-eligible runtime paths, without exposing hidden cases or weakening thresholds.
-4. Only after every A1 gate is green may issue #15 assign final candidate dispositions, select a primary runtime, and explicitly permit promotion. Do not advance to issue #16 before that point.
+1. Require this durable documentation head to pass tests, legacy phase-b, bootstrap-assurance, runtime-candidates, both Nautilus evaluators, and `a1-assurance`.
+2. Extend mutation/fault coverage to the still-eligible LEAN adapter/normalizer/evidence surfaces. Malformed/duplicate runtime output, nonzero candidate exit/crash, timeout/dependency failure, and receipt corruption must all fail closed; keep the existing mutation thresholds unchanged.
+3. Establish and execute the authorized opaque hidden-acceptance path without reading, copying, or exposing sealed cases/labels. Public fixtures must never be mislabeled as hidden acceptance.
+4. Close remaining candidate-level metamorphic, repeated-determinism, clean-environment, and chaos/fault evidence. Only then may issue #15 assign final candidate dispositions and select a primary runtime.
+5. Do not advance to issue #16 or change trading/holdout authority before durable state explicitly permits promotion.
 
-Append-only record: `docs/handoffs/2026-08-25-a1-nautilus-public-path-exhaustion.md`.
+Append-only record: `docs/handoffs/2026-08-25-a1-restart-metamorphic-mutation-assurance.md`.
