@@ -1,25 +1,28 @@
-# Handoff — A1 public matrix green; hidden acceptance blocked on authorized runner
+# Handoff — A1 Luna hidden runner prepared
 
 Date: 2026-08-26
 Branch: `bootstrap/oss-autonomous-trader-replatform`
 Active issue: #15
 Assurance phase: A1
+Master plan: #12
+Bootstrap status: BOOTSTRAP_COMPLETE
 
-Required governance/state sources were re-read before changes. Property impact remains **STRENGTHEN** only: candidate pins, execution semantics, PIT rules, permitted differences, runtime dispositions, trading authority, and sealed-holdout restrictions were not changed.
+The public A1 code baseline `4739392b15319bb209d657294834fed4cfb02d29` remains fully green across the required public matrix. Runtime selection remains `NONE / PENDING`; trading authority remains `NONE`; autonomous paper/live execution remains disabled; sealed-holdout contents were not accessed in this public preparation session.
 
-Exact durable head `4739392b15319bb209d657294834fed4cfb02d29` completed the full eight-workflow public validation matrix successfully: tests `32926469922`, legacy Phase-B `32926469919`, bootstrap-assurance `32926469897`, runtime-candidates `32926469900`, Nautilus callback evaluator `32926469912`, Nautilus pre-open evaluator `32926469910`, `a1-assurance` `32926469899`, and LEAN clean-determinism `32926469909`.
+The remaining substantive A1 blocker is genuine `HIDDEN_ACCEPTANCE`. A dedicated authorized-runner implementation/run handoff now exists at `docs/acceptance/A1_LUNA_HIDDEN_RUNNER_HANDOFF.md`.
 
-This establishes a fully green public A1 baseline for the current slice. LEAN production differential, mutation, metamorphic, deterministic clean-runner, and chaos/fault evidence remain preserved. Nautilus retains its native same-bar `FQ-PROP-015` failure, deferred-callback `FQ-PROP-021` failure, published latency-API ineligibility, and public production-native path-exhaustion record. Candidate dispositions remain `PENDING` because A1 gates are conjunctive.
+That handoff pins the exact public evaluation baseline and LEAN runtime commit, defines deterministic candidate artifact hashing, specifies the credential-free read-only scoring boundary, enumerates the synthetic private tests required before a real seal use, pins the exact public preflight test nodes, defines exact allowed public output schemas, and requires a clean public-verifier round-trip before evidence is returned.
 
-The remaining substantive blocker is genuine `HIDDEN_ACCEPTANCE`. `docs/acceptance/SEALED_INTERFACE.md` explicitly requires an authorized external clean runner that can execute the private sealed corpus without exposing cases/labels and emit only an aggregate `SafeAcceptanceReceipt` bound to the public `SealRecord`. Public CI and the ordinary repository GitHub identity are not valid clean-runner identities. `.github/workflows/a1-hidden-acceptance.yml` is only the aggregate receipt-ingress verifier and cannot itself satisfy hidden acceptance.
+The local authorized Codex/Luna session may implement runner mechanics inside `Pukujan/finance-quant-holdout`, but the actual sealed scorer must have no GitHub/provider/brokerage/MLflow/general-network credentials and may export only the public `SealRecord`, aggregate-only `SafeAcceptanceReceipt`, and candidate artifact SHA-256. It must not expose exact cases, labels, case IDs, expected outputs, traces, counts, or hidden debugging information.
 
-No attempt was made to inspect, search, checkout, print, or infer private holdout cases or labels. No fabricated receipt was created. Trading authority remains `NONE`; autonomous paper/live execution remains disabled; runtime selection remains `NONE / PENDING`.
+No real seal use should be consumed while developing the runner. Synthetic private fixtures must close runner mechanics first. A failed/invalid real hidden result must be returned only as aggregate evidence and must not trigger an automatic second run.
 
 ## Next exact action
 
-1. Use the authorized external clean runner defined by `docs/acceptance/SEALED_INTERFACE.md` to evaluate the exact candidate artifact against the sealed A1 corpus and emit only the public `SealRecord` plus aggregate `SafeAcceptanceReceipt`.
-2. Submit that aggregate evidence through `.github/workflows/a1-hidden-acceptance.yml` and require `finance_quant.acceptance.a1_hidden` to verify it fail-closed.
-3. If the aggregate hidden result fails, preserve the failure receipt and fix only public defects consistent with the unchanged A1 contract; do not inspect or optimize against hidden cases.
-4. Only after hidden acceptance passes and all public gates remain green may issue #15 assign final candidate dispositions, select the primary runtime, update machine-readable state, and explicitly permit promotion. Do not begin issue #16 beforehand.
+1. Launch local Codex/Luna in an environment explicitly authorized for `Pukujan/finance-quant-holdout` and give it `docs/acceptance/A1_LUNA_HIDDEN_RUNNER_HANDOFF.md` as the controlling instruction.
+2. Require every synthetic private runner test and the explicit public preflight suite to pass before consuming a real seal use.
+3. Execute one authorized sealed A1 run in the isolated credential-free scorer and return only the permitted aggregate evidence.
+4. Submit the public seal/receipt/hash through `.github/workflows/a1-hidden-acceptance.yml` and require `finance_quant.acceptance.a1_hidden` to verify fail-closed.
+5. Only after hidden acceptance passes and every public A1 gate remains green may issue #15 assign final dispositions and select a primary runtime. Do not begin issue #16 beforehand.
 
-Append-only record: `docs/handoffs/2026-08-26-a1-public-matrix-green-hidden-blocked.md`.
+Append-only record: `docs/handoffs/2026-08-26-a1-luna-hidden-runner-ready.md`.
