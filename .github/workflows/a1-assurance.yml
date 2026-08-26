@@ -22,6 +22,16 @@ jobs:
           tests/test_execution_metamorphic.py
           tests/test_execution_faults.py
           tests/test_a1_lean_probe_assurance.py
+          tests/test_a1_lean_process_fault_gate.py
+      - name: Run LEAN process-boundary chaos/fault campaign
+        run: python scripts/a1_lean_process_fault_gate.py --output a1-lean-process-fault-receipt.json
+      - name: Upload LEAN process fault receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: a1-lean-process-fault-receipt
+          path: a1-lean-process-fault-receipt.json
+          if-no-files-found: error
 
   mutation:
     runs-on: ubuntu-latest
