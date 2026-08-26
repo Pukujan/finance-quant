@@ -130,6 +130,14 @@ MUTANTS = [
 THRESHOLDS = {"critical": 0.98, "high": 0.95}
 
 
+def _purge_module_bytecode(path: Path) -> None:
+    cache = path.parent / "__pycache__"
+    if not cache.is_dir():
+        return
+    for pyc in cache.glob(f"{path.stem}.*.pyc"):
+        pyc.unlink()
+
+
 def _run_pytest(oracle: str) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         [sys.executable, "-m", "pytest", "-q", oracle],
@@ -170,6 +178,7 @@ def main() -> int:
             mutated = original.replace(mutant.old, mutant.new, 1)
             compile(mutated, str(path), "exec")
             path.write_text(mutated, encoding="utf-8")
+            _purge_module_bytecode(path)
             try:
                 completed = _run_pytest(mutant.oracle)
                 killed = completed.returncode != 0
@@ -183,9 +192,11 @@ def main() -> int:
                 )
             finally:
                 path.write_text(original, encoding="utf-8")
+                _purge_module_bytecode(path)
     finally:
         for path, original in originals.items():
             path.write_text(original, encoding="utf-8")
+            _purge_module_bytecode(path)
 
     summary: dict[str, dict[str, object]] = {}
     failed = False
