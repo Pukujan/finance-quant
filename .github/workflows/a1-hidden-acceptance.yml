@@ -1,0 +1,47 @@
+name: a1-hidden-acceptance
+
+on:
+  workflow_dispatch:
+    inputs:
+      seal_record_json:
+        description: Public SealRecord JSON only; never paste sealed cases or labels
+        required: true
+        type: string
+      safe_receipt_json:
+        description: Aggregate-only SafeAcceptanceReceipt JSON from the authorized clean runner
+        required: true
+        type: string
+      candidate_artifact_hash:
+        description: Expected lowercase sha256 of the public candidate artifact evaluated by the sealed runner
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  verify-opaque-receipt:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -r requirements-dev.txt
+      - name: Materialize aggregate-only public inputs
+        env:
+          A1_SEAL_RECORD_JSON: ${{ inputs.seal_record_json }}
+          A1_SAFE_RECEIPT_JSON: ${{ inputs.safe_receipt_json }}
+        run: |
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          Path("a1-seal-record.json").write_text(os.environ["A1_SEAL_RECORD_JSON"], encoding="utf-8")
+          Path("a1-safe-receipt.json").write_text(os.environ["A1_SAFE_RECEIPT_JSON"], encoding="utf-8")
+          PY
+      - name: Verify sealed A1 aggregate receipt fail-closed
+        run: >-
+          python -m scripts.verify_a1_hidden_acceptance
+          --seal-record a1-seal-record.json
+          --safe-receipt a1-safe-receipt.json
+          --candidate-artifact-hash '${{ inputs.candidate_artifact_hash }}'
