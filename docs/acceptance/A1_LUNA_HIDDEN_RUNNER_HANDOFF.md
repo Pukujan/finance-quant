@@ -8,28 +8,29 @@ Pinned LEAN runtime commit: `185c691b89f28bd68e48d53c02147415134975f0`
 
 ## Mission
 
-Implement and execute the authorized **private** A1 hidden-acceptance runner against the sealed corpus, then export only the public `SealRecord` and aggregate-only `SafeAcceptanceReceipt` required by `finance_quant.acceptance.a1_hidden`.
+Implement and execute the authorized **private** A1 hidden-acceptance runner against the sealed corpus, then export only the public `SealRecord`, aggregate-only `SafeAcceptanceReceipt`, and exact candidate artifact SHA-256 required by `finance_quant.acceptance.a1_hidden`.
 
-The runner is an assurance worker, not a promotion or trading authority. A passing receipt grants no paper/live authority by itself.
+The runner is an assurance worker only. It may not select a runtime, promote A1, begin issue #16, or grant paper/live trading authority.
 
-## Non-negotiable authority boundary
+## Authority boundary
 
-The private runner may read the sealed corpus only inside the authorized holdout environment. It must never copy, print, summarize, upload, commit, paste into chat, or otherwise expose exact hidden cases, labels, case IDs, payloads, expected fills, failure examples, or oracle internals to `Pukujan/finance-quant`, ordinary agent logs, GitHub Actions, or any public artifact.
+The private runner may read sealed material only inside the authorized holdout environment. It must never copy, print, summarize, upload, commit, paste into chat, or expose exact hidden cases, labels, case IDs, payloads, expected values, traces, or oracle internals to `Pukujan/finance-quant`, ordinary logs, GitHub Actions, or public artifacts.
 
-Do **not** execute the sealed corpus under the standing coarse GitHub PAT. The actual scoring process must run in a clean executor/container with:
+Do **not** execute the real corpus under the standing coarse GitHub PAT. The actual scorer must run in a clean isolated process/container with:
 
 - sealed case set mounted read-only;
 - candidate artifact mounted read-only;
 - reference/runtime image or dependencies mounted read-only;
 - no GitHub, provider, brokerage, MLflow, cloud-general, SSH-agent, or general network credentials;
+- network disabled after immutable inputs are staged;
 - no writable mount back into the public repository;
 - exactly one aggregate result writer.
 
-Luna may implement private runner code in the authorized holdout workspace, but the real sealed execution must occur in the isolated credential-free scoring process above.
+Luna may implement private runner code in the authorized holdout workspace. The real sealed scoring process itself must satisfy the isolation rules above.
 
-## Public contracts to treat as authoritative
+## Public sources Luna must read first
 
-Read these from the public evaluation baseline before implementing:
+Read from the public evaluation baseline before implementation:
 
 1. `AGENTS.md`
 2. `docs/CURRENT_STATE.md`
@@ -44,11 +45,11 @@ Read these from the public evaluation baseline before implementing:
 11. `tests/test_a1_hidden_acceptance.py`
 12. `.github/workflows/a1-hidden-acceptance.yml`
 
-If private holdout instructions conflict with these public authority/receipt constraints, stop and report the conflict without consuming a real seal use.
+If private instructions conflict with these public authority/receipt constraints, stop without consuming a real seal use and report only the conflict category.
 
-## Exact candidate artifact binding
+## Exact candidate artifact
 
-Hidden acceptance must be bound to immutable public code, not to a branch name or working tree.
+Hidden acceptance is bound to immutable public code, not a branch or working tree.
 
 Use public evaluation code baseline:
 
@@ -56,93 +57,97 @@ Use public evaluation code baseline:
 4739392b15319bb209d657294834fed4cfb02d29
 ```
 
-Materialize the candidate source artifact deterministically from a clean clone of `Pukujan/finance-quant`:
+From a clean clone, build the deterministic source artifact:
 
 ```bash
 PUBLIC_EVAL_SHA=4739392b15319bb209d657294834fed4cfb02d29
-git status --porcelain --untracked-files=no | grep -q '^' && { echo 'working tree not clean' >&2; exit 2; } || true
+test -z "$(git status --porcelain --untracked-files=no)"
 git cat-file -e "${PUBLIC_EVAL_SHA}^{commit}"
 git archive --format=tar --prefix=finance-quant/ "$PUBLIC_EVAL_SHA" > a1-public-candidate.tar
 sha256sum a1-public-candidate.tar
 ```
 
-The lowercase 64-hex SHA-256 of **those exact tar bytes** is `candidate_artifact_hash`. Mount the tar or its extracted immutable filesystem read-only in the scoring executor. Do not substitute the Git commit SHA for the SHA-256 artifact hash.
+The lowercase 64-hex SHA-256 of those exact tar bytes is `candidate_artifact_hash`. Rebuild the archive independently in a second clean clone and require the same SHA-256 before opening the sealed corpus. If hashes differ, stop with `CANDIDATE_ARTIFACT_NONDETERMINISTIC`.
 
-The scoring environment must also verify that the production LEAN dependency under test is exactly commit `185c691b89f28bd68e48d53c02147415134975f0`. Do not float or update the runtime during hidden acceptance.
+Mount the candidate tar or an immutable extraction read-only. Do not substitute the Git commit SHA for the SHA-256 artifact hash.
 
-If deterministic archive bytes cannot be reproduced independently from the same commit, stop before opening the sealed corpus and report `CANDIDATE_ARTIFACT_NONDETERMINISTIC`.
+The scoring environment must independently verify the production LEAN dependency is exactly commit `185c691b89f28bd68e48d53c02147415134975f0`. Any other revision fails closed before hidden execution.
 
-## Seal preparation and budget
+## Seal validation and use budget
 
 Before any real case executes:
 
 1. Locate the authorized A1 sealed set in `Pukujan/finance-quant-holdout` or its approved seal store.
 2. Recompute the case Merkle root and labels hash privately.
-3. Compare both to the public `SealRecord` fields.
-4. Compute the public seal `commitment_hash` using the same canonical JSON semantics as `SealRecord.commitment_hash`.
-5. Verify `use_number` is allowed by `max_uses` **before** execution.
-6. Record the use atomically in the private ledger so crash/retry cannot silently consume an extra evaluation.
+3. Match both against the public `SealRecord`.
+4. Compute `commitment_hash` using the same canonical JSON semantics as `SealRecord.commitment_hash`.
+5. Validate the requested `use_number` against `max_uses` before execution.
+6. Atomically claim/record the use so crash/retry cannot silently consume another evaluation.
 
-Do not spend a real seal use while developing the runner. All runner unit/integration work must use synthetic private fixtures. Consume the real sealed suite only after the synthetic test battery below is green.
+Do not spend a real seal use while developing the runner. Develop and test runner mechanics only with synthetic private fixtures.
 
-## Required private runner tests before a real sealed run
+## Required private synthetic tests
 
-Implement these tests in the private holdout/runner repository using only synthetic cases and labels:
+All must pass before one real sealed run:
 
-1. **Credential isolation** — scoring process fails before case load if prohibited credential/environment variables or writable public-repo mounts are present.
-2. **Network isolation** — scoring succeeds with network disabled and does not require network access after immutable inputs are staged.
-3. **Seal commitment mismatch** — altered case bytes or labels cause `invalid`/fail-closed behavior before candidate execution.
-4. **Artifact binding mismatch** — candidate bytes differing from the declared `candidate_artifact_hash` fail before case execution.
-5. **Runtime pin mismatch** — any LEAN revision other than `185c691b89f28bd68e48d53c02147415134975f0` fails before case execution.
-6. **Use-budget enforcement** — use `0`, use `> max_uses`, and a replayed already-consumed use all fail closed.
-7. **One-shot result writer** — exactly one aggregate receipt can be committed; a second write/retry cannot overwrite or append another authoritative result.
-8. **Exact receipt schema** — output contains exactly: `case_set_id`, `commitment_hash`, `candidate_artifact_hash`, `status`, `aggregate_metrics`, `failure_classes`, `use_number`.
-9. **No leakage fields** — attempts to emit raw cases, labels, case IDs, payloads, expected values, stack-local fixture objects, or arbitrary extra fields are rejected.
-10. **Aggregate metric safety** — metric names are unique/non-empty and values are finite numeric values; no per-case metric arrays are emitted.
-11. **Pass/failure consistency** — `status=pass` requires empty `failure_classes`; failures use only pre-registered aggregate failure-class names.
-12. **Crash before result commit** — leaves no authoritative receipt and cannot claim a pass.
-13. **Crash after result commit** — preserves exactly the committed receipt; restart cannot generate a second authoritative receipt for the same use.
-14. **Public verifier round-trip** — with synthetic seal/receipt files copied into a separate clean public checkout, the exact command below passes only for a matching passing receipt and fails closed for mismatched seal, candidate hash, use budget, status, extra fields, duplicate/non-finite metrics, or non-empty pass failures.
-15. **Log/output redaction** — stdout, stderr, exceptions, test reports, and retained artifacts contain no synthetic raw case/label payloads; the production runner uses the same aggregate-only output path.
+1. **Credential isolation** — prohibited credentials or writable public-repo mounts fail before case load.
+2. **Network isolation** — scoring requires no network after immutable inputs are staged.
+3. **Seal mismatch** — altered synthetic case bytes or labels fail before candidate execution.
+4. **Artifact mismatch** — altered candidate bytes fail against the declared artifact SHA-256.
+5. **Runtime-pin mismatch** — any non-pinned LEAN revision fails before execution.
+6. **Use budget** — use `0`, use `> max_uses`, and reuse of an already-consumed use fail closed.
+7. **One-shot writer** — a second write/retry cannot overwrite or append another authoritative receipt.
+8. **Exact schema** — receipt contains exactly `case_set_id`, `commitment_hash`, `candidate_artifact_hash`, `status`, `aggregate_metrics`, `failure_classes`, `use_number`.
+9. **No leakage** — raw cases, labels, case IDs, payloads, expected values, paths, traces, arbitrary debug objects, and extra fields cannot cross the result boundary.
+10. **Metric safety** — metric names are unique/non-empty; values are finite numeric values; no per-case metric arrays are emitted.
+11. **Status consistency** — `status=pass` requires empty `failure_classes`; failures use only pre-registered aggregate failure-class names.
+12. **Crash before commit** — leaves no authoritative receipt and cannot report pass.
+13. **Crash after commit** — preserves exactly the committed receipt; restart cannot create a second authoritative result for the same use.
+14. **Public verifier round-trip** — synthetic matching pass verifies; mismatched seal/hash/use/status, extra fields, duplicate or non-finite metrics, and non-empty pass failures all fail closed.
+15. **Log redaction** — stdout, stderr, exceptions, test reports, and retained artifacts do not contain synthetic raw case/label payloads; production uses the same aggregate-only output boundary.
 
-The public hidden classes are already specified by issue #15 and `runtime-conformance-v1.json`. The private suite must cover the registered A1 classes without exporting case counts or exact examples. Do not add new public hints derived from hidden failures.
+The private suite must cover the public A1 hidden classes already registered by issue #15 and `runtime-conformance-v1.json`, without exporting exact cases, counts, or new hints derived from failures.
 
-## Public-side preflight commands
+## Public preflight — exact test nodes
 
 Run against the extracted public candidate before opening the sealed suite:
 
 ```bash
 python -m pip install -r requirements-dev.txt
-python -m pytest tests/test_a1_hidden_acceptance.py -q
-python -m pytest tests/test_runtime_conformance.py -q
+python -m pytest \
+  tests/test_a1_hidden_acceptance.py \
+  tests/test_execution_conformance.py \
+  tests/test_execution_differential.py \
+  tests/test_execution_faults.py \
+  tests/test_execution_lean_a1.py \
+  tests/test_execution_metamorphic.py \
+  tests/test_execution_reference.py \
+  -q
 python -m scripts.verify_a1_hidden_acceptance --help
 ```
 
-If a named public test path has moved, find the current public runtime-conformance test module from the pinned evaluation commit and run its full suite. Do not alter tests merely to continue the hidden run.
+Any failure is a blocker. Do not modify a public test, execution oracle, PIT boundary, or permitted-difference rule merely to continue the hidden run.
 
-## Real sealed execution procedure
+## Real sealed execution
 
-Only after the synthetic runner tests and public preflight are green:
+Only after all synthetic runner tests and the public preflight are green:
 
-1. Start a fresh isolated clean executor.
-2. Verify there are no prohibited credentials and network is disabled.
+1. Start a fresh isolated scorer.
+2. Verify prohibited credentials are absent and network is disabled.
 3. Mount one sealed case set read-only.
-4. Mount `a1-public-candidate.tar` or its immutable extracted tree read-only.
-5. Mount the reference/runtime image and verify the LEAN pin.
-6. Revalidate the seal commitments and artifact SHA-256.
-7. Atomically claim the next permitted seal use.
+4. Mount the exact candidate artifact read-only.
+5. Mount the reference/runtime environment read-only and verify the LEAN pin.
+6. Revalidate seal commitments and candidate SHA-256.
+7. Atomically claim the next permitted use.
 8. Execute the full registered A1 hidden corpus once.
-9. Aggregate results inside the clean executor.
+9. Aggregate internally.
 10. Commit exactly one `SafeAcceptanceReceipt` through the one-shot writer.
-11. Export only:
-    - public `SealRecord` JSON;
-    - aggregate-only `SafeAcceptanceReceipt` JSON;
-    - the lowercase 64-hex `candidate_artifact_hash`.
-12. Destroy the scoring container/workspace and any uncommitted case-level execution output.
+11. Export only the public `SealRecord`, aggregate-only receipt, and candidate artifact hash.
+12. Destroy the scoring workspace and uncommitted case-level output.
 
-## Required output schemas
+## Required public schemas
 
-`SealRecord` must contain exactly:
+`SealRecord` contains exactly:
 
 ```json
 {
@@ -152,13 +157,13 @@ Only after the synthetic runner tests and public preflight are green:
   "sealed_at": "...",
   "eval_harness_sha": "...",
   "scorecard_ref": "...",
-  "max_uses": 1
+  "max_uses": 2
 }
 ```
 
-Use the actual authorized `max_uses`; do not change it to match this example.
+Use the actual authorized `max_uses`; the value above is illustrative only.
 
-`SafeAcceptanceReceipt` must contain exactly:
+`SafeAcceptanceReceipt` contains exactly:
 
 ```json
 {
@@ -172,11 +177,11 @@ Use the actual authorized `max_uses`; do not change it to match this example.
 }
 ```
 
-Do not add timestamps, case counts, per-case scores, fixture names, paths, labels, stack traces, or debug metadata to this public receipt.
+Do not add timestamps, case counts, per-case scores, fixture names, paths, labels, stack traces, or debug metadata.
 
-## Public verifier round-trip
+## Mandatory public verifier round-trip
 
-Before handing the aggregate evidence back, verify it in a clean checkout of the public evaluation baseline:
+Before returning evidence, use a clean public checkout of the evaluation baseline:
 
 ```bash
 python -m scripts.verify_a1_hidden_acceptance \
@@ -185,34 +190,34 @@ python -m scripts.verify_a1_hidden_acceptance \
   --candidate-artifact-hash '<64 lowercase hex>'
 ```
 
-Expected success output is aggregate-only and retains `authority: NONE`. Any nonzero exit is a blocker; do not edit the public verifier or receipt to manufacture a pass.
+A successful verification retains `authority: NONE`. Any nonzero exit is a blocker; never edit the verifier or receipt to manufacture a pass.
 
-The same three public values are then submitted to `.github/workflows/a1-hidden-acceptance.yml` via its manual inputs. That workflow is only the public receipt verifier and must never receive holdout credentials or sealed files.
+Then submit the same three public values to `.github/workflows/a1-hidden-acceptance.yml`. That workflow is only an aggregate verifier; it must never receive holdout credentials or sealed files.
 
-## Failure protocol
+## Failure behavior
 
 If hidden acceptance returns `fail` or `invalid`:
 
 - preserve only the aggregate receipt and authorized aggregate failure classes;
-- do not disclose exact failed cases, values, labels, expected outputs, counts, or traces;
+- do not reveal failed cases, values, labels, expected outputs, counts, or traces;
 - do not rerun automatically;
-- do not use the second seal use as an iterative debugger;
-- return control to issue #15 with the unchanged public contract and the aggregate result.
+- do not use another seal invocation as an iterative debugger;
+- return control to issue #15 with the unchanged public contract.
 
-If the runner itself is defective, fix it using synthetic fixtures first. A runner defect does not justify opening or printing sealed cases.
+Runner defects must be repaired using synthetic fixtures before any further authorized real invocation.
 
-## Completion response to the public project
+## Completion response Luna may return
 
-Return only these items:
+Return only:
 
 ```text
 A1 hidden runner: COMPLETE | BLOCKED
 public_eval_sha: 4739392b15319bb209d657294834fed4cfb02d29
 candidate_artifact_hash: <sha256 or NONE>
-seal_record: <aggregate public JSON or NONE>
-safe_acceptance_receipt: <aggregate public JSON or NONE>
+seal_record: <public aggregate JSON or NONE>
+safe_acceptance_receipt: <public aggregate JSON or NONE>
 public_verifier: PASS | FAIL_CLOSED | NOT_RUN
 notes: <aggregate-only operational note; no sealed details>
 ```
 
-Do not select the runtime, close issue #15, begin issue #16, or enable any trading authority. The public project performs final conjunctive-gate verification and candidate disposition after receipt ingress.
+Do not select a runtime, close issue #15, begin issue #16, or enable any trading authority. The public project performs final conjunctive-gate verification and candidate disposition after receipt ingress.
