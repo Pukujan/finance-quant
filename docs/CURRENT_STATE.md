@@ -46,7 +46,7 @@ The still-eligible LEAN production normalizer is fail-closed. `load_probe_result
 
 Independent tests cover direct and timestamped TRACE forms, arbitrary/unrecognized stdout, missing/duplicate/unrelated/non-object results, the unchanged valid public production differential, semantic drift in engine/scope/status/source event/fill time/instrument/quantity/price, and candidate-pin authority drift. The candidate-specific LEAN mutation gate now includes a fifth critical mutant that bypasses the timestamp/TRACE leader guard. Run `32919112339` passed the generic gate at **11/11 critical and 2/2 high mutants killed**, and the LEAN-specific gate at **100% kill rate with zero survivors**.
 
-A process-boundary LEAN chaos/fault campaign is now implemented and wired into `a1-assurance`. It injects a nonzero candidate exit, timeout, missing dependency, corrupted candidate stdout, and corrupted persisted evidence. Every injected case must produce a `FAIL_CLOSED` disposition, authority `NONE`, and no sealed-holdout access; persisted evidence is accepted only when it exactly matches recomputed authoritative public evidence. This is an evaluator/control-boundary campaign and does not enable credentials, CLI trading authority, paper execution, or live capital.
+A process-boundary LEAN chaos/fault campaign is implemented and wired into `a1-assurance`. It injects a nonzero candidate exit, timeout, missing dependency, corrupted candidate stdout, and corrupted persisted evidence. Every injected case must produce a `FAIL_CLOSED` disposition, authority `NONE`, and no sealed-holdout access; persisted evidence is accepted only when it exactly matches recomputed authoritative public evidence. This is an evaluator/control-boundary campaign and does not enable credentials, CLI trading authority, paper execution, or live capital.
 
 ## Validation status
 
@@ -56,16 +56,18 @@ The durable baseline entering the LEAN-normalizer slice, `3bb38567252c66372c9418
 
 Documentation head `1eb0cef3cd55b0123d7a7db853dd152ea2db7c25` exposed two ordinary-test failures in `tests/test_lean_a1_probe_output.py`: the normalizer rejected production-shaped `20260825 TRACE::` diagnostics because it required `TRACE::` at column zero. The same defect caused downstream tests, Phase-B, bootstrap-assurance, and runtime-candidates to fail; `a1-assurance` and both Nautilus evaluators remained green. This was repaired without changing the execution oracle or permitted-difference policy.
 
-Repair head `b8cc43daeb7d6fc34b5b1d8e6df6948e8c8e8c25` has already passed `a1-assurance` run `32919112339`, including the strengthened five-mutant LEAN gate at 100%, while its broader exact-head workflows were still running when the process-fault slice began.
+Repair head `b8cc43daeb7d6fc34b5b1d8e6df6948e8c8e8c25` passed `a1-assurance` run `32919112339`, including the strengthened five-mutant LEAN gate at 100%.
 
-Process-fault implementation head `8a23f12dd7dbc34f918b70f3b53f31b3ca618fbf` launched all seven exact-head workflows; they were queued/in progress at this durable update. No fully-green claim is made for the final documentation head until its own exact-head cycle completes.
+The first process-fault implementation run, `32919228495` on head `8a23f12dd7dbc34f918b70f3b53f31b3ca618fbf`, passed all **56** independent reference/metamorphic/fault/LEAN tests and the mutation job. Its standalone process campaign failed before injection with `ModuleNotFoundError: No module named 'scripts'` because the workflow invoked the package-importing script by file path. The workflow invocation was repaired to `python -m scripts.a1_lean_process_fault_gate`; no fault semantics, oracle, or tests changed. Repair head `df2a0a2ed0395275178951663107873b4756d767` launched all seven workflows, which were queued/in progress at the durable update.
+
+No fully-green claim is made for the final documentation head until its own exact-head cycle completes.
 
 A1 remains **IN_PROGRESS**. Hidden acceptance is still outstanding. Candidate-level repeated-determinism/clean-environment closure and any remaining metamorphic/chaos obligations must still be established before candidate dispositions. No primary runtime may be selected yet.
 
 ## Next exact action
 
-1. Require this final durable-state head to pass tests, legacy phase-b, bootstrap-assurance, runtime-candidates, `a1-nautilus-adapter-evaluation`, `a1-nautilus-preopen-evaluation`, and `a1-assurance`; fix genuine failures without weakening any invariant or mutation threshold.
-2. Confirm the new LEAN process-fault receipt proves fail-closed handling for nonzero exit, timeout, dependency loss, candidate-output corruption, and persisted-evidence corruption; preserve raw/evaluator evidence and authority `NONE`.
+1. Require this final durable-state head to pass tests, legacy phase-b, bootstrap-assurance, runtime-candidates, `a1-nautilus-adapter-evaluation`, `a1-nautilus-preopen-evaluation`, and `a1-assurance`; specifically confirm the process-fault campaign completes and uploads its receipt. Fix genuine failures without weakening any invariant or mutation threshold.
+2. Preserve the timestamped TRACE classifier and five-critical-mutant LEAN gate; confirm the process-fault receipt proves fail-closed handling for nonzero exit, timeout, dependency loss, candidate-output corruption, and persisted-evidence corruption.
 3. Establish the opaque hidden-acceptance execution path without reading or exposing sealed cases/labels, then run the authorized hidden corpus externally/through its permitted gate. Do not synthesize public cases and call them hidden.
 4. Close any remaining candidate-level metamorphic, repeated-determinism, clean-environment, and chaos/fault obligations. Preserve the Nautilus negative/ineligibility/path-exhaustion evidence and do not manufacture conformity through private bindings, future event payload, custom fill logic, or changed order semantics.
 5. Only after every required A1 gate is green may issue #15 assign final candidate dispositions (`ADOPT | ADOPT_WITH_CONSTRAINTS | REFERENCE_ONLY | REJECT`), select a primary runtime, and explicitly permit promotion.
