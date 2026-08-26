@@ -28,6 +28,12 @@ MUTANTS = [
         '_TRACE_PREFIX = ""',
     ),
     Mutant(
+        "A1-LEAN-TRACE-LEADER-BYPASS",
+        "critical",
+        "return bool(match and line[match.end() :].startswith(_TRACE_PREFIX))",
+        "return _TRACE_PREFIX in line",
+    ),
+    Mutant(
         "A1-LEAN-EXTRA-JSON-BYPASS",
         "critical",
         "if len(matches) != 1 or len(candidates) != 1:",
