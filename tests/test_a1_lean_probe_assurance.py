@@ -32,13 +32,31 @@ def _write(tmp_path: Path, text: str) -> Path:
     return path
 
 
-def test_load_probe_result_accepts_explicit_trace_and_one_result(tmp_path: Path) -> None:
-    text = "TRACE::2026-08-25 diagnostic\n" + json.dumps(_probe()) + "\n"
+@pytest.mark.parametrize(
+    "trace",
+    [
+        "TRACE::2026-08-25 diagnostic",
+        "20260825 TRACE:: Composer(): Loading Assemblies",
+        "20260825 13:30:00.123 TRACE:: Composer(): Loading Assemblies",
+    ],
+)
+def test_load_probe_result_accepts_known_trace_shapes(tmp_path: Path, trace: str) -> None:
+    text = trace + "\n" + json.dumps(_probe()) + "\n"
     assert load_probe_result(_write(tmp_path, text)) == _probe()
 
 
-def test_load_probe_result_rejects_unprefixed_runtime_text(tmp_path: Path) -> None:
-    text = "runtime diagnostic\n" + json.dumps(_probe()) + "\n"
+@pytest.mark.parametrize(
+    "diagnostic",
+    [
+        "runtime diagnostic",
+        "20260825 runtime diagnostic",
+        "arbitrary TRACE:: diagnostic",
+    ],
+)
+def test_load_probe_result_rejects_unrecognized_runtime_text(
+    tmp_path: Path, diagnostic: str
+) -> None:
+    text = diagnostic + "\n" + json.dumps(_probe()) + "\n"
     with pytest.raises(ValueError, match="unexpected non-JSON"):
         load_probe_result(_write(tmp_path, text))
 
