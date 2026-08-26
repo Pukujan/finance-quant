@@ -38,20 +38,25 @@ The LEAN process-boundary chaos/fault campaign explicitly exercises all contract
 
 The opaque A1 hidden-acceptance public ingress exists and is fail-closed, but this does **not** satisfy `HIDDEN_ACCEPTANCE`. Genuine completion requires an authorized external clean runner to execute the sealed corpus and provide only an aggregate `SafeAcceptanceReceipt` bound to the public A1 `SealRecord`. Ordinary agents must not inspect or fabricate sealed cases, labels, or receipts. The repository's ordinary/public CI identity is explicitly ineligible to act as that runner.
 
+On 2026-08-26 Luna returned an aggregate-safe blocker report for the frozen public evaluation baseline `4739392b15319bb209d657294834fed4cfb02d29`: `A1 hidden runner: BLOCKED`, reported candidate artifact SHA-256 `ed2b7b335f4be0f256fc7b28b8df12ae0a337c7b2bdec0c9925ddcd9bef630ff`, `seal_record: NONE`, `safe_acceptance_receipt: NONE`, and `public_verifier: NOT_RUN`. The operational note says the synthetic runner and public preflight passed, but no eligible isolated scorer or staged private seal inputs were available; no seal use was consumed. The reported artifact hash is structurally valid lowercase SHA-256, but there is no receipt to bind or verify it publicly yet. This is an infrastructure/authorization-input blocker, not a hidden-case failure and not an A1 pass.
+
 ## Validation status
 
-Exact durable head `4739392b15319bb209d657294834fed4cfb02d29` is fully green across all eight required public PR workflows: tests `32926469922`, legacy Phase-B `32926469919`, bootstrap-assurance `32926469897`, runtime-candidates `32926469900`, Nautilus callback evaluator `32926469912`, Nautilus pre-open evaluator `32926469910`, `a1-assurance` `32926469899`, and LEAN clean-determinism `32926469909`.
+The frozen public evaluation-code baseline `4739392b15319bb209d657294834fed4cfb02d29` remains fully green across its eight required public PR workflows: tests `32926469922`, legacy Phase-B `32926469919`, bootstrap-assurance `32926469897`, runtime-candidates `32926469900`, Nautilus callback evaluator `32926469912`, Nautilus pre-open evaluator `32926469910`, `a1-assurance` `32926469899`, and LEAN clean-determinism `32926469909`.
 
-The public SDD/PDD, static/IR, unit/regression, property/stateful, mutation, differential, metamorphic, determinism, clean-environment, and chaos/fault work is green for the current A1 public slice. The remaining conjunctive blocker is genuine **HIDDEN_ACCEPTANCE** through the authorized external clean-runner/sealed interface. No primary runtime may be selected and A1 may not be promoted until that aggregate receipt verifies successfully.
+The later documentation/handoff head `42e1e026808903950e0e9a5df812faa7f36ee91e` is also fully green across all eight PR-triggered workflows: tests `32964831248`, legacy Phase-B `32964831235`, bootstrap-assurance `32964831212`, runtime-candidates `32964831168`, Nautilus callback evaluator `32964831238`, Nautilus pre-open evaluator `32964831207`, `a1-assurance` `32964831183`, and LEAN clean-determinism `32964831285`. No `a1-hidden-acceptance` workflow was run for that head because Luna returned no `SealRecord` or `SafeAcceptanceReceipt` to verify.
+
+The public SDD/PDD, static/IR, unit/regression, property/stateful, mutation, differential, metamorphic, determinism, clean-environment, and chaos/fault work is green for the current A1 public slice. The remaining conjunctive blocker is genuine **HIDDEN_ACCEPTANCE** through an eligible isolated scorer with staged private seal inputs. No primary runtime may be selected and A1 may not be promoted until a genuine aggregate receipt verifies successfully.
 
 A1 remains **IN_PROGRESS**.
 
 ## Next exact action
 
-1. Obtain genuine `HIDDEN_ACCEPTANCE` only through the authorized external clean runner described by `docs/acceptance/SEALED_INTERFACE.md`; the runner must execute the sealed corpus without exposing cases or labels and emit only the public `SealRecord` plus aggregate `SafeAcceptanceReceipt` for the exact candidate artifact under evaluation.
-2. Ingest that aggregate-only evidence through `.github/workflows/a1-hidden-acceptance.yml` / `finance_quant.acceptance.a1_hidden`. Do not inspect the private holdout, use the repository's coarse GitHub identity as the clean runner, or fabricate a receipt.
-3. If hidden acceptance fails, preserve the aggregate failure receipt and fix only public implementation/oracle defects consistent with the unchanged contract; never optimize against hidden cases or weaken invariants.
-4. Only after hidden acceptance passes and every conjunctive A1 gate remains green may issue #15 assign final candidate dispositions (`ADOPT | ADOPT_WITH_CONSTRAINTS | REFERENCE_ONLY | REJECT`), select a primary runtime, update machine-readable state, and explicitly permit promotion.
+1. Provision or stage an eligible isolated scorer and the authorized private A1 seal inputs under `docs/acceptance/SEALED_INTERFACE.md` and `docs/acceptance/A1_LUNA_HIDDEN_RUNNER_HANDOFF.md`; do not use the repository's coarse GitHub credential and do not expose sealed material.
+2. Before any real seal use, independently revalidate the exact public evaluation SHA `4739392b15319bb209d657294834fed4cfb02d29`, deterministic candidate archive bytes/SHA-256, pinned LEAN commit, synthetic runner suite, and public preflight. If the archive hash does not match the expected candidate, stop before opening the corpus.
+3. Execute one authorized sealed A1 run only after the isolated scorer and inputs are ready. Return only the public `SealRecord`, aggregate-only `SafeAcceptanceReceipt`, candidate artifact SHA-256, and aggregate verifier status. Do not spend a seal use as an iterative debugger.
+4. Submit those three public values through `.github/workflows/a1-hidden-acceptance.yml` / `finance_quant.acceptance.a1_hidden` and require fail-closed verification. A missing, failed, or invalid receipt remains a blocker.
+5. Only after hidden acceptance passes and every conjunctive A1 gate remains green may issue #15 assign final candidate dispositions (`ADOPT | ADOPT_WITH_CONSTRAINTS | REFERENCE_ONLY | REJECT`), select a primary runtime, update machine-readable completion state, and explicitly permit promotion.
 
 Do not start issue #16 or change any authority/holdout restriction while A1 remains incomplete.
 

@@ -13,7 +13,7 @@
     "preserve_evidence": true
   },
   "next_issue": 16,
-  "next_exact_action": "Recheck exact-head CI after the A1 LEAN adapter/differential handoff commits, then add executable candidate-run evidence for the shared daily-bar subset and the corresponding thin NautilusTrader adapter; preserve fail-closed differential semantics and do not select a primary runtime until all A1 gates pass.",
+  "next_exact_action": "Provision or stage an eligible isolated A1 scorer plus the authorized private seal inputs without using the repository's coarse GitHub credential; require the exact public evaluation SHA 4739392b15319bb209d657294834fed4cfb02d29 and deterministic candidate artifact SHA-256 to revalidate before any real seal use, then execute one sealed run and ingest only the public SealRecord, aggregate SafeAcceptanceReceipt, and artifact hash through the fail-closed public verifier. Do not start issue #16 or select a runtime while HIDDEN_ACCEPTANCE is unsatisfied.",
   "authority": {
     "trading": "NONE",
     "paper_trading_enabled": false,
@@ -38,5 +38,5 @@
     "docs/handoffs/LATEST.md",
     "relevant contracts/ADRs/tests"
   ],
-  "updated_date": "2026-08-25"
+  "updated_date": "2026-08-26"
 }
