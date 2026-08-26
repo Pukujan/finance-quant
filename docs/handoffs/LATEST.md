@@ -1,27 +1,25 @@
-# Handoff — A1 LEAN chaos/fault closure
+# Handoff — A1 public matrix green; hidden acceptance blocked on authorized runner
 
-Date: 2026-08-25
+Date: 2026-08-26
 Branch: `bootstrap/oss-autonomous-trader-replatform`
 Active issue: #15
 Assurance phase: A1
 
 Required governance/state sources were re-read before changes. Property impact remains **STRENGTHEN** only: candidate pins, execution semantics, PIT rules, permitted differences, runtime dispositions, trading authority, and sealed-holdout restrictions were not changed.
 
-The public A1 audit closed two previously implicit metamorphic relations and then found missing explicit LEAN process-boundary coverage for several contract-named fault classes. The metamorphic suite now explicitly enforces non-negative fee monotonicity and equivalent liquidity-bounded split-execution economics in addition to canonical key order, duplicate idempotence, event permutations, time shifts, future-known decoys, liquidity monotonicity, and repeated determinism.
+Exact durable head `4739392b15319bb209d657294834fed4cfb02d29` completed the full eight-workflow public validation matrix successfully: tests `32926469922`, legacy Phase-B `32926469919`, bootstrap-assurance `32926469897`, runtime-candidates `32926469900`, Nautilus callback evaluator `32926469912`, Nautilus pre-open evaluator `32926469910`, `a1-assurance` `32926469899`, and LEAN clean-determinism `32926469909`.
 
-The LEAN chaos campaign was expanded through commits `2121870bed04907e3a524d672655a0164a0820e1` and `2ede511d00f5213fdc266003e3280b21d1252e0b`. It now injects `nonzero_exit`, `runtime_exception`, `timeout`, `dependency_missing`, `candidate_output_corruption`, `duplicate_delivery`, `malformed_payload`, `invalid_reorder`, `dropped_event`, `crash_before_commit`, `crash_after_commit`, `restart_replay`, `persisted_evidence_corruption`, and contract-named `persisted_state_corruption`.
+This establishes a fully green public A1 baseline for the current slice. LEAN production differential, mutation, metamorphic, deterministic clean-runner, and chaos/fault evidence remain preserved. Nautilus retains its native same-bar `FQ-PROP-015` failure, deferred-callback `FQ-PROP-021` failure, published latency-API ineligibility, and public production-native path-exhaustion record. Candidate dispositions remain `PENDING` because A1 gates are conjunctive.
 
-All non-committed faults must fail closed with authority `NONE`. The only recovery cases are `crash_after_commit` and `restart_replay`, which require exact persisted authoritative public evidence to revalidate against recomputed evidence before returning `RECOVERED_COMMITTED`; they grant no trading authority.
+The remaining substantive blocker is genuine `HIDDEN_ACCEPTANCE`. `docs/acceptance/SEALED_INTERFACE.md` explicitly requires an authorized external clean runner that can execute the private sealed corpus without exposing cases/labels and emit only an aggregate `SafeAcceptanceReceipt` bound to the public `SealRecord`. Public CI and the ordinary repository GitHub identity are not valid clean-runner identities. `.github/workflows/a1-hidden-acceptance.yml` is only the aggregate receipt-ingress verifier and cannot itself satisfy hidden acceptance.
 
-`a1-assurance` run `32926137710` passed the expanded metamorphic/chaos job and both mutation jobs. Artifact `a1-lean-process-fault-receipt` is `9591573749`, digest `sha256:736d60345a54e626f2d39317e701600a9ac99c6ccd93d9f590bb4ecb105f6a42`. On code head `2ede511d00f5213fdc266003e3280b21d1252e0b`, ordinary tests, runtime-candidates, both Nautilus evaluators, `a1-assurance`, and LEAN clean-determinism are green; legacy Phase-B and bootstrap-assurance were still completing when this handoff was persisted, so that code head is not yet claimed fully green across all eight workflows.
-
-The public metamorphic/chaos audit is now closed for the current reference/LEAN slice. A1 remains **IN_PROGRESS** because genuine `HIDDEN_ACCEPTANCE` still requires an authorized external clean runner and actual public A1 seal-bound aggregate `SafeAcceptanceReceipt`. Ordinary agents may not inspect exact sealed cases or labels. Runtime selection remains `NONE / PENDING`; trading authority remains `NONE`; autonomous paper/live execution remains disabled.
+No attempt was made to inspect, search, checkout, print, or infer private holdout cases or labels. No fabricated receipt was created. Trading authority remains `NONE`; autonomous paper/live execution remains disabled; runtime selection remains `NONE / PENDING`.
 
 ## Next exact action
 
-1. Require the chaos code head and final durable documentation head to finish the full eight-workflow exact-head validation matrix; fix genuine failures without weakening tests or invariants.
-2. Once that public matrix is green, obtain genuine `HIDDEN_ACCEPTANCE` only through the authorized external clean-runner/sealed interface and ingest only its aggregate receipt. Never inspect or fabricate hidden evidence.
-3. Preserve Nautilus negative/ineligibility/path-exhaustion evidence plus LEAN production differential, mutation, metamorphic, process-fault, and clean-determinism receipts.
-4. Only after every conjunctive A1 gate, including hidden acceptance, is green may issue #15 assign final candidate dispositions and select a primary runtime. Do not start issue #16 or change trading/holdout authority beforehand.
+1. Use the authorized external clean runner defined by `docs/acceptance/SEALED_INTERFACE.md` to evaluate the exact candidate artifact against the sealed A1 corpus and emit only the public `SealRecord` plus aggregate `SafeAcceptanceReceipt`.
+2. Submit that aggregate evidence through `.github/workflows/a1-hidden-acceptance.yml` and require `finance_quant.acceptance.a1_hidden` to verify it fail-closed.
+3. If the aggregate hidden result fails, preserve the failure receipt and fix only public defects consistent with the unchanged A1 contract; do not inspect or optimize against hidden cases.
+4. Only after hidden acceptance passes and all public gates remain green may issue #15 assign final candidate dispositions, select the primary runtime, update machine-readable state, and explicitly permit promotion. Do not begin issue #16 beforehand.
 
-Append-only record: `docs/handoffs/2026-08-25-a1-lean-chaos-fault-closure.md`.
+Append-only record: `docs/handoffs/2026-08-26-a1-public-matrix-green-hidden-blocked.md`.
