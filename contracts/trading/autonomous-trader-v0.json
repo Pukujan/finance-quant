@@ -57,12 +57,28 @@
     "FQ-PROP-029",
     "FQ-PROP-030"
   ],
+  "frozen_evaluation": {
+    "public_eval_sha": "1ecc470cd6e0e23bf1d439f51e4e2c39674f02c4",
+    "candidate_artifact_sha256": "446fdc1a0c87db3a6a2ab4e94fab3d7e9f8fd389cc41676be12c3803b1f2d093",
+    "scorecard_ref": "issue-16-a2-public-contract-v1"
+  },
+  "hidden_evidence": {
+    "case_set_id": "A2-ISSUE-16-PRIVATE-V1",
+    "commitment_hash": "327a07323e55c3762ec2b04650f8c7d1f792fa8e210a2adc2583cea7a42c1f86",
+    "status": "pass",
+    "use_number": 1,
+    "max_uses": 1,
+    "scorer_package_sha256": "223ddbd0eb679b6e968639a96033b305a1e853366221f62543cdbd74b771fcb0",
+    "evaluator_revision": "a2-private-evaluator-v1",
+    "evaluator_sha256": "1ef08ed11d6fa493d57ea70b9e57784d2fcbf10b1ea0d45d3955b4b2c4a65cc4",
+    "sealed_bundle_sha256": "bf711753f3ce2ce6047d854fbf8a6e2ec0c790a52d5f49c2d7d997c013a69a4c"
+  },
   "assurance": {
     "minimum_repeated_runs": 5,
-    "hidden_acceptance": "REQUIRED_NOT_YET_SATISFIED",
-    "mutation": "REQUIRED_NOT_YET_SATISFIED",
-    "clean_environment": "REQUIRED_NOT_YET_SATISFIED",
-    "chaos_fault": "REQUIRED_NOT_YET_SATISFIED",
+    "hidden_acceptance": "SATISFIED",
+    "mutation": "SATISFIED",
+    "clean_environment": "SATISFIED",
+    "chaos_fault": "SATISFIED",
     "hitl_promotion": "REQUIRED_NOT_YET_SATISFIED"
   }
 }

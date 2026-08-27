@@ -13,7 +13,7 @@
     "preserve_evidence": true
   },
   "next_issue": 18,
-  "next_exact_action": "Execute Issue #16 / A2 as a deliberately simple unattended-local-paper vertical slice using pinned LEAN commit 185c691b89f28bd68e48d53c02147415134975f0 as the A1-selected primary runtime under ADOPT_WITH_CONSTRAINTS. Preserve the independent finance-quant reference simulator as validation oracle, keep trading/paper/live authority NONE until all A2 gates pass, and require explicit HITL_PROMOTION before unattended paper capability is enabled.",
+  "next_exact_action": "A2 public implementation and assurance, including genuine one-shot hidden acceptance for frozen public evaluation SHA 1ecc470cd6e0e23bf1d439f51e4e2c39674f02c4, are satisfied. Obtain an explicit human HITL_PROMOTION decision for Issue #16. Until approval is durably recorded, keep trading authority NONE, unattended paper disabled, and live capital disabled. If approved, promote only to constrained local PAPER; live capital remains disabled.",
   "authority": {
     "trading": "NONE",
     "paper_trading_enabled": false,
