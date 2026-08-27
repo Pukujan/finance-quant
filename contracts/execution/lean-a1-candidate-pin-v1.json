@@ -10,12 +10,12 @@
   "evidence_mode": "SOURCE_PRODUCTION_FILL_MODEL_PROBE",
   "cli_used": false,
   "credentials_required": false,
-  "runtime_disposition": "ADOPT_WITH_CONSTRAINTS",
+  "runtime_disposition": "PENDING",
   "authority": {
     "trading": "NONE",
     "paper_trading": "DISABLED",
     "live_capital": "DISABLED",
     "sealed_holdout_access": "DENIED_TO_ORDINARY_AGENTS"
   },
-  "scope": "A1-selected primary runtime for Autonomous Trader v0 only within the validated deterministic daily-bar next-eligible-open execution slice. This does not claim unrestricted full-LEAN/backtest conformance; A2 must expand accounting, persistence, replay, authority, and multi-session evidence before unattended paper capability can be promoted."
+  "scope": "Exercise pinned LEAN production EquityFillModel behavior for the public A1 daily-bar market-on-open subset; this is not a full LEAN runtime/backtest disposition."
 }

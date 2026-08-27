@@ -1,0 +1,49 @@
+{
+  "schema_version": "1.0.0",
+  "issue": 15,
+  "phase": "A1",
+  "status": "COMPLETE",
+  "selected_primary_runtime": "LEAN",
+  "selected_primary_source_commit": "185c691b89f28bd68e48d53c02147415134975f0",
+  "candidate_dispositions": {
+    "LEAN": {
+      "disposition": "ADOPT_WITH_CONSTRAINTS",
+      "constraints": [
+        "Primary selection is limited to the A1-validated deterministic daily-bar next-eligible-open execution slice.",
+        "A1 does not claim unrestricted full-LEAN/backtest conformance.",
+        "A2 must add persistent virtual-account, accounting, restart/replay, session-lineage, authority, and multi-session evidence before unattended paper promotion."
+      ]
+    },
+    "NautilusTrader": {
+      "disposition": "REJECT",
+      "source_commit": "8160730c7c550480b0a439fb11086a4c4de15f0b",
+      "release_tag": "v1.230.0",
+      "reasons": [
+        "Pinned production GTC matching violates FQ-PROP-015 by filling on the decision bar.",
+        "The explored PIT-safe callback deferral path fills at the later bar close rather than the required open, violating FQ-PROP-021.",
+        "The pinned public API exposes no eligible native pre-open insertion path for the unchanged contract."
+      ]
+    }
+  },
+  "validation_oracles": [
+    "finance-quant independent reference simulator for the subset it implements",
+    "public A1 conformance/property/metamorphic/mutation/chaos suites",
+    "sealed A1 hidden acceptance receipt"
+  ],
+  "upstream_pin_update_policy": "Any runtime update changes the evaluated body and must re-run the applicable conformance and assurance gates before replacing the selected pin.",
+  "local_extension_fork_status": "THIN_ADAPTERS_ONLY_NO_UPSTREAM_FORK_AUTHORIZED",
+  "hidden_acceptance": {
+    "public_eval_sha": "4739392b15319bb209d657294834fed4cfb02d29",
+    "candidate_artifact_sha256": "ed2b7b335f4be0f256fc7b28b8df12ae0a337c7b2bdec0c9925ddcd9bef630ff",
+    "seal_record": "docs/acceptance/A1_ISSUE_15_SEAL_RECORD.json",
+    "safe_acceptance_receipt": "docs/acceptance/A1_ISSUE_15_SAFE_ACCEPTANCE_RECEIPT.json",
+    "derived_commitment_hash": "c87d13ac10602d613f9730438dc527ffa4f870e676c5f532fe7e60d0da42a038",
+    "status": "PASS",
+    "use_number": 1
+  },
+  "authority": {
+    "trading": "NONE",
+    "paper_trading": "DISABLED",
+    "live_capital": "DISABLED"
+  }
+}
