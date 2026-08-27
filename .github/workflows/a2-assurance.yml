@@ -18,7 +18,7 @@ jobs:
       - run: python -m pip install -r requirements-dev.txt
       - name: SDD/PDD/static contract validation
         run: python scripts/validate_a2_contracts.py
-      - name: Unit, stateful, metamorphic, fault and controlled differential tests
+      - name: Unit, stateful, replay, operator, metamorphic, fault and controlled differential tests
         run: >-
           python -m pytest -q
           tests/test_a2_contracts.py
@@ -32,6 +32,9 @@ jobs:
           tests/test_a2_property_stateful.py
           tests/test_a2_metamorphic.py
           tests/test_a2_chaos.py
+          tests/test_a2_replay.py
+          tests/test_a2_operator.py
+          tests/test_a2_hidden_acceptance.py
       - name: Critical A2 mutation gate
         run: python scripts/a2_trader_mutation_gate.py --output a2-mutation-receipt.json
       - name: Emit public A2 assurance receipt
@@ -51,6 +54,8 @@ jobs:
                   'SDD', 'PDD', 'STATIC_IR', 'UNIT_REGRESSION',
                   'PROPERTY_STATEFUL', 'MUTATION', 'METAMORPHIC', 'CHAOS_FAULT'
               ],
+              'replay_operator_public_oracles': 'PASS',
+              'hidden_verifier_mechanics': 'PASS',
               'mutation_summary': mutation['summary'],
               'authority': 'NONE',
               'hidden_acceptance': 'NOT_RUN',
