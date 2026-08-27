@@ -4,7 +4,11 @@
 
 ## Active direction
 
-The active master plan is issue **#12 — OSS-first autonomous trader + visual research console**. A1 / issue **#15** is complete. A2 / issue **#16 — Autonomous Trader v0** has completed its public implementation/assurance work and genuine one-shot hidden acceptance. It is now waiting only on the required explicit `HITL_PROMOTION` decision.
+The active master plan is issue **#12 — OSS-first autonomous trader + visual research console**. A1 / issue **#15** is complete. A2 / issue **#16 — Autonomous Trader v0** has completed its public implementation/assurance work and genuine one-shot hidden acceptance. The formal remaining A2 gate is explicit `HITL_PROMOTION`.
+
+**That promotion is intentionally on hold.** Before enabling unattended paper capability, the owner requested a product-level OSS architecture reassessment because the intended product is broader than the current validated A2 kernel: configurable starting paper capital, real historical/ongoing PIT data, temporal knowledge/RAG, local model training, paper execution, and a proper operator dashboard.
+
+The immediate project action is therefore an OSS component bakeoff, not promotion.
 
 ## Runtime and capability
 
@@ -39,6 +43,26 @@ Canonical public evidence is stored at `docs/acceptance/A2_ISSUE_16_SEAL_RECORD.
 
 No exact hidden cases, labels, expected outputs, IDs, traces, counts, or oracle internals are stored publicly.
 
+## Reusable product/data assets already present
+
+The repo also contains older but potentially reusable assets not yet promoted into the active autonomous-trader product path:
+
+- bitemporal `vt/kt` PIT record semantics and durable SQLite PIT store;
+- Polygon market-data/corporate-action ingestion;
+- Qlib compiler boundary;
+- temporal graph/KG boundary design;
+- legacy research/evaluation fixtures.
+
+These should be assessed alongside mature OSS rather than rewritten blindly.
+
+## Active OSS reassessment
+
+The detailed handoff is `docs/handoffs/2026-08-27-oss-product-architecture-reassessment.md`.
+
+Initial verified candidates include FinRL-X (`AI4Finance-Foundation/FinRL-Trading`), Open Papertrade (`Open-Papertrade/Open-Papertrade`), Agentic Trading Lab (`Open-Finance-Lab/AgenticTrading`), Microsoft Qlib and RD-Agent, with OpenBB/FinGPT as follow-up candidates.
+
+The objective is a layer-by-layer **KEEP / REPLACE / ADAPT / DELETE** decision for data/PIT, research/model training, temporal KG/RAG, execution/paper account, frontend/operator UX and local deployment. Finance-quant's unusual proven assets—PIT/authority semantics, exact account/replay evidence, sealed acceptance, mutation/chaos gates and promotion controls—should not be discarded unless a replacement explicitly passes conformance.
+
 ## Authority
 
 - Trading authority: **NONE**
@@ -46,18 +70,20 @@ No exact hidden cases, labels, expected outputs, IDs, traces, counts, or oracle 
 - Live capital: **DISABLED**
 - Frontend authority: **OPERATOR_ONLY**
 
-A passing hidden receipt does not itself grant capability authority. A2 remains `IN_PROGRESS` until the required explicit human `HITL_PROMOTION` is durably recorded.
+A passing hidden receipt does not itself grant capability authority. A2 remains `IN_PROGRESS` until a later explicit human `HITL_PROMOTION` is durably recorded.
 
 ## Next exact action
 
-Obtain the human owner's explicit approve/reject decision for A2 unattended local paper operation. If approved, transition only the constrained local-paper capability from `NONE` to `PAPER`, preserve `live_capital_enabled=false`, record the promotion receipt/evidence hash, rerun exact-head CI, and only then close issue #16 / mark A2 complete. If rejected, keep authority `NONE` and leave A2 unpromoted.
+Perform the OSS product architecture bakeoff described in the latest handoff. Produce a decision matrix for each layer with current implementation, candidate OSS, KEEP/REPLACE/ADAPT/DELETE disposition, licensing/security/maintenance risks, required conformance tests, migration cost and custom code made unnecessary. Update the master roadmap/issues before implementing a material pivot.
+
+Do **not** ask for A2 promotion first. Until the architecture decision is durable, keep authority `NONE`, paper disabled and live capital disabled, and do not consume another hidden seal use.
 
 ## Required read order for a fresh session
 
 1. `AGENTS.md`
 2. this file
-3. issue #16
-4. `docs/handoffs/LATEST.md`
-5. `contracts/assurance/capability-assurance-v1.json`
-6. `contracts/trading/autonomous-trader-v0.json`
-7. A2 acceptance evidence and relevant tests/workflows
+3. `docs/handoffs/LATEST.md`
+4. `docs/handoffs/2026-08-27-oss-product-architecture-reassessment.md`
+5. issue #12 and issue #16
+6. issue #17 plus issues #19/#20/#21
+7. relevant contracts/tests and external OSS repositories
