@@ -18,13 +18,14 @@ jobs:
       - run: python -m pip install -r requirements-dev.txt
       - name: Validate A2 durable contracts
         run: python scripts/validate_a2_contracts.py
-      - name: Run A2 account/session/execution/risk/authority core tests
+      - name: Run A2 account/session/execution/strategy/risk/authority core tests
         run: >-
           python -m pytest
           tests/test_a2_contracts.py
           tests/test_a2_account.py
           tests/test_a2_session.py
           tests/test_a2_execution_session.py
+          tests/test_a2_strategy.py
           tests/test_a2_risk.py
           tests/test_a2_authority.py
           -q

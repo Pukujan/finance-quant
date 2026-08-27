@@ -75,9 +75,17 @@ def validate() -> list[str]:
     if c_authority.get("hitl_promotion_required") is not True:
         errors.append("A2 contract must require HITL promotion")
 
-    expected_props = {f"FQ-PROP-{number:03d}" for number in range(23, 30)}
+    strategy = contract.get("strategy", {})
+    if strategy.get("id") != "a2-two-close-trend-v1":
+        errors.append("A2 strategy must remain the declared deterministic baseline")
+    if strategy.get("model_authority") != "NONE" or strategy.get("kg_authority") != "NONE":
+        errors.append("A2 baseline may not grant model or KG authority")
+    if strategy.get("future_or_late_known_events_may_affect_prior_decision") is not False:
+        errors.append("A2 strategy must preserve PIT decision safety")
+
+    expected_props = {f"FQ-PROP-{number:03d}" for number in range(23, 31)}
     if set(contract.get("properties", [])) != expected_props:
-        errors.append("A2 contract property set must be FQ-PROP-023..029")
+        errors.append("A2 contract property set must be FQ-PROP-023..030")
     catalog_map = {item.get("property_id"): item for item in catalog.get("properties", [])}
     missing = expected_props - set(catalog_map)
     if missing:

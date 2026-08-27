@@ -37,6 +37,13 @@
     "lineage_fields": ["input_hash", "strategy_hash", "risk_hash", "execution_hash", "runtime", "runtime_commit", "authority"],
     "hash_rule": "sha256 canonical JSON excluding receipt_hash"
   },
+  "strategy": {
+    "id": "a2-two-close-trend-v1",
+    "model_authority": "NONE",
+    "kg_authority": "NONE",
+    "decision_rule": "two latest bars with event_time <= decision_time and known_at <= decision_time; rising close BUY, falling close SELL, otherwise NO_INTENT",
+    "future_or_late_known_events_may_affect_prior_decision": false
+  },
   "risk": {
     "policy": "mechanical veto may approve the exact requested notional or reject to zero; it may never widen exposure"
   },
@@ -47,7 +54,8 @@
     "FQ-PROP-026",
     "FQ-PROP-027",
     "FQ-PROP-028",
-    "FQ-PROP-029"
+    "FQ-PROP-029",
+    "FQ-PROP-030"
   ],
   "assurance": {
     "minimum_repeated_runs": 5,

@@ -1,9 +1,13 @@
 """A2 non-widening adapter around the existing mechanical risk veto."""
 from __future__ import annotations
 
-from dataclasses import dataclass
+import hashlib
+import json
+from dataclasses import asdict, dataclass
 
 from finance_quant.risk.veto import OrderIntent, PortfolioState, RiskLimits, RiskVeto, veto
+
+from .strategy import PortfolioIntent
 
 
 @dataclass(frozen=True)
@@ -12,6 +16,18 @@ class RiskDecision:
     requested_notional: float
     approved_notional: float
     reason: str | None
+
+
+@dataclass(frozen=True)
+class GatedIntent:
+    decision: RiskDecision
+    approved_intent: PortfolioIntent | None
+    risk_hash: str
+
+
+def _hash(value: object) -> str:
+    raw = json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+    return hashlib.sha256(raw).hexdigest()
 
 
 def gate_order_intent(
@@ -38,3 +54,29 @@ def gate_order_intent(
         approved_notional=float(intent.notional),
         reason=None,
     )
+
+
+def gate_portfolio_intent(
+    state: PortfolioState,
+    intent: PortfolioIntent,
+    limits: RiskLimits = RiskLimits(),
+) -> GatedIntent:
+    try:
+        requested = float(intent.risk_notional)
+    except ValueError as exc:
+        raise ValueError("risk_notional must be numeric") from exc
+    decision = gate_order_intent(
+        state,
+        OrderIntent(notional=requested, side=intent.side.lower()),
+        limits,
+    )
+    approved = intent if decision.status == "APPROVED" else None
+    risk_hash = _hash(
+        {
+            "state": asdict(state),
+            "limits": asdict(limits),
+            "intent": asdict(intent),
+            "decision": asdict(decision),
+        }
+    )
+    return GatedIntent(decision=decision, approved_intent=approved, risk_hash=risk_hash)
