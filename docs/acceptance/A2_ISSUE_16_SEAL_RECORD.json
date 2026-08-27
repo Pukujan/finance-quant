@@ -1,0 +1,9 @@
+{
+  "case_merkle_root": "2d650f8c9afb9f8fa2948970d18d2122b2e9e5f0c73649ccfea904ba21a8bef1",
+  "case_set_id": "A2-ISSUE-16-PRIVATE-V1",
+  "eval_harness_sha": "1ecc470cd6e0e23bf1d439f51e4e2c39674f02c4",
+  "labels_hash": "764c16372c56ddd93d6d16a6d59f0acb1ff9dd50305355f639f2485b33905d44",
+  "max_uses": 1,
+  "scorecard_ref": "issue-16-a2-public-contract-v1",
+  "sealed_at": "2026-08-27T22:17:03Z"
+}
