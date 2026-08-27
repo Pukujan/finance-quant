@@ -72,7 +72,7 @@
       "minimum_repeated_runs": 3,
       "hidden_acceptance_required": true,
       "hitl_promotion_required": false,
-      "completion_status": "IN_PROGRESS"
+      "completion_status": "COMPLETE"
     },
     {
       "id": "A2",
@@ -82,7 +82,7 @@
       "minimum_repeated_runs": 5,
       "hidden_acceptance_required": true,
       "hitl_promotion_required": true,
-      "completion_status": "NOT_STARTED"
+      "completion_status": "IN_PROGRESS"
     },
     {
       "id": "A3",

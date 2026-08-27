@@ -10,7 +10,7 @@
   "evidence_mode": "PRODUCTION_EXECUTABLE_NONCONFORMANCE",
   "cli_used": false,
   "credentials_required": false,
-  "runtime_disposition": "PENDING",
+  "runtime_disposition": "REJECT",
   "semantic_conformance": "FAIL",
   "failed_property": "FQ-PROP-015",
   "authority": {
@@ -19,5 +19,5 @@
     "live_capital": "DISABLED",
     "sealed_holdout_access": "DENIED_TO_ORDINARY_AGENTS"
   },
-  "scope": "Pinned production BacktestEngine/SimulatedExchange evidence for the public A1 daily-bar next-open subset. Three deterministic GTC market probes fill on the decision bar rather than the next eligible bar, and the exact pinned production matching source rejects AT_THE_OPEN time-in-force as unsupported. This records semantic nonconformance without assigning a final A1 runtime disposition or changing authority."
+  "scope": "Rejected for the A1 primary-runtime role at pinned v1.230.0 because production evidence violates the mandatory next-eligible execution boundary. Native GTC matching fills on the decision bar, PIT-safe callback deferral fills at the later bar close rather than its open, and the pinned public API does not provide an eligible native pre-open insertion path. This does not authorize weakening FQ-PROP-015/FQ-PROP-021."
 }

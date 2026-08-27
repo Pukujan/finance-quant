@@ -1,0 +1,12 @@
+{
+  "aggregate_metrics": [
+    ["conformant", 1.0],
+    ["evaluated", 1.0]
+  ],
+  "candidate_artifact_hash": "ed2b7b335f4be0f256fc7b28b8df12ae0a337c7b2bdec0c9925ddcd9bef630ff",
+  "case_set_id": "A1-ISSUE-15-LEAN-PRIVATE-V1",
+  "commitment_hash": "c87d13ac10602d613f9730438dc527ffa4f870e676c5f532fe7e60d0da42a038",
+  "failure_classes": [],
+  "status": "pass",
+  "use_number": 1
+}

@@ -1,0 +1,9 @@
+{
+  "case_set_id": "A1-ISSUE-15-LEAN-PRIVATE-V1",
+  "case_merkle_root": "25271945851890881036915b64681dc76dd8ffcad88b115008e14e1110817c34",
+  "labels_hash": "3b8c68de8845729a95471ee2bb9f104936ca6a09d5a0c17e1cf875d5470bd8ad",
+  "sealed_at": "2026-08-27T19:01:45Z",
+  "eval_harness_sha": "4739392b15319bb209d657294834fed4cfb02d29",
+  "scorecard_ref": "issue-15-a1-public-contract-v1",
+  "max_uses": 1
+}

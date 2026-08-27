@@ -3,17 +3,17 @@
   "architecture": "OSS_FIRST_AUTONOMOUS_TRADER_REPLATFORM",
   "status": "BOOTSTRAP_COMPLETE",
   "active_epic": 12,
-  "active_issue": 15,
+  "active_issue": 16,
   "assurance_issue": 14,
-  "assurance_phase": "A1",
-  "current_capability": "OSS_RUNTIME_BAKEOFF",
+  "assurance_phase": "A2",
+  "current_capability": "AUTONOMOUS_TRADER_V0",
   "legacy_phase_b": {
     "issue": 11,
     "status": "PARKED",
     "preserve_evidence": true
   },
-  "next_issue": 16,
-  "next_exact_action": "Freeze and stage the locally validated private A1 scorer package SHA-256 385a95ee8d35eb6264b1c67026d4355ba25fe80026eaad11fed68055a977924f together with the authorized sealed A1 bundle and pinned LEAN runtime into a locked-down credential-free, network-disabled scorer environment; revalidate public evaluation SHA 4739392b15319bb209d657294834fed4cfb02d29, candidate artifact SHA-256 ed2b7b335f4be0f256fc7b28b8df12ae0a337c7b2bdec0c9925ddcd9bef630ff, seal commitment/use budget, runtime pin, synthetic suite and public preflight, then execute exactly one real sealed run and ingest only aggregate-safe evidence. Do not start issue #16 or select a runtime while HIDDEN_ACCEPTANCE is unsatisfied.",
+  "next_issue": 18,
+  "next_exact_action": "Execute Issue #16 / A2 as a deliberately simple unattended-local-paper vertical slice using pinned LEAN commit 185c691b89f28bd68e48d53c02147415134975f0 as the A1-selected primary runtime under ADOPT_WITH_CONSTRAINTS. Preserve the independent finance-quant reference simulator as validation oracle, keep trading/paper/live authority NONE until all A2 gates pass, and require explicit HITL_PROMOTION before unattended paper capability is enabled.",
   "authority": {
     "trading": "NONE",
     "paper_trading_enabled": false,
@@ -38,5 +38,5 @@
     "docs/handoffs/LATEST.md",
     "relevant contracts/ADRs/tests"
   ],
-  "updated_date": "2026-08-26"
+  "updated_date": "2026-08-27"
 }
