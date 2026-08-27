@@ -77,6 +77,21 @@ def test_fq_prop_030_future_or_late_known_events_cannot_change_prior_decision():
     assert _decision(late_known) == baseline
 
 
+def test_future_event_is_excluded_even_if_its_knowledge_timestamp_is_early():
+    baseline = _decision()
+    adversarial = _events() + [
+        {
+            "event_id": "future-early-known",
+            "instrument_id": "AAA",
+            "event_time": "2026-01-03T00:00:00Z",
+            "known_at": "2026-01-01T00:00:00Z",
+            "sequence": 3,
+            "payload": {"open": "11", "close": "1", "liquidity": "10"},
+        }
+    ]
+    assert _decision(adversarial) == baseline
+
+
 def test_strategy_is_order_independent_and_exact_duplicates_are_idempotent():
     baseline = _decision()
     reversed_events = list(reversed(_events()))

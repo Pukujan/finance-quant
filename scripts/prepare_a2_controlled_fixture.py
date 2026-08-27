@@ -9,13 +9,31 @@ from typing import Any, Mapping
 
 from finance_quant.risk.veto import PortfolioState, RiskLimits
 from finance_quant.trader.risk import gate_portfolio_intent
-from finance_quant.trader.strategy import BaselineStrategyConfig, generate_baseline_decision
+from finance_quant.trader.strategy import BaselineStrategyConfig, StrategyInvariantError, generate_baseline_decision
+
+
+def _canonical_events(events: list[Mapping[str, Any]]) -> list[dict[str, Any]]:
+    seen: dict[str, dict[str, Any]] = {}
+    for raw in events:
+        event = dict(raw)
+        event_id = str(event.get("event_id", ""))
+        if not event_id:
+            raise ValueError("controlled fixture event_id must be non-empty")
+        prior = seen.get(event_id)
+        if prior is not None and prior != event:
+            raise ValueError(f"ambiguous duplicate event_id: {event_id}")
+        seen[event_id] = event
+    return sorted(
+        seen.values(),
+        key=lambda event: (str(event["event_time"]), int(event["sequence"]), str(event["event_id"])),
+    )
 
 
 def prepare_controlled_fixture(spec: Mapping[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:
+    events = _canonical_events(list(spec.get("events", [])))
     config = BaselineStrategyConfig(**dict(spec.get("strategy_config", {})))
     decision = generate_baseline_decision(
-        list(spec.get("events", [])),
+        events,
         session_id=str(spec["session_id"]),
         instrument_id=str(spec["instrument_id"]),
         decision_time=str(spec["decision_time"]),
@@ -33,7 +51,7 @@ def prepare_controlled_fixture(spec: Mapping[str, Any]) -> tuple[dict[str, Any],
         "fixture_id": str(spec["fixture_id"]),
         "initial_cash": str(spec["initial_cash"]),
         "fee_per_unit": str(spec.get("fee_per_unit", "0")),
-        "events": [dict(item) for item in spec.get("events", [])],
+        "events": events,
         "intents": [gated.approved_intent.execution_intent()],
     }
     evidence = {

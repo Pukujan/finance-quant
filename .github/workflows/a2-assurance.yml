@@ -1,0 +1,67 @@
+name: a2-assurance
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  public-a2-assurance:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -r requirements-dev.txt
+      - name: SDD/PDD/static contract validation
+        run: python scripts/validate_a2_contracts.py
+      - name: Unit, stateful, metamorphic, fault and controlled differential tests
+        run: >-
+          python -m pytest -q
+          tests/test_a2_contracts.py
+          tests/test_a2_account.py
+          tests/test_a2_session.py
+          tests/test_a2_execution_session.py
+          tests/test_a2_strategy.py
+          tests/test_a2_risk.py
+          tests/test_a2_authority.py
+          tests/test_a2_controlled_campaign.py
+          tests/test_a2_property_stateful.py
+          tests/test_a2_metamorphic.py
+          tests/test_a2_chaos.py
+      - name: Critical A2 mutation gate
+        run: python scripts/a2_trader_mutation_gate.py --output a2-mutation-receipt.json
+      - name: Emit public A2 assurance receipt
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          mutation = json.loads(Path('a2-mutation-receipt.json').read_text())
+          assert mutation['status'] == 'PASS'
+          receipt = {
+              'schema_version': '1.0.0',
+              'issue': 16,
+              'phase': 'A2',
+              'status': 'PASS',
+              'techniques': [
+                  'SDD', 'PDD', 'STATIC_IR', 'UNIT_REGRESSION',
+                  'PROPERTY_STATEFUL', 'MUTATION', 'METAMORPHIC', 'CHAOS_FAULT'
+              ],
+              'mutation_summary': mutation['summary'],
+              'authority': 'NONE',
+              'hidden_acceptance': 'NOT_RUN',
+              'hitl_promotion': 'NOT_GRANTED',
+          }
+          Path('a2-public-assurance-receipt.json').write_text(
+              json.dumps(receipt, indent=2, sort_keys=True) + '\n', encoding='utf-8')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: a2-public-assurance-receipts
+          path: |
+            a2-mutation-receipt.json
+            a2-public-assurance-receipt.json
