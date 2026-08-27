@@ -44,7 +44,7 @@ def canonical_hash(value: object) -> str:
 
 
 class VirtualAccountStore:
-    """Transactional SQLite account store with idempotent fill application.
+    """Transactional SQLite account store with idempotent order/fill application.
 
     The store is intentionally finance-quant owned. Runtime adapters may propose normalized
     fills, but this store is the authoritative local paper account truth.
@@ -147,30 +147,31 @@ class VirtualAccountStore:
         quantity_d = _decimal(quantity, field="quantity")
         if quantity_d <= 0:
             raise AccountInvariantError("quantity must be positive")
-        expected = {
+        immutable = {
             "order_id": order_id_s,
             "intent_id": intent_id_s,
             "session_id": session_id_s,
             "instrument_id": instrument_id_s,
             "side": side_s,
             "quantity": _text(quantity_d),
-            "filled_quantity": "0",
-            "state": "ACCEPTED",
             "created_at": created_at_s,
         }
         prior = self._conn.execute("SELECT * FROM orders WHERE order_id = ?", (order_id_s,)).fetchone()
         if prior is not None:
-            if dict(prior) != expected:
+            prior_immutable = {key: str(prior[key]) for key in immutable}
+            if prior_immutable != immutable:
                 raise AccountInvariantError("conflicting duplicate order_id")
             return False
         intent_prior = self._conn.execute("SELECT order_id FROM orders WHERE intent_id = ?", (intent_id_s,)).fetchone()
         if intent_prior is not None:
             raise AccountInvariantError("intent_id already belongs to another order")
+        row = dict(immutable)
+        row.update({"filled_quantity": "0", "state": "ACCEPTED"})
         with self._conn:
             self._conn.execute(
                 """INSERT INTO orders(order_id,intent_id,session_id,instrument_id,side,quantity,filled_quantity,state,created_at)
                    VALUES(:order_id,:intent_id,:session_id,:instrument_id,:side,:quantity,:filled_quantity,:state,:created_at)""",
-                expected,
+                row,
             )
         return True
 

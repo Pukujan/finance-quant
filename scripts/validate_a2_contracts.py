@@ -8,6 +8,7 @@ ROOT = Path(__file__).resolve().parents[1]
 PROJECT = ROOT / "contracts" / "project" / "project-state.json"
 ASSURANCE = ROOT / "contracts" / "assurance" / "capability-assurance-v1.json"
 DECISION = ROOT / "contracts" / "execution" / "a1-runtime-decision-v1.json"
+CATALOG = ROOT / "contracts" / "properties" / "finance-quant-properties-v1.json"
 A2 = ROOT / "contracts" / "trading" / "autonomous-trader-v0.json"
 PLAN = ROOT / "docs" / "plans" / "A2_AUTONOMOUS_TRADER_V0.md"
 
@@ -18,7 +19,7 @@ def _load(path: Path) -> dict:
 
 def validate() -> list[str]:
     errors: list[str] = []
-    for path in (PROJECT, ASSURANCE, DECISION, A2, PLAN):
+    for path in (PROJECT, ASSURANCE, DECISION, CATALOG, A2, PLAN):
         if not path.is_file() or path.stat().st_size == 0:
             errors.append(f"missing/empty A2 artifact: {path.relative_to(ROOT)}")
     if errors:
@@ -27,6 +28,7 @@ def validate() -> list[str]:
     project = _load(PROJECT)
     assurance = _load(ASSURANCE)
     decision = _load(DECISION)
+    catalog = _load(CATALOG)
     contract = _load(A2)
 
     if project.get("active_issue") != 16 or project.get("assurance_phase") != "A2":
@@ -76,6 +78,16 @@ def validate() -> list[str]:
     expected_props = {f"FQ-PROP-{number:03d}" for number in range(23, 30)}
     if set(contract.get("properties", [])) != expected_props:
         errors.append("A2 contract property set must be FQ-PROP-023..029")
+    catalog_map = {item.get("property_id"): item for item in catalog.get("properties", [])}
+    missing = expected_props - set(catalog_map)
+    if missing:
+        errors.append(f"property catalog missing A2 properties {sorted(missing)}")
+    for prop_id in sorted(expected_props - missing):
+        prop = catalog_map[prop_id]
+        if prop.get("status") != "active":
+            errors.append(f"{prop_id} must be active")
+        if not prop.get("oracle"):
+            errors.append(f"{prop_id} must have executable oracle refs")
 
     return errors
 

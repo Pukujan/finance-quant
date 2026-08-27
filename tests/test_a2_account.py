@@ -5,8 +5,8 @@ import pytest
 from finance_quant.trader.account import AccountInvariantError, VirtualAccountStore
 
 
-def _submit(store: VirtualAccountStore, *, quantity: str = "5") -> None:
-    assert store.submit_order(
+def _submit(store: VirtualAccountStore, *, quantity: str = "5") -> bool:
+    return store.submit_order(
         order_id="order-1",
         intent_id="intent-1",
         session_id="session-1",
@@ -33,7 +33,7 @@ def _fill(store: VirtualAccountStore, *, fill_id: str = "fill-1", quantity: str 
 
 def test_fq_prop_023_nav_reconciles_exactly(tmp_path):
     with VirtualAccountStore(tmp_path / "account.db", initial_cash="1000") as store:
-        _submit(store)
+        assert _submit(store)
         assert _fill(store)
         assert store.apply_fill(
             fill_id="fill-2",
@@ -66,7 +66,7 @@ def test_fq_prop_024_fill_requires_order_and_cannot_overfill(tmp_path):
             )
 
     with VirtualAccountStore(tmp_path / "overfill.db", initial_cash="100") as store:
-        _submit(store, quantity="1")
+        assert _submit(store, quantity="1")
         before = store.state_hash()
         with pytest.raises(AccountInvariantError, match="exceeds"):
             _fill(store, quantity="2")
@@ -77,13 +77,16 @@ def test_fq_prop_024_fill_requires_order_and_cannot_overfill(tmp_path):
 def test_fq_prop_028_duplicate_fill_is_idempotent_and_reopen_is_stable(tmp_path):
     path = tmp_path / "account.db"
     with VirtualAccountStore(path, initial_cash="1000") as store:
-        _submit(store)
+        assert _submit(store)
         assert _fill(store) is True
         after_first = store.state_hash()
         assert _fill(store) is False
         assert store.state_hash() == after_first
         with pytest.raises(AccountInvariantError, match="conflicting duplicate fill_id"):
             _fill(store, quantity="1")
+        assert store.state_hash() == after_first
+        # Retrying the original immutable order after it has partially filled is also idempotent.
+        assert _submit(store) is False
         assert store.state_hash() == after_first
 
     with VirtualAccountStore(path) as reopened:
@@ -95,9 +98,27 @@ def test_fq_prop_028_duplicate_fill_is_idempotent_and_reopen_is_stable(tmp_path)
         assert len(state["cash_ledger"]) == 1
 
 
+def test_conflicting_order_retry_fails_closed_after_fill(tmp_path):
+    with VirtualAccountStore(tmp_path / "account.db", initial_cash="1000") as store:
+        assert _submit(store)
+        assert _fill(store)
+        before = store.state_hash()
+        with pytest.raises(AccountInvariantError, match="conflicting duplicate order_id"):
+            store.submit_order(
+                order_id="order-1",
+                intent_id="intent-1",
+                session_id="session-1",
+                instrument_id="AAA",
+                side="BUY",
+                quantity="6",
+                created_at="2026-06-01T20:00:00Z",
+            )
+        assert store.state_hash() == before
+
+
 def test_missing_mark_for_nonzero_position_fails_closed(tmp_path):
     with VirtualAccountStore(tmp_path / "account.db", initial_cash="100") as store:
-        _submit(store, quantity="1")
+        assert _submit(store, quantity="1")
         _fill(store, quantity="1", price="10", fee="0")
         with pytest.raises(AccountInvariantError, match="missing mark"):
             store.nav({})
