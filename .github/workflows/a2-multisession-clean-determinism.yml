@@ -1,0 +1,135 @@
+name: a2-multisession-clean-determinism
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  LEAN_SHA: 185c691b89f28bd68e48d53c02147415134975f0
+
+jobs:
+  multisession-production-run:
+    strategy:
+      fail-fast: false
+      matrix:
+        run: [1, 2, 3, 4, 5]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: finance-quant
+      - uses: actions/checkout@v4
+        with:
+          repository: QuantConnect/Lean
+          ref: 185c691b89f28bd68e48d53c02147415134975f0
+          path: lean
+          fetch-depth: 1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - working-directory: finance-quant
+        run: python -m pip install -r requirements-dev.txt
+      - name: Verify exact LEAN pin
+        shell: bash
+        run: test "$(git -C "$GITHUB_WORKSPACE/lean" rev-parse HEAD)" = "$LEAN_SHA"
+      - name: Build production LEAN probe once
+        working-directory: finance-quant
+        run: >-
+          dotnet build tools/lean_a1_probe/LeanA1Probe.csproj --configuration Release
+          -p:LeanRoot="$GITHUB_WORKSPACE/lean"
+      - name: Run two persistent sessions with restart and replay
+        working-directory: finance-quant
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT=artifacts/a2-multisession-${{ matrix.run }}
+          mkdir -p "$ROOT/s1" "$ROOT/s2"
+
+          python -m scripts.prepare_a2_session \
+            --spec fixtures/trader/a2-controlled-baseline-v1.json --db "$ROOT/account.db" \
+            --fixture-out "$ROOT/s1/fixture.json" --evidence-out "$ROOT/s1/plan.json"
+          dotnet run --project tools/lean_a1_probe/LeanA1Probe.csproj --configuration Release --no-build \
+            -p:LeanRoot="$GITHUB_WORKSPACE/lean" -- "$ROOT/s1/fixture.json" > "$ROOT/s1/probe.txt"
+          python -m scripts.run_a2_session \
+            --spec fixtures/trader/a2-controlled-baseline-v1.json --fixture "$ROOT/s1/fixture.json" \
+            --plan "$ROOT/s1/plan.json" --pin contracts/execution/lean-a1-candidate-pin-v1.json \
+            --probe-result "$ROOT/s1/probe.txt" --db "$ROOT/account.db" \
+            --execution-out "$ROOT/s1/execution.json" --out "$ROOT/s1/run.json"
+
+          python -m scripts.prepare_a2_session \
+            --spec fixtures/trader/a2-controlled-baseline-v1-session-2.json --db "$ROOT/account.db" \
+            --fixture-out "$ROOT/s2/fixture.json" --evidence-out "$ROOT/s2/plan.json"
+          dotnet run --project tools/lean_a1_probe/LeanA1Probe.csproj --configuration Release --no-build \
+            -p:LeanRoot="$GITHUB_WORKSPACE/lean" -- "$ROOT/s2/fixture.json" > "$ROOT/s2/probe.txt"
+          python -m scripts.run_a2_session \
+            --spec fixtures/trader/a2-controlled-baseline-v1-session-2.json --fixture "$ROOT/s2/fixture.json" \
+            --plan "$ROOT/s2/plan.json" --pin contracts/execution/lean-a1-candidate-pin-v1.json \
+            --probe-result "$ROOT/s2/probe.txt" --db "$ROOT/account.db" \
+            --execution-out "$ROOT/s2/execution.json" --out "$ROOT/s2/run.json"
+
+          python -m scripts.replay_a2_store --source "$ROOT/account.db" --target "$ROOT/replay.db" --out "$ROOT/replay.json"
+          python -m scripts.render_a2_operator_evidence --db "$ROOT/account.db" \
+            --json-out "$ROOT/operator.json" --html-out "$ROOT/operator.html"
+          RUN_ROOT="$ROOT" python - <<'PY'
+          import hashlib, json, os
+          from pathlib import Path
+          root = Path(os.environ['RUN_ROOT'])
+          s1 = json.loads((root / 's1/run.json').read_text())
+          s2 = json.loads((root / 's2/run.json').read_text())
+          replay = json.loads((root / 'replay.json').read_text())
+          operator = json.loads((root / 'operator.json').read_text())
+          operator_hash = hashlib.sha256(json.dumps(operator, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
+          assert s1['session_number'] == 1 and s2['session_number'] == 2
+          assert s2['parent_receipt_hash'] == s1['session_receipt_hash']
+          assert s2['initial_state_hash'] == s1['terminal_state_hash']
+          assert replay['terminal_state_hash'] == s2['account_state_hash']
+          assert replay['session_receipt_hashes'] == [s1['session_receipt_hash'], s2['session_receipt_hash']]
+          assert operator['commands'] == [] and operator['authority']['trading'] == 'NONE'
+          receipt = {
+              'schema_version': '1.0.0', 'issue': 16, 'phase': 'A2',
+              'techniques': ['DIFFERENTIAL', 'DETERMINISM', 'CLEAN_ENV', 'CHAOS_FAULT'],
+              'independent_run_sessions': 2, 'session_receipt_hashes': replay['session_receipt_hashes'],
+              'terminal_state_hash': replay['terminal_state_hash'], 'operator_snapshot_hash': operator_hash,
+              'replay_status': replay['status'], 'authority': 'NONE',
+          }
+          (root / 'multisession-receipt.json').write_text(json.dumps(receipt, indent=2, sort_keys=True) + '\n')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: a2-multisession-run-${{ matrix.run }}
+          path: finance-quant/artifacts/a2-multisession-${{ matrix.run }}/multisession-receipt.json
+
+  compare-multisession-runs:
+    needs: multisession-production-run
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: a2-multisession-run-*
+          path: runs
+      - shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          paths = sorted(Path('runs').glob('a2-multisession-run-*/multisession-receipt.json'))
+          assert len(paths) == 5, paths
+          receipts = [json.loads(path.read_text()) for path in paths]
+          assert all(item == receipts[0] for item in receipts[1:]), receipts
+          assert receipts[0]['replay_status'] == 'PASS'
+          assert receipts[0]['authority'] == 'NONE'
+          closure = dict(receipts[0])
+          closure.update({'independent_clean_runs': 5, 'minimum_required_runs': 5, 'equivalent_receipts': True})
+          Path('a2-multisession-clean-determinism-receipt.json').write_text(
+              json.dumps(closure, indent=2, sort_keys=True) + '\n')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: a2-multisession-clean-determinism-receipt
+          path: a2-multisession-clean-determinism-receipt.json

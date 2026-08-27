@@ -1,0 +1,35 @@
+{
+  "fixture_id": "a2-controlled-baseline-v1-session-2",
+  "session_id": "a2-controlled-session-2",
+  "instrument_id": "AAA",
+  "decision_time": "2026-06-05T20:00:00Z",
+  "initial_cash": "1000",
+  "fee_per_unit": "0",
+  "strategy_config": {"quantity": "2", "risk_notional": "0.1"},
+  "events": [
+    {
+      "event_id": "bar-4-close",
+      "instrument_id": "AAA",
+      "event_time": "2026-06-04T20:00:00Z",
+      "known_at": "2026-06-04T20:00:00Z",
+      "sequence": 4,
+      "payload": {"open": "13", "high": "13", "low": "13", "close": "13", "liquidity": "100"}
+    },
+    {
+      "event_id": "bar-5-close",
+      "instrument_id": "AAA",
+      "event_time": "2026-06-05T20:00:00Z",
+      "known_at": "2026-06-05T20:00:00Z",
+      "sequence": 5,
+      "payload": {"open": "13", "high": "13", "low": "11", "close": "11", "liquidity": "100"}
+    },
+    {
+      "event_id": "bar-6-open",
+      "instrument_id": "AAA",
+      "event_time": "2026-06-08T13:30:00Z",
+      "known_at": "2026-06-08T13:30:00Z",
+      "sequence": 6,
+      "payload": {"open": "10", "high": "10", "low": "10", "close": "10", "liquidity": "100"}
+    }
+  ]
+}
