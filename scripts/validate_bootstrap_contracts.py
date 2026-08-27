@@ -25,6 +25,11 @@ EXPECTED_TECHNIQUES = {
     "DETERMINISM", "CLEAN_ENV", "CHAOS_FAULT", "SOAK", "TLA", "SMT",
     "LEAN4", "HITL_PROMOTION",
 }
+CAPABILITY_BY_PHASE = {
+    "A0": "BOOTSTRAP_ONLY",
+    "A1": "OSS_RUNTIME_BAKEOFF",
+    "A2": "AUTONOMOUS_TRADER_V0",
+}
 
 
 def _load(path: Path) -> dict:
@@ -54,48 +59,6 @@ def validate() -> list[str]:
     if project.get("assurance_issue") != 14:
         errors.append("assurance authority must remain issue #14")
 
-    status = project.get("status")
-    if status == "BOOTSTRAP_IN_PROGRESS":
-        expected_issue = 13
-        expected_phase = "A0"
-        expected_capability = "BOOTSTRAP_ONLY"
-        current_tokens = ("#12", "#13", "A0", "BOOTSTRAP")
-    elif status == "BOOTSTRAP_COMPLETE":
-        expected_issue = 15
-        expected_phase = "A1"
-        expected_capability = "OSS_RUNTIME_BAKEOFF"
-        current_tokens = ("#12", "#15", "A1", "BOOTSTRAP_COMPLETE")
-    else:
-        errors.append(f"unsupported bootstrap project status: {status!r}")
-        expected_issue = project.get("active_issue")
-        expected_phase = project.get("assurance_phase")
-        expected_capability = project.get("current_capability")
-        current_tokens = ("#12",)
-
-    if project.get("active_issue") != expected_issue:
-        errors.append(f"active_issue must be #{expected_issue} for status {status}")
-    if project.get("assurance_phase") != expected_phase:
-        errors.append(f"assurance_phase must be {expected_phase} for status {status}")
-    if project.get("current_capability") != expected_capability:
-        errors.append(f"current_capability must be {expected_capability} for status {status}")
-
-    authority = project.get("authority", {})
-    if authority.get("trading") != "NONE":
-        errors.append("bootstrap/A1 trading authority must remain NONE")
-    if authority.get("paper_trading_enabled") is not False:
-        errors.append("paper trading must remain disabled before Autonomous Trader v0")
-    if authority.get("live_capital_enabled") is not False:
-        errors.append("live capital must remain disabled")
-    if authority.get("frontend") != "OPERATOR_ONLY":
-        errors.append("frontend authority must be OPERATOR_ONLY")
-
-    read_order = project.get("read_order", [])
-    for required in ("AGENTS.md", "docs/CURRENT_STATE.md", "docs/handoffs/LATEST.md"):
-        if required not in read_order:
-            errors.append(f"project-state read_order missing {required}")
-    if not str(project.get("next_exact_action", "")).strip():
-        errors.append("project-state next_exact_action must be non-empty")
-
     techniques = set(assurance.get("techniques", {}))
     missing_techniques = EXPECTED_TECHNIQUES - techniques
     if missing_techniques:
@@ -105,8 +68,8 @@ def validate() -> list[str]:
     phase_ids = [p.get("id") for p in phases]
     if phase_ids != EXPECTED_PHASES:
         errors.append(f"assurance phases must be ordered {EXPECTED_PHASES}; got {phase_ids}")
-
     phase_map = {p["id"]: p for p in phases if "id" in p}
+
     minimums = {
         "A0": {"SDD", "PDD", "UNIT_REGRESSION", "DETERMINISM", "CLEAN_ENV", "TLA"},
         "A1": {"PROPERTY_STATEFUL", "HIDDEN_ACCEPTANCE", "MUTATION", "DIFFERENTIAL", "METAMORPHIC", "CHAOS_FAULT"},
@@ -124,11 +87,63 @@ def validate() -> list[str]:
         if missing:
             errors.append(f"{phase_id} missing required assurance techniques {sorted(missing)}")
 
-    if status == "BOOTSTRAP_COMPLETE":
-        if phase_map.get("A0", {}).get("completion_status") != "COMPLETE":
-            errors.append("A0 must be COMPLETE when bootstrap project state is complete")
-        if phase_map.get("A1", {}).get("completion_status") != "IN_PROGRESS":
-            errors.append("A1 must be IN_PROGRESS after bootstrap completion")
+    status = project.get("status")
+    active_phase = project.get("assurance_phase")
+    expected_issue = project.get("active_issue")
+    expected_capability = project.get("current_capability")
+    current_tokens = ("#12",)
+
+    if status == "BOOTSTRAP_IN_PROGRESS":
+        active_phase = "A0"
+        expected_issue = 13
+        expected_capability = CAPABILITY_BY_PHASE["A0"]
+        current_tokens = ("#12", "#13", "A0", "BOOTSTRAP")
+        if phase_map.get("A0", {}).get("completion_status") != "IN_PROGRESS":
+            errors.append("A0 must be IN_PROGRESS while bootstrap is in progress")
+    elif status == "BOOTSTRAP_COMPLETE":
+        if active_phase not in phase_map or active_phase == "A0":
+            errors.append(f"post-bootstrap assurance phase must be A1-A8; got {active_phase!r}")
+        else:
+            expected_issue = phase_map[active_phase].get("issue")
+            known_capability = CAPABILITY_BY_PHASE.get(active_phase)
+            if known_capability is not None:
+                expected_capability = known_capability
+            elif not str(expected_capability or "").strip():
+                errors.append("current_capability must be non-empty for active post-bootstrap phase")
+            current_tokens = ("#12", f"#{expected_issue}", active_phase)
+
+            active_index = EXPECTED_PHASES.index(active_phase)
+            for completed_phase in EXPECTED_PHASES[:active_index]:
+                if phase_map.get(completed_phase, {}).get("completion_status") != "COMPLETE":
+                    errors.append(f"{completed_phase} must be COMPLETE before {active_phase} is active")
+            if phase_map.get(active_phase, {}).get("completion_status") != "IN_PROGRESS":
+                errors.append(f"active phase {active_phase} must be IN_PROGRESS")
+    else:
+        errors.append(f"unsupported bootstrap project status: {status!r}")
+
+    if project.get("active_issue") != expected_issue:
+        errors.append(f"active_issue must be #{expected_issue} for active phase {active_phase}")
+    if project.get("assurance_phase") != active_phase:
+        errors.append(f"assurance_phase must be {active_phase}")
+    if project.get("current_capability") != expected_capability:
+        errors.append(f"current_capability must be {expected_capability} for active phase {active_phase}")
+
+    authority = project.get("authority", {})
+    if authority.get("trading") != "NONE":
+        errors.append("trading authority must remain NONE before an explicit capability promotion")
+    if authority.get("paper_trading_enabled") is not False:
+        errors.append("paper trading must remain disabled before A2 HITL promotion")
+    if authority.get("live_capital_enabled") is not False:
+        errors.append("live capital must remain disabled")
+    if authority.get("frontend") != "OPERATOR_ONLY":
+        errors.append("frontend authority must be OPERATOR_ONLY")
+
+    read_order = project.get("read_order", [])
+    for required in ("AGENTS.md", "docs/CURRENT_STATE.md", "docs/handoffs/LATEST.md"):
+        if required not in read_order:
+            errors.append(f"project-state read_order missing {required}")
+    if not str(project.get("next_exact_action", "")).strip():
+        errors.append("project-state next_exact_action must be non-empty")
 
     mutation = assurance.get("mutation_policy", {})
     if mutation.get("critical_minimum_valid_mutant_kill_rate", 0) < 0.98:
@@ -138,7 +153,10 @@ def validate() -> list[str]:
     if mutation.get("critical_invariant_bypass_survivor_allowed") is not False:
         errors.append("critical invariant-bypass surviving mutants must be forbidden")
 
-    t3 = [p for p in properties.get("properties", []) if p.get("status") == "active" and p.get("tier") == "T3"]
+    t3 = [
+        p for p in properties.get("properties", [])
+        if p.get("status") == "active" and p.get("tier") == "T3"
+    ]
     if not t3:
         errors.append("property catalog has no active T3 property")
     for prop in t3:
@@ -159,8 +177,10 @@ def validate() -> list[str]:
             errors.append(f"CURRENT_STATE.md missing {token}")
 
     handoff = (ROOT / "docs" / "handoffs" / "LATEST.md").read_text(encoding="utf-8")
-    if "Next exact action" not in handoff or "#15" not in handoff:
-        errors.append("LATEST handoff must contain next exact action and point to #15")
+    if "Next exact action" not in handoff or f"#{expected_issue}" not in handoff:
+        errors.append(
+            f"LATEST handoff must contain next exact action and point to active issue #{expected_issue}"
+        )
 
     return errors
 

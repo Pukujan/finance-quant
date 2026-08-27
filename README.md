@@ -9,15 +9,15 @@ The active execution plan is GitHub issue #12. Project policy, architecture, ass
 
 - Architecture: `OSS_FIRST_AUTONOMOUS_TRADER_REPLATFORM`
 - Status: **BOOTSTRAP_COMPLETE**
-- Active epic / issue: **#12 / #15**
-- Assurance phase: **A1 — OSS execution/runtime bakeoff**
-- Current capability: **OSS_RUNTIME_BAKEOFF**
+- Active epic / issue: **#12 / #16**
+- Assurance phase: **A2 — Autonomous Trader v0**
+- Current capability: **AUTONOMOUS_TRADER_V0**
 - Trading authority: **NONE**
 - Paper trading enabled: **false**
 - Live capital enabled: **false**
 - Frontend authority: **OPERATOR_ONLY**
 - Legacy Phase B: **PARKED** (evidence preserved)
-- Next planned issue: **#16**
+- Next planned issue: **#18**
 
 Machine source: `contracts/project/project-state.json`; assurance source: `contracts/assurance/capability-assurance-v1.json`.
 <!-- END GENERATED PROJECT STATUS -->
@@ -28,9 +28,9 @@ New capabilities are built as vertical slices:
 
 `domain/backend -> typed API/events -> evidence/observability -> thin operator/research UI -> end-to-end validation`
 
-The frontend is an operator/research surface, never trading or promotion authority. The first autonomous trader will be a deliberately simple unattended local paper trader after the NautilusTrader-vs-LEAN runtime bakeoff. Knowledge graph and local learning capabilities are later controlled upgrades to an already-running autonomous paper system.
+The frontend is an operator/research surface, never trading or promotion authority. A1 selected constrained LEAN as the primary runtime; the active A2 slice now builds the deliberately simple autonomous local-paper trader, while unattended paper remains disabled until A2 assurance and explicit HITL promotion pass. Knowledge graph and local learning capabilities are later controlled upgrades to an already-running autonomous paper system.
 
-Read `AGENTS.md`, `docs/CURRENT_STATE.md`, issue #12/#14/#15, and `docs/handoffs/LATEST.md` before starting material work.
+Read `AGENTS.md`, `docs/CURRENT_STATE.md`, issue #12/#14/#16, and `docs/handoffs/LATEST.md` before starting material work.
 
 ## Preserved Phase-B V0 evidence
 
