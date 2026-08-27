@@ -1,0 +1,149 @@
+name: a2-lean-clean-determinism
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  LEAN_SHA: 185c691b89f28bd68e48d53c02147415134975f0
+
+jobs:
+  controlled-production-run:
+    strategy:
+      fail-fast: false
+      matrix:
+        run: [1, 2, 3, 4, 5]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout finance-quant
+        uses: actions/checkout@v4
+        with:
+          path: finance-quant
+      - name: Checkout pinned LEAN source
+        uses: actions/checkout@v4
+        with:
+          repository: QuantConnect/Lean
+          ref: 185c691b89f28bd68e48d53c02147415134975f0
+          path: lean
+          fetch-depth: 1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Install finance-quant test dependencies
+        working-directory: finance-quant
+        run: python -m pip install -r requirements-dev.txt
+      - name: Verify A1-selected runtime pin and fail-closed authority
+        working-directory: finance-quant
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C "$GITHUB_WORKSPACE/lean" rev-parse HEAD)" = "$LEAN_SHA"
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          pin = json.loads(Path('contracts/execution/lean-a1-candidate-pin-v1.json').read_text())
+          decision = json.loads(Path('contracts/execution/a1-runtime-decision-v1.json').read_text())
+          state = json.loads(Path('contracts/project/project-state.json').read_text())
+          assert pin['source_commit'] == '185c691b89f28bd68e48d53c02147415134975f0'
+          assert decision['selected_primary_source_commit'] == pin['source_commit']
+          assert state['authority']['trading'] == 'NONE'
+          assert state['authority']['paper_trading_enabled'] is False
+          assert state['authority']['live_capital_enabled'] is False
+          PY
+      - name: Build pinned production LEAN fill probe
+        working-directory: finance-quant
+        run: >-
+          dotnet build tools/lean_a1_probe/LeanA1Probe.csproj
+          --configuration Release
+          -p:LeanRoot="$GITHUB_WORKSPACE/lean"
+      - name: Prepare deterministic strategy and risk evidence
+        working-directory: finance-quant
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/a2-controlled-${{ matrix.run }}
+          python -m scripts.prepare_a2_controlled_fixture \
+            --spec fixtures/trader/a2-controlled-baseline-v1.json \
+            --fixture-out artifacts/a2-controlled-${{ matrix.run }}/execution-fixture.json \
+            --evidence-out artifacts/a2-controlled-${{ matrix.run }}/strategy-risk.json
+      - name: Execute pinned LEAN and commit one controlled session
+        working-directory: finance-quant
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT=artifacts/a2-controlled-${{ matrix.run }}
+          dotnet run --project tools/lean_a1_probe/LeanA1Probe.csproj \
+            --configuration Release --no-build \
+            -p:LeanRoot="$GITHUB_WORKSPACE/lean" \
+            -- "$ROOT/execution-fixture.json" \
+            > "$ROOT/raw-probe.txt" 2> "$ROOT/probe-stderr.txt"
+          python -m scripts.run_a2_controlled_campaign \
+            --spec fixtures/trader/a2-controlled-baseline-v1.json \
+            --fixture "$ROOT/execution-fixture.json" \
+            --strategy-risk "$ROOT/strategy-risk.json" \
+            --pin contracts/execution/lean-a1-candidate-pin-v1.json \
+            --probe-result "$ROOT/raw-probe.txt" \
+            --db "$ROOT/account.db" \
+            --out "$ROOT/campaign-receipt.json"
+      - name: Upload independent controlled receipt
+        uses: actions/upload-artifact@v4
+        with:
+          name: a2-controlled-run-${{ matrix.run }}
+          path: finance-quant/artifacts/a2-controlled-${{ matrix.run }}/campaign-receipt.json
+
+  compare-controlled-runs:
+    needs: controlled-production-run
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: a2-controlled-run-*
+          path: runs
+      - name: Require five independent production receipts to be identical
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          paths = sorted(Path('runs').glob('a2-controlled-run-*/campaign-receipt.json'))
+          assert len(paths) == 5, paths
+          receipts = [json.loads(path.read_text()) for path in paths]
+          assert all(item == receipts[0] for item in receipts[1:]), receipts
+          first = receipts[0]
+          assert first['differential_conformance'] == 'PASS'
+          assert first['authority'] == 'NONE'
+          closure = {
+              'schema_version': '1.0.0',
+              'issue': 16,
+              'phase': 'A2',
+              'techniques': ['DIFFERENTIAL', 'DETERMINISM', 'CLEAN_ENV'],
+              'independent_clean_runs': 5,
+              'minimum_required_runs': 5,
+              'equivalent_receipts': True,
+              'runtime': first['runtime'],
+              'runtime_commit': first['runtime_commit'],
+              'fixture_id': first['fixture_id'],
+              'strategy_hash': first['strategy_hash'],
+              'risk_hash': first['risk_hash'],
+              'reference_receipt_hash': first['reference_receipt_hash'],
+              'candidate_receipt_hash': first['candidate_receipt_hash'],
+              'session_receipt_hash': first['session_receipt_hash'],
+              'terminal_state_hash': first['terminal_state_hash'],
+              'authority': 'NONE',
+          }
+          Path('a2-controlled-clean-determinism-receipt.json').write_text(
+              json.dumps(closure, indent=2, sort_keys=True) + '\n', encoding='utf-8')
+          print(json.dumps(closure, indent=2, sort_keys=True))
+          PY
+      - name: Upload A2 controlled clean determinism receipt
+        uses: actions/upload-artifact@v4
+        with:
+          name: a2-controlled-clean-determinism-receipt
+          path: a2-controlled-clean-determinism-receipt.json

@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 using QuantConnect;
 using QuantConnect.Data;
@@ -44,6 +45,14 @@ static class Program
             new Dictionary<DateTime, TimeSpan>());
     }
 
+    private static DateTime ParseUtc(string value)
+    {
+        return DateTimeOffset.Parse(
+            value,
+            CultureInfo.InvariantCulture,
+            DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal).UtcDateTime;
+    }
+
     public static int Main(string[] args)
     {
         if (args.Length != 1)
@@ -54,14 +63,43 @@ static class Program
 
         using var document = JsonDocument.Parse(File.ReadAllText(args[0]));
         var root = document.RootElement;
-        var intent = root.GetProperty("intents")[0];
+        var intents = root.GetProperty("intents");
+        if (intents.GetArrayLength() != 1)
+        {
+            throw new InvalidOperationException("probe requires exactly one intent");
+        }
+        var intent = intents[0];
         var events = root.GetProperty("events");
-        var sourceEvent = events[1];
-        var payload = sourceEvent.GetProperty("payload");
+        var decisionUtc = ParseUtc(intent.GetProperty("created_at").GetString()!);
 
+        JsonElement sourceEvent = default;
+        DateTime? sourceEventUtc = null;
+        foreach (var candidate in events.EnumerateArray())
+        {
+            if (candidate.GetProperty("instrument_id").GetString() != intent.GetProperty("instrument_id").GetString())
+            {
+                continue;
+            }
+            var eventUtc = ParseUtc(candidate.GetProperty("event_time").GetString()!);
+            if (eventUtc <= decisionUtc)
+            {
+                continue;
+            }
+            if (sourceEventUtc is null || eventUtc < sourceEventUtc.Value)
+            {
+                sourceEvent = candidate;
+                sourceEventUtc = eventUtc;
+            }
+        }
+        if (sourceEventUtc is null)
+        {
+            throw new InvalidOperationException("fixture lacks a next eligible event after the decision boundary");
+        }
+
+        var payload = sourceEvent.GetProperty("payload");
         var instrument = intent.GetProperty("instrument_id").GetString()!;
         var side = intent.GetProperty("side").GetString()!;
-        var quantity = decimal.Parse(intent.GetProperty("quantity").GetString()!, System.Globalization.CultureInfo.InvariantCulture);
+        var quantity = decimal.Parse(intent.GetProperty("quantity").GetString()!, CultureInfo.InvariantCulture);
         if (side.Equals("SELL", StringComparison.OrdinalIgnoreCase))
         {
             quantity = -quantity;
@@ -71,10 +109,10 @@ static class Program
             throw new InvalidOperationException($"unsupported side: {side}");
         }
 
-        var open = decimal.Parse(payload.GetProperty("open").GetString()!, System.Globalization.CultureInfo.InvariantCulture);
-        var high = decimal.Parse(payload.GetProperty("high").GetString()!, System.Globalization.CultureInfo.InvariantCulture);
-        var low = decimal.Parse(payload.GetProperty("low").GetString()!, System.Globalization.CultureInfo.InvariantCulture);
-        var close = decimal.Parse(payload.GetProperty("close").GetString()!, System.Globalization.CultureInfo.InvariantCulture);
+        var open = decimal.Parse(payload.GetProperty("open").GetString()!, CultureInfo.InvariantCulture);
+        var high = decimal.Parse(payload.GetProperty("high").GetString()!, CultureInfo.InvariantCulture);
+        var low = decimal.Parse(payload.GetProperty("low").GetString()!, CultureInfo.InvariantCulture);
+        var close = decimal.Parse(payload.GetProperty("close").GetString()!, CultureInfo.InvariantCulture);
 
         var exchangeHours = CreateWeekdayHours();
         var sid = SecurityIdentifier.GenerateEquity(instrument, Market.USA, mapSymbol: false);
@@ -98,11 +136,9 @@ static class Program
             RegisteredSecurityDataTypesProvider.Null,
             Exchange.ARCA);
 
-        // The public fixture's decision boundary is the first bar close: 16:00 New York.
-        // LEAN Order.Time is UTC. Mirror the pinned upstream EquityFillModel tests rather
-        // than passing a local wall-clock DateTime through a UTC-valued contract.
-        var decisionLocal = new DateTime(2026, 6, 1, 16, 0, 0, DateTimeKind.Unspecified);
-        var decisionUtc = decisionLocal.ConvertToUtc(TimeZones.NewYork);
+        // Order.Time is UTC. Derive the market boundary from the fixture intent instead
+        // of hard-coding the A1 fixture date so A2 can reuse this exact production probe.
+        var decisionLocal = decisionUtc.ConvertFromUtc(TimeZones.NewYork);
         var timeKeeper = new TimeKeeper(decisionUtc, TimeZones.NewYork);
         equity.SetLocalTimeKeeper(timeKeeper.GetLocalTimeKeeper(TimeZones.NewYork));
 
@@ -110,8 +146,6 @@ static class Program
         var nextOpen = exchangeHours.GetNextMarketOpen(decisionLocal, false);
         timeKeeper.SetUtcDateTime(nextOpen.ConvertToUtc(TimeZones.NewYork));
 
-        // LEAN's own regression suite exercises daily MarketOnOpen fills by updating the
-        // security with the completed daily TradeBar and then invoking EquityFillModel.
         var bar = new TradeBar(nextOpen.RoundDown(Time.OneDay), symbol, open, high, low, close, 100m, Time.OneDay);
         equity.SetMarketPrice(bar);
 
@@ -129,8 +163,8 @@ static class Program
             probe_scope = "EquityFillModel.MarketOnOpenFill",
             order_type = "MarketOnOpen",
             status = fill.Status.ToString(),
-            fill_quantity = fill.FillQuantity.ToString(System.Globalization.CultureInfo.InvariantCulture),
-            fill_price = fill.FillPrice.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            fill_quantity = fill.FillQuantity.ToString(CultureInfo.InvariantCulture),
+            fill_price = fill.FillPrice.ToString(CultureInfo.InvariantCulture),
             fill_time = fill.UtcTime.ToUniversalTime().ToString("O"),
             source_event_id = sourceEvent.GetProperty("event_id").GetString(),
             instrument_id = instrument,
