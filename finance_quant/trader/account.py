@@ -4,9 +4,10 @@ from __future__ import annotations
 import hashlib
 import json
 import sqlite3
+from contextlib import contextmanager
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any, Iterator, Mapping
 
 D = Decimal
 
@@ -43,12 +44,20 @@ def canonical_hash(value: object) -> str:
     return hashlib.sha256(raw).hexdigest()
 
 
-class VirtualAccountStore:
-    """Transactional SQLite account store with idempotent order/fill application.
+def _position_map(items: list[Mapping[str, object]], *, field: str) -> dict[str, Decimal]:
+    result: dict[str, Decimal] = {}
+    for index, item in enumerate(items):
+        instrument = _identifier(item.get("instrument_id"), field=f"{field}[{index}].instrument_id")
+        if instrument in result:
+            raise AccountInvariantError(f"duplicate position instrument: {instrument}")
+        quantity = _decimal(item.get("quantity"), field=f"{field}[{index}].quantity")
+        if quantity != 0:
+            result[instrument] = quantity
+    return result
 
-    The store is intentionally finance-quant owned. Runtime adapters may propose normalized
-    fills, but this store is the authoritative local paper account truth.
-    """
+
+class VirtualAccountStore:
+    """Transactional SQLite account/session store with idempotent effects."""
 
     def __init__(self, path: str | Path, *, initial_cash: object | None = None) -> None:
         self.path = Path(path)
@@ -112,6 +121,12 @@ class VirtualAccountStore:
                 amount TEXT NOT NULL,
                 fill_id TEXT NOT NULL UNIQUE REFERENCES fills(fill_id)
             );
+            CREATE TABLE IF NOT EXISTS session_receipts (
+                session_number INTEGER PRIMARY KEY,
+                session_id TEXT NOT NULL UNIQUE,
+                receipt_hash TEXT NOT NULL UNIQUE,
+                receipt_json TEXT NOT NULL
+            );
             """
         )
         self._conn.commit()
@@ -125,7 +140,20 @@ class VirtualAccountStore:
     def __exit__(self, exc_type: object, exc: object, tb: object) -> None:
         self.close()
 
-    def submit_order(
+    @contextmanager
+    def transaction(self) -> Iterator["VirtualAccountStore"]:
+        if self._conn.in_transaction:
+            raise AccountInvariantError("nested authoritative transaction is not allowed")
+        self._conn.execute("BEGIN IMMEDIATE")
+        try:
+            yield self
+        except BaseException:
+            self._conn.rollback()
+            raise
+        else:
+            self._conn.commit()
+
+    def _submit_order_tx(
         self,
         *,
         order_id: object,
@@ -167,15 +195,20 @@ class VirtualAccountStore:
             raise AccountInvariantError("intent_id already belongs to another order")
         row = dict(immutable)
         row.update({"filled_quantity": "0", "state": "ACCEPTED"})
-        with self._conn:
-            self._conn.execute(
-                """INSERT INTO orders(order_id,intent_id,session_id,instrument_id,side,quantity,filled_quantity,state,created_at)
-                   VALUES(:order_id,:intent_id,:session_id,:instrument_id,:side,:quantity,:filled_quantity,:state,:created_at)""",
-                row,
-            )
+        self._conn.execute(
+            """INSERT INTO orders(order_id,intent_id,session_id,instrument_id,side,quantity,filled_quantity,state,created_at)
+               VALUES(:order_id,:intent_id,:session_id,:instrument_id,:side,:quantity,:filled_quantity,:state,:created_at)""",
+            row,
+        )
         return True
 
-    def apply_fill(
+    def submit_order(self, **kwargs: object) -> bool:
+        if self._conn.in_transaction:
+            return self._submit_order_tx(**kwargs)
+        with self._conn:
+            return self._submit_order_tx(**kwargs)
+
+    def _apply_fill_tx(
         self,
         *,
         fill_id: object,
@@ -252,27 +285,32 @@ class VirtualAccountStore:
         next_position = current_position + signed_quantity
         next_state = "FILLED" if new_filled == order_qty else "PARTIALLY_FILLED"
 
-        with self._conn:
-            self._conn.execute(
-                """INSERT INTO fills(fill_id,order_id,session_id,instrument_id,quantity,price,fee,event_time,source_event_id)
-                   VALUES(:fill_id,:order_id,:session_id,:instrument_id,:quantity,:price,:fee,:event_time,:source_event_id)""",
-                fill,
-            )
-            self._conn.execute("UPDATE account_state SET cash = ? WHERE singleton = 1", (_text(next_cash),))
-            self._conn.execute(
-                """INSERT INTO positions(instrument_id,quantity) VALUES(?,?)
-                   ON CONFLICT(instrument_id) DO UPDATE SET quantity = excluded.quantity""",
-                (instrument_id_s, _text(next_position)),
-            )
-            self._conn.execute(
-                "UPDATE orders SET filled_quantity = ?, state = ? WHERE order_id = ?",
-                (_text(new_filled), next_state, order_id_s),
-            )
-            self._conn.execute(
-                "INSERT INTO cash_ledger(entry_id,session_id,kind,amount,fill_id) VALUES(?,?,?,?,?)",
-                (f"cash:{fill_id_s}", session_id_s, "FILL", _text(cash_delta), fill_id_s),
-            )
+        self._conn.execute(
+            """INSERT INTO fills(fill_id,order_id,session_id,instrument_id,quantity,price,fee,event_time,source_event_id)
+               VALUES(:fill_id,:order_id,:session_id,:instrument_id,:quantity,:price,:fee,:event_time,:source_event_id)""",
+            fill,
+        )
+        self._conn.execute("UPDATE account_state SET cash = ? WHERE singleton = 1", (_text(next_cash),))
+        self._conn.execute(
+            """INSERT INTO positions(instrument_id,quantity) VALUES(?,?)
+               ON CONFLICT(instrument_id) DO UPDATE SET quantity = excluded.quantity""",
+            (instrument_id_s, _text(next_position)),
+        )
+        self._conn.execute(
+            "UPDATE orders SET filled_quantity = ?, state = ? WHERE order_id = ?",
+            (_text(new_filled), next_state, order_id_s),
+        )
+        self._conn.execute(
+            "INSERT INTO cash_ledger(entry_id,session_id,kind,amount,fill_id) VALUES(?,?,?,?,?)",
+            (f"cash:{fill_id_s}", session_id_s, "FILL", _text(cash_delta), fill_id_s),
+        )
         return True
+
+    def apply_fill(self, **kwargs: object) -> bool:
+        if self._conn.in_transaction:
+            return self._apply_fill_tx(**kwargs)
+        with self._conn:
+            return self._apply_fill_tx(**kwargs)
 
     def authoritative_state(self) -> dict[str, Any]:
         account = self._conn.execute("SELECT cash FROM account_state WHERE singleton = 1").fetchone()
@@ -320,3 +358,88 @@ class VirtualAccountStore:
             "marked_position_value": _text(marked),
             "nav": _text(nav),
         }
+
+    def assert_terminal_matches(self, *, cash: object, positions: list[Mapping[str, object]]) -> None:
+        state = self.authoritative_state()
+        actual_cash = _decimal(state["cash"], field="cash")
+        expected_cash = _decimal(cash, field="expected_cash")
+        if actual_cash != expected_cash:
+            raise AccountInvariantError(
+                f"terminal cash mismatch: account={_text(actual_cash)} receipt={_text(expected_cash)}"
+            )
+        actual_positions = _position_map(state["positions"], field="account.positions")
+        expected_positions = _position_map(positions, field="receipt.positions")
+        if actual_positions != expected_positions:
+            raise AccountInvariantError("terminal positions do not match execution receipt")
+
+    def get_session_receipt(self, session_id: str) -> dict[str, Any] | None:
+        row = self._conn.execute(
+            "SELECT receipt_json FROM session_receipts WHERE session_id = ?", (session_id,)
+        ).fetchone()
+        if row is None:
+            return None
+        value = json.loads(str(row["receipt_json"]))
+        if not isinstance(value, dict):
+            raise AccountInvariantError("stored session receipt must be a JSON object")
+        return value
+
+    def latest_session_receipt(self) -> dict[str, Any] | None:
+        row = self._conn.execute(
+            "SELECT receipt_json FROM session_receipts ORDER BY session_number DESC LIMIT 1"
+        ).fetchone()
+        if row is None:
+            return None
+        value = json.loads(str(row["receipt_json"]))
+        if not isinstance(value, dict):
+            raise AccountInvariantError("stored session receipt must be a JSON object")
+        return value
+
+    def session_receipts(self) -> list[dict[str, Any]]:
+        result: list[dict[str, Any]] = []
+        for row in self._conn.execute(
+            "SELECT receipt_json FROM session_receipts ORDER BY session_number"
+        ).fetchall():
+            value = json.loads(str(row["receipt_json"]))
+            if not isinstance(value, dict):
+                raise AccountInvariantError("stored session receipt must be a JSON object")
+            result.append(value)
+        return result
+
+    def append_session_receipt(self, receipt: object) -> bool:
+        from dataclasses import asdict
+        from .session import SessionReceipt, SessionReceiptError, validate_session_chain
+
+        if isinstance(receipt, SessionReceipt):
+            current = receipt
+        elif isinstance(receipt, Mapping):
+            current = SessionReceipt.from_dict(dict(receipt))
+        else:
+            raise AccountInvariantError("session receipt must be a SessionReceipt or mapping")
+
+        existing = self.get_session_receipt(current.session_id)
+        serialized = json.dumps(asdict(current), sort_keys=True, separators=(",", ":"))
+        if existing is not None:
+            prior = SessionReceipt.from_dict(existing)
+            if prior != current:
+                raise AccountInvariantError("conflicting duplicate session_id")
+            return False
+
+        latest_raw = self.latest_session_receipt()
+        latest = None if latest_raw is None else SessionReceipt.from_dict(latest_raw)
+        try:
+            validate_session_chain(latest, current)
+        except SessionReceiptError as exc:
+            raise AccountInvariantError(str(exc)) from exc
+
+        def insert() -> None:
+            self._conn.execute(
+                "INSERT INTO session_receipts(session_number,session_id,receipt_hash,receipt_json) VALUES(?,?,?,?)",
+                (current.session_number, current.session_id, current.receipt_hash, serialized),
+            )
+
+        if self._conn.in_transaction:
+            insert()
+        else:
+            with self._conn:
+                insert()
+        return True

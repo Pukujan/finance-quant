@@ -24,12 +24,15 @@
     "duplicate_fill_policy": "exact duplicate fill_id is idempotent; conflicting duplicate fails closed",
     "fill_precondition": "a fill requires a preceding accepted or partially-filled order",
     "reconciliation": "nav = cash + sum(position_quantity * declared_mark)",
-    "restart_policy": "reopen the same durable account state; never synthesize a reset"
+    "restart_policy": "reopen the same durable account state; never synthesize a reset",
+    "session_commit_policy": "execution effects and authoritative SessionReceipt commit atomically in the same SQLite transaction"
   },
   "session_receipt": {
     "statuses": ["COMPLETE", "FAILED", "ABORTED"],
     "immutable": true,
     "append_only": true,
+    "authoritative_store": "same local SQLite transaction as account effects",
+    "jsonl_role": "optional export only; never account authority",
     "chain_fields": ["session_number", "parent_receipt_hash", "initial_state_hash", "terminal_state_hash"],
     "lineage_fields": ["input_hash", "strategy_hash", "risk_hash", "execution_hash", "runtime", "runtime_commit", "authority"],
     "hash_rule": "sha256 canonical JSON excluding receipt_hash"
