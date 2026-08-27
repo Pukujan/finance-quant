@@ -1,0 +1,18 @@
+{
+  "aggregate_metrics": [
+    [
+      "conformant",
+      1.0
+    ],
+    [
+      "evaluated",
+      1.0
+    ]
+  ],
+  "candidate_artifact_hash": "446fdc1a0c87db3a6a2ab4e94fab3d7e9f8fd389cc41676be12c3803b1f2d093",
+  "case_set_id": "A2-ISSUE-16-PRIVATE-V1",
+  "commitment_hash": "327a07323e55c3762ec2b04650f8c7d1f792fa8e210a2adc2583cea7a42c1f86",
+  "failure_classes": [],
+  "status": "pass",
+  "use_number": 1
+}
