@@ -1,31 +1,36 @@
-# Handoff — A2 hidden acceptance passed; awaiting HITL
+# Handoff — OSS product architecture reassessment before A2 HITL
 
 Date: 2026-08-27
 Branch: `bootstrap/oss-autonomous-trader-replatform`
 Active issue: #16
 Assurance phase: A2
+Authority: trading `NONE`; unattended paper disabled; live capital disabled
 
-A2 public implementation and public assurance are complete for the frozen evaluation candidate. Exact-head public workflows at frozen SHA `1ecc470cd6e0e23bf1d439f51e4e2c39674f02c4` are green, including candidate freeze, A2 assurance, core assurance, five-run LEAN clean determinism, five-run multi-session restart/replay determinism, full tests, bootstrap assurance, Phase-B preservation, and A1 regressions.
+A2 public implementation/assurance and genuine one-shot hidden acceptance are complete for frozen public evaluation SHA `1ecc470cd6e0e23bf1d439f51e4e2c39674f02c4` / candidate artifact SHA-256 `446fdc1a0c87db3a6a2ab4e94fab3d7e9f8fd389cc41676be12c3803b1f2d093`. The remaining formal A2 gate is `HITL_PROMOTION`.
 
-Frozen candidate artifact SHA-256: `446fdc1a0c87db3a6a2ab4e94fab3d7e9f8fd389cc41676be12c3803b1f2d093`.
-Pinned LEAN: `185c691b89f28bd68e48d53c02147415134975f0`.
+**Do not request or grant HITL yet.** The owner clarified that the intended product is a visible local autonomous quant workstation with configurable starting paper capital, real historical/ongoing PIT data, temporal knowledge/RAG, local model training, paper execution, and a proper operator dashboard. The current A2 kernel proves the lower trading/account/replay substrate but does not yet provide that whole product.
 
-The authorized isolated A2 runner completed the sole real hidden use and returned `status=pass`, `use_number=1`, aggregate metrics `conformant=1.0` / `evaluated=1.0`, and no failure classes. The canonical SealRecord commitment recomputes to `327a07323e55c3762ec2b04650f8c7d1f792fa8e210a2adc2583cea7a42c1f86`, exactly matching the receipt.
+A detailed OSS product-level scan is now the active next step. Verified candidates include:
 
-Operational aggregate-safe identities:
-- scorer package: `223ddbd0eb679b6e968639a96033b305a1e853366221f62543cdbd74b771fcb0`
-- evaluator: `a2-private-evaluator-v1` / `1ef08ed11d6fa493d57ea70b9e57784d2fcbf10b1ea0d45d3955b4b2c4a65cc4`
-- sealed bundle: `bf711753f3ce2ce6047d854fbf8a6e2ec0c790a52d5f49c2d7d997c013a69a4c`
-- seal use: `1 / 1` consumed
+- `AI4Finance-Foundation/FinRL-Trading` (FinRL-X): unified market data, ML/DRL strategies, backtesting, Alpaca paper/live execution, risk/P&L and deployment workflow; candidate larger trading/research substrate.
+- `Open-Papertrade/Open-Papertrade`: Django + Next.js full-stack paper trading on live quotes, charts/backtests, SEC filing RAG with citations/refusal, local LLM support; strongest candidate/reference for visible product UX and RAG, with AGPL licensing implications.
+- `Open-Finance-Lab/AgenticTrading`: agent dashboard, backtests/paper simulations, positions/trades/reasoning, FastAPI/frontend, broker infrastructure and FinAgent orchestration; shipping paper backend still requires caution because repo identifies it as a stub in the current v2 execution layout.
+- `microsoft/qlib` + `microsoft/RD-Agent`: strongest current research/factor/model automation candidates; Qlib includes full ML pipeline, PIT DB support, online serving and trading/research infrastructure, while RD-Agent(Q) automates factor/model co-optimization.
+- OpenBB and FinGPT remain follow-up candidates for broad data/research and financial RAG components.
 
-Canonical evidence:
-- `docs/acceptance/A2_ISSUE_16_SEAL_RECORD.json`
-- `docs/acceptance/A2_ISSUE_16_SAFE_ACCEPTANCE_RECEIPT.json`
-
-Authority remains fail-closed: trading `NONE`, unattended paper disabled, live capital disabled. Hidden acceptance does not satisfy the separate `HITL_PROMOTION` gate.
+Finance-quant already contains valuable reusable assets that should not be discarded casually: strict `vt/kt` bitemporal PIT semantics/store, Polygon ingestion, Qlib compiler boundary, temporal-KG boundary design, validated LEAN execution, authoritative SQLite account/replay, sealed acceptance, mutation/chaos testing and authority/promotion controls.
 
 ## Next exact action
 
-Obtain one explicit human approve/reject decision for A2 unattended local paper capability. On approval, record a durable promotion receipt, enable only constrained local `PAPER`, keep live capital disabled, rerun exact-head CI, and then close issue #16 / mark A2 complete. On rejection, keep authority `NONE`.
+Perform an explicit OSS architecture bakeoff and produce a layer-by-layer **KEEP / REPLACE / ADAPT / DELETE** matrix for data/PIT, research/model training, KG/RAG, execution/paper account, frontend/operator UX and local deployment. Evaluate licensing, maintenance, Windows/local operation, security/credentials, provenance/PIT correctness and conformance-test cost. Then update the roadmap before implementing the pivot.
 
-Append-only record: `docs/handoffs/2026-08-27-a2-hidden-pass-await-hitl.md`.
+Until that decision is durable:
+
+- keep trading authority `NONE`;
+- keep unattended paper disabled;
+- keep live capital disabled;
+- do not consume another A2 hidden seal use;
+- do not throw away validated evidence;
+- do not continue custom frontend/model work merely because it was on the old sequence.
+
+Detailed append-only handoff: `docs/handoffs/2026-08-27-oss-product-architecture-reassessment.md`.
