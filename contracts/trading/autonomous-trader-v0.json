@@ -1,0 +1,57 @@
+{
+  "schema_version": "1.0.0",
+  "issue": 16,
+  "phase": "A2",
+  "status": "IN_PROGRESS",
+  "selected_runtime": {
+    "name": "LEAN",
+    "source_commit": "185c691b89f28bd68e48d53c02147415134975f0",
+    "disposition": "ADOPT_WITH_CONSTRAINTS",
+    "validated_scope": "deterministic daily-bar next-eligible-open execution slice"
+  },
+  "authority": {
+    "build_authority": "NONE",
+    "unattended_paper_enabled": false,
+    "live_capital_enabled": false,
+    "hitl_promotion_required": true,
+    "brokerage_credentials_allowed": false,
+    "ui_is_authoritative": false
+  },
+  "account": {
+    "base_currency": "USD",
+    "numeric_representation": "canonical decimal strings",
+    "authoritative_store": "local SQLite",
+    "duplicate_fill_policy": "exact duplicate fill_id is idempotent; conflicting duplicate fails closed",
+    "fill_precondition": "a fill requires a preceding accepted or partially-filled order",
+    "reconciliation": "nav = cash + sum(position_quantity * declared_mark)",
+    "restart_policy": "reopen the same durable account state; never synthesize a reset"
+  },
+  "session_receipt": {
+    "statuses": ["COMPLETE", "FAILED", "ABORTED"],
+    "immutable": true,
+    "append_only": true,
+    "chain_fields": ["session_number", "parent_receipt_hash", "initial_state_hash", "terminal_state_hash"],
+    "lineage_fields": ["input_hash", "strategy_hash", "risk_hash", "execution_hash", "runtime", "runtime_commit", "authority"],
+    "hash_rule": "sha256 canonical JSON excluding receipt_hash"
+  },
+  "risk": {
+    "policy": "mechanical veto may approve the exact requested notional or reject to zero; it may never widen exposure"
+  },
+  "properties": [
+    "FQ-PROP-023",
+    "FQ-PROP-024",
+    "FQ-PROP-025",
+    "FQ-PROP-026",
+    "FQ-PROP-027",
+    "FQ-PROP-028",
+    "FQ-PROP-029"
+  ],
+  "assurance": {
+    "minimum_repeated_runs": 5,
+    "hidden_acceptance": "REQUIRED_NOT_YET_SATISFIED",
+    "mutation": "REQUIRED_NOT_YET_SATISFIED",
+    "clean_environment": "REQUIRED_NOT_YET_SATISFIED",
+    "chaos_fault": "REQUIRED_NOT_YET_SATISFIED",
+    "hitl_promotion": "REQUIRED_NOT_YET_SATISFIED"
+  }
+}
