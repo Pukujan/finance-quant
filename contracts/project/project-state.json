@@ -13,7 +13,7 @@
     "preserve_evidence": true
   },
   "next_issue": 18,
-  "next_exact_action": "A2 public implementation and assurance, including genuine one-shot hidden acceptance for frozen public evaluation SHA 1ecc470cd6e0e23bf1d439f51e4e2c39674f02c4, are satisfied. Obtain an explicit human HITL_PROMOTION decision for Issue #16. Until approval is durably recorded, keep trading authority NONE, unattended paper disabled, and live capital disabled. If approved, promote only to constrained local PAPER; live capital remains disabled.",
+  "next_exact_action": "A2 public implementation/assurance and genuine one-shot hidden acceptance for frozen public evaluation SHA 1ecc470cd6e0e23bf1d439f51e4e2c39674f02c4 are satisfied, but owner HITL_PROMOTION is intentionally on hold pending a product-level OSS architecture reassessment. Perform a KEEP/REPLACE/ADAPT/DELETE bakeoff across data/PIT, research/model training, temporal KG/RAG, paper account/execution, frontend/operator UX, and local deployment using the detailed 2026-08-27 OSS reassessment handoff. Until a revised architecture/roadmap is durable and the owner later approves promotion, keep trading authority NONE, unattended paper disabled, and live capital disabled; do not consume another A2 hidden seal use.",
   "authority": {
     "trading": "NONE",
     "paper_trading_enabled": false,
