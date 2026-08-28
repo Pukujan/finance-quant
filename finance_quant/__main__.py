@@ -66,6 +66,11 @@ def _cmd_workstation(args: argparse.Namespace) -> int:
     return workstation_main(args.remainder)
 
 
+def _cmd_lab(args: argparse.Namespace) -> int:
+    from finance_quant.lab.cli import main as lab_main
+    return lab_main(args.remainder)
+
+
 _SUBCOMMAND_HANDLERS = {
     "verify": _cmd_verify,
     "benchmark": _cmd_benchmark,
@@ -102,6 +107,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     p_workstation = sub.add_parser("workstation", help="Launch the real-data predictive research and local paper UI")
     p_workstation.set_defaults(func=_cmd_workstation)
+
+    p_lab = sub.add_parser("lab", help="Run versioned candidate arms through the fixed PIT/evaluation laboratory")
+    p_lab.set_defaults(func=_cmd_lab)
 
     p_verify = sub.add_parser("verify", help="Run the existing verification suite (pytest + smoke)")
     p_verify.set_defaults(func=_cmd_verify)
