@@ -1,222 +1,229 @@
 # Current project state
 
-<!-- MACHINE-STATE: architecture=WORKING_LOCAL_QUANT_WORKSTATION_PLUS_LAB status=LUNA_CANDIDATE_EXECUTION_READY active_issue=27 -->
+<!-- MACHINE-STATE: architecture=TEMPORAL_MARKET_STATE_FABRIC_PLUS_FIXED_LAB status=CONTRACT_FREEZE_BEFORE_PARALLEL_BUILD active_issue=35 -->
 
-## Active direction
+## Active product direction
 
-Build and empirically improve the working local quant workstation through a fixed parallel research laboratory:
+The working workstation and fixed experiment laboratory remain on `main`. The architecture has now been refined in durable proposal #35.
 
-`real historical data -> PIT normalization -> immutable versioned knowledge/model components -> assembled historical benchmark -> parallel walk-forward arms -> canonical realized market outcomes -> full-information scoring/router -> isolated persistent local paper accounts -> browser workstation`
+North star:
 
-The former assurance-phase ladder and OSS architecture bakeoff are not product gates. Historical evidence remains as implementation history. New research is judged by direct product correctness and unseen realized market outcomes.
+`world data -> PIT evidence -> epistemic/market state -> exposure/retrieval -> forecast distributions -> portfolio allocation -> local zero-money paper -> realized outcome -> learning`
 
-Live capital is out of scope. Local simulated paper trading is enabled.
+At decision time `T`, the system must use only information legitimately knowable at `T`, derive a compact economically relevant state, rank the best/worst available investments, decide how much to hold/buy/sell/diversify/cash, persist an inspectable simulated portfolio decision, and learn from subsequent realized outcomes.
 
-## Fixed laboratory/control plane is Luna-ready
+Forward paper is a continuous benchmark, not a later phase. Every executable surviving arm should begin accumulating prospective paper history as soon as it can make a valid decision.
 
-`finance_quant.lab` is now the fixed measuring/execution layer for Luna or other candidate-generating agents. Candidate workers can publish many data/KG/RAG/model versions and run them in parallel without owning historical labels, PIT cuts, scoring, evaluation identity, or paper-account truth.
+Live capital remains out of scope.
 
-The autonomous flow is:
+## Scope control
 
-1. publish immutable component artifacts;
-2. assemble PIT historical benchmark snapshots from registered component versions and fixed canonical outcomes;
-3. declare explicit arms or a bounded arm matrix;
-4. run all affordable arms concurrently;
-5. score every arm against the same realized outcome at each decision point;
-6. preserve exact component/evaluation/run lineage;
-7. route using prior resolved OOS results only;
-8. advance surviving arms in isolated zero-money shadow paper accounts.
+Do not build a literal whole-world model.
 
-### Public CLI
+The implementation unit is a **bounded market sphere**: a controlled investment universe plus the smallest economically relevant information frontier around it.
 
-Publish a component:
+Initial empirical sphere from #35/#37:
 
-`python -m finance_quant lab publish-component SPEC.json PAYLOAD.json --registry .lab-state/registry --output artifact.json`
+- AI + semiconductors;
+- US + China + Taiwan;
+- roughly 50–100 equities/ETFs initially;
+- daily decisions initially;
+- 1d / 5d / 20d research horizons;
+- interfaces remain asset-class-neutral for later crypto/prediction-market adapters.
 
-Assemble a benchmark:
+Second-domain generalization should use something materially different, such as SaaS, without rewriting the core engine.
 
-`python -m finance_quant lab assemble-benchmark EVALUATION.json COMPONENTS.json --registry .lab-state/registry --output benchmark.json`
+## Architecture
 
-Run candidate arms:
+Use a **modular monolith with process-isolated heavy workers**, not microservices by default.
 
-`python -m finance_quant lab run benchmark.json candidates.json --state-dir .lab-state --parallel 16 --output result.json`
+Three planes:
 
-`EVALUATION.json`/the assembled benchmark owns canonical outcomes. `CANDIDATES.json` owns only candidate arm/component/model/retrieval configuration. Candidate files are rejected if they contain snapshots, outcomes, labels, benchmark data, or experiment metadata.
+1. product/runtime — evidence -> state -> forecast -> portfolio -> paper -> workstation;
+2. research/evaluation — fixed PIT benchmark -> arms -> canonical outcomes -> scores -> lineage -> forward paper;
+3. agent-control — specs/contracts -> work packets -> agents -> CI -> merge -> handoff.
 
-## Stable lab contracts
+The agent-control plane exists to accelerate the product; it is not the product roadmap.
 
-### Versioned components
+Permanent walking skeleton:
 
-`ComponentSpec` + `ComponentRegistry` provide content-addressed immutable artifacts with:
+`SourceAdapter -> CanonicalObservation -> MarketState -> ForecastDistribution -> PortfolioIntent -> PaperFill -> CanonicalOutcome -> Score -> Workstation`
 
-- lane/name/version;
-- code/input-dataset identity;
-- schema/ontology/extractor/parameter identity;
-- parent artifacts and dependency DAG;
-- immutable payload bytes;
-- descendant queries for selective downstream invalidation.
+Every new capability should enter as a vertical slice through that spine.
 
-A standard temporal-observation artifact uses schema:
+## Fixed laboratory remains authoritative
 
-`finance-quant.lab.temporal-observations.v1`
+`finance_quant.lab` continues to own canonical historical snapshots/outcomes, PIT cuts, scoring, evaluation identity, router timing and simulated-account truth. Candidate components may propose knowledge, state, retrieval, forecasts and portfolio policies; they do not own the answer key.
 
-with observations carrying `entity`, `known_at`, optional valid-time interval, and payload. Global observations may use entity `*`.
+Stable flow:
 
-### Multiple versions at one historical cut
+`publish immutable components -> assemble PIT benchmark -> run exact-version arms -> join same canonical outcome -> score -> ExperimentLedger -> prior-resolved-only routing -> isolated paper accounts`
 
-A frozen snapshot may contain several versions of the same semantic lane simultaneously, e.g.:
+Existing fixed-lab semantics, component hashes, evaluation hashes, mutation probes and paper-account invariants remain in force. Proposal #35 extends the candidate/product layers rather than replacing these semantics.
 
-`price@v2 | news@v3 | news@v4 | KG-retriever@v5 | KG-retriever@v6`
+## New durable architecture issues
 
-Each `ArmSpec` selects exact `(lane, artifact_hash)` components. One arm still uses at most one artifact per semantic lane, but different arms can select different versions from the same frozen snapshot. This directly supports A/B/C/... version flywheels.
+- #35 — Temporal Market State Fabric + portfolio-intelligence proposal
+- #36 — walking skeleton, typed Market IR/API contracts, AI-agent work graph and tiered CI
+- #37 — bounded epistemic/trend Market State Fabric
+- #38 — forecast-to-allocation portfolio engine + diversified forward paper
+- #39 — reproducible Research Evidence Bundle + semantic provenance export
 
-### Benchmark assembly
+Existing execution lanes remain active:
 
-`assemble_benchmark` reads registered temporal artifacts and freezes each version at each fixed decision time **after PIT filtering**. Future-known rows are absent from the frozen snapshot. Canonical realized outcomes remain a separate evaluation input.
-
-### Arm matrices
-
-Candidate files may declare a bounded matrix with:
-
-- fixed base components;
-- named versions for variant lanes;
-- explicit lane combinations/interactions;
-- multiple model executors/configs;
-- `max_arms` hard ceiling.
-
-The lab expands this into exact immutable `ArmSpec`s. It never silently invents a full Cartesian product beyond the combinations requested.
-
-### Full-information execution
-
-Every affordable arm can predict every eligible historical decision. One canonical outcome is materialized per entity/decision/horizon and every arm is scored against that exact same outcome ID/cost assumptions.
-
-The standard-library thread runner is the dependency-light baseline. Ray/Optuna/Qlib may be adapters later, not prerequisites for correctness.
-
-### Experiment identity
-
-`ExperimentLedger.RunSpec` now includes:
-
-- knowledge manifest hash;
-- retrieval policy hash;
-- arm spec hash;
-- router config hash;
-- **evaluation hash**.
-
-The evaluation hash is derived from actual frozen snapshot IDs and actual canonical outcome IDs, so changing historical input content or the realized answer necessarily creates a different experiment identity even if a human dataset label was left unchanged.
-
-### Router and shadow paper
-
-The first inspectable router is an exponentially weighted expert ensemble that only consumes outcomes resolved by the current historical decision time. Future unresolved arm performance cannot affect earlier weights.
-
-`ShadowPaperLab` maintains one persistent authoritative `VirtualAccountStore` per arm. Accounts are isolated, restart-safe/idempotent, and zero-money simulation only.
-
-## Correctness evidence
-
-Dedicated workflow: `.github/workflows/lab-control-plane.yml`.
-
-Latest green code run: **33173989475** at SHA `4ce8be50ecdc453d0ece0db440bf2b93f693063b`.
-
-Results:
-
-- lab correctness suite: **23 passed**;
-- targeted semantic source mutations: **9/9 killed, 0 survived**;
-- public benchmark/candidate CLI smoke: **passed**;
-- existing workstation regression: **4/4 passed**;
-- smoke artifact ID: **9686784711**;
-- smoke artifact ZIP SHA256: `a0bdbcc9c2708c82dee482408387aff3a5248c7c2843022cb53f7a9bd5826354`.
-
-The nine mutation probes deliberately corrupt:
-
-1. future-known PIT filtering;
-2. simultaneous same-lane version preservation;
-3. direct snapshot future-time guard;
-4. exact component selection;
-5. canonical outcome coverage;
-6. evaluation identity dependence on realized outcomes;
-7. router no-hindsight timing;
-8. candidate benchmark/label separation;
-9. shadow-account restart behavior.
-
-All nine are detected by the executable tests.
-
-The smoke proves `price`, `price+news@v3`, and `price+news@v4` can run concurrently from the same frozen snapshot and receive the same canonical outcome ID. This is a synthetic control-plane proof, not predictive-performance evidence.
-
-## Working workstation MVP retained
-
-`finance_quant.workstation` remains runnable with:
-
-`python -m finance_quant workstation --ticker AAPL --start 2018-01-01 --capital 100000`
-
-It still provides real Yahoo daily market history, SEC CompanyFacts PIT fundamentals, strict walk-forward ridge evaluation, persistent simulated paper execution, and browser inspection.
-
-Real AAPL/SEC workflow `33146074713` produced 1,988 evaluated walk-forward predictions:
-
-- price-only directional accuracy: **53.3702%**;
-- price + current small SEC-fundamental feature set: **51.8612%**;
-- delta: **-1.5091 percentage points**.
-
-The current tiny SEC-fundamental set hurts this baseline. Do not claim KG predictive value from it. Historical simple long/cash metrics are also not a realistic cost-complete strategy result.
-
-Existing zero-money paper proof remains:
-
-- 2026-08-26 signal persisted;
-- 2026-08-27 simulated next-open fill: **BUY 305 AAPL @ 310.61209779052734**;
-- marked NAV: **$101,210.2061** from $100,000 starting cash.
-
-That proves signal -> persistent state -> simulated execution -> marked account, not profitability.
-
-## Active durable issues
-
-- #12 master working local predictive quant workstation
-- #26 workstation MVP + empirical iteration
-- #27 versioned knowledge lanes + parallel full-information laboratory
-- #28 component registry/manifests/DAG
+- #27 fixed versioned knowledge/full-information experiment flywheel
 - #29 historical PIT data lanes
-- #30 parallel arm scheduler/shared outcomes
-- #31 scoring/router/shadow paper
-- #32 workstation experiment/lineage UI
 - #19 temporal KG + PIT-safe RAG
 - #21 local model research/training
 - #18 continuous local paper refresh
-- #17 browser workstation UX
+- #17/#32 workstation/lineage UX
 
-## Next exact action
+## Epistemic/state direction
 
-The shared executioner is ready. **Do not redesign its benchmark/outcome semantics inside candidate lanes.**
+Do not store naked graph facts. Preserve distinct layers:
 
-Luna should now spawn parallel workers against #29, #19 and #21 for:
+`SourceArtifact -> Observation -> Claim/Proposition -> Evidence -> bitemporal EpistemicState -> MarketBeliefState -> Derived MarketState -> BenchmarkedKnowledge -> PredictiveKnowledge`
 
-1. raw OHLCV + timestamped corporate actions;
-2. SEC filing text and amendments;
-3. ALFRED-style macro vintages;
-4. historical financial news/events with publication/first-known clocks and syndication dedup;
-5. industrial supplier/customer/competitor relation extraction;
-6. bounded temporal graph retrieval and PIT-safe RAG;
-7. stronger local model families and cross-sectional models.
+Factual confidence, market attention, economic materiality, exposure strength and predictive usefulness stay separate.
 
-Each worker should emit immutable versioned temporal component artifacts and/or arm executors. The lab then assembles the fixed PIT benchmark and expands/runs explicit or matrix arms concurrently.
+The ontology has a stable core plus versioned domain modules. The temporal graph carries valid/knowledge time, source/provenance, confidence and materiality. Graph traversal remains typed and bounded.
 
-First substantive experiment family:
+`TrendState` should retain level, robust percentile/z-score, multi-horizon velocity, acceleration, noise, dominant trend shape, structural-break probability, novelty, persistence, saturation/decay and cross-source confirmation instead of one generic hype score.
 
-`price | +fundamentals | +news/hype | +events | +supply/competitors | +macro | +RAG | +bounded-KG | combined | contextual router`
+## Data/compression direction
 
-across multiple symbols/regimes. Subsequent realized market prices remain the objective judge.
+Local-first data lifecycle:
 
-## Safety scope
+`raw stream -> relevance filter -> dedup/story clusters -> claims/events/entities -> state deltas/checkpoints -> compact MarketState -> model matrices`
 
-- Local simulated paper: **ENABLED**.
-- Parallel per-arm shadow paper: **ENABLED as simulation**.
-- Broker-hosted paper: **not used**.
-- Live capital: **DISABLED / out of scope**.
-- Existing private/sealed holdout contents must not be inspected or optimized against without explicit authorization.
+Target storage tiers:
+
+- bronze/cold raw permitted evidence: compressed Parquet/ZSTD;
+- silver canonical claims/events/entities/relations/provenance;
+- gold MarketState checkpoints + deltas;
+- platinum PIT model-ready decision snapshots.
+
+Do not predict once per article. Predict at scheduled cuts and/or material state changes.
+
+## Forecast/model direction
+
+Retrieval is first-class but not a replacement for forecasting:
+
+1. evidence retrieval — what matters at `T`;
+2. historical analog retrieval — which prior resolved states resemble the current one.
+
+Initial model comparisons should remain simple and interpretable:
+
+- price-only;
+- price + direct news/events;
+- price + TrendState;
+- price + compact MarketState;
+- price + MarketState + bounded graph exposure;
+- historical-analog weighted-return baseline;
+- LightGBM/XGBoost cross-sectional ranker;
+- later temporal/neural models only if data volume justifies them.
+
+Prefer calibrated predictive distributions and cross-sectional ranking over pretending exact point-return forecasts are certain.
+
+## Portfolio engine direction
+
+#38 owns the second half of the product.
+
+The system must answer:
+
+- where to invest;
+- how much to invest;
+- how much cash to hold;
+- how to diversify by real economic exposure;
+- what to buy/sell/hold;
+- where/when to trade under simulated liquidity/cost assumptions;
+- when to abstain;
+- how/when to rebalance.
+
+`PortfolioIntent` is the immutable contract from forecasts to paper execution and records target weights, trade deltas, target cash, expected return/risk/cost, turnover, constraints and provenance.
+
+Initial allocation-policy arms:
+
+1. equal-weight top-K;
+2. edge/confidence-weighted top-K with caps;
+3. volatility-scaled/risk-budgeted;
+4. mean-variance/robust convex allocation with turnover/cost penalties;
+5. explicit cash/no-trade threshold policy.
+
+Each policy receives identical upstream forecasts/cost assumptions and gets historical OOS metrics plus its own persistent forward paper account. Forecast quality and allocation quality are scored separately.
+
+## SWE / multi-agent execution
+
+#36 must be completed enough to freeze shared contracts before the broad parallel build.
+
+Every agent work packet should declare issue/dependencies, owned modules, typed inputs/outputs, forbidden authority, focused acceptance tests and required product proof/experiment arm.
+
+Use capability-based routing: stronger reasoning/integration agents for temporal semantics, statistical leakage, shared architecture and hard debugging; parallel workers for bounded adapters, feature lanes, model executors, tests and UX. Track agent performance by task class and merge/regression outcomes rather than hard-coding permanent roles.
+
+Verification is risk-tiered:
+
+- lint/format + strict typing/import rules;
+- contract/schema round-trips;
+- focused TDD;
+- property/invariant tests;
+- metamorphic tests for PIT/reordering/dedup/retrieval invariance;
+- targeted mutation tests where tiny bugs could create fake alpha/account corruption;
+- deterministic replay;
+- Lean/SMT only for concrete hard invariants not credibly covered by executable tests;
+- historical WFO + forward paper judge investment usefulness.
+
+Correctness gates software merges. Alpha/performance gates research promotion.
+
+## Reproducibility/audit direction
+
+#39 targets a sellable `Research Evidence Bundle` using existing immutable manifests/ledger plus standards-based export where useful: RDF/JSON-LD, OWL 2, SHACL, PROV-O, deterministic hashes and RO-Crate-style packaging.
+
+Goal: an external party can trace a result from exact inputs/state/model/portfolio decision through realized outcome and recompute scores where licensed inputs are available.
+
+## Existing empirical baseline retained
+
+The current workstation remains runnable:
+
+`python -m finance_quant workstation --ticker AAPL --start 2018-01-01 --capital 100000`
+
+Existing real AAPL/SEC workflow produced 1,988 walk-forward predictions:
+
+- price-only directional accuracy: 53.3702%;
+- price + current small SEC-fundamental set: 51.8612%;
+- delta: -1.5091 percentage points.
+
+The tiny fundamental set hurt the simple baseline. Do not claim KG predictive value from it.
+
+Existing zero-money paper proof remains a signal -> persistent decision -> next-open simulated fill -> marked account proof, not profitability evidence.
+
+## Immediate execution order
+
+1. Freeze #36 walking-skeleton/API/MarketIR/PortfolioIntent/work-packet contracts and tiered CI.
+2. In parallel, resume #29 raw market/SEC/macro/news PIT lanes behind those contracts.
+3. Build #37 AI+semiconductor evidence/epistemic/trend MarketState vertical slices.
+4. Feed #19 bounded KG/RAG and historical-analog retrieval into state/forecast arms.
+5. Run #21 local ranker/model families against identical PIT states/outcomes.
+6. Implement #38 competing allocation policies and start their forward paper accounts immediately.
+7. Surface state, evidence, forecasts, target allocation, fills and comparative performance in #32/#17 workstation UX.
+8. Add #39 audit/export once useful experiment lineages exist; do not put semantic-export tooling on the hot path prematurely.
+
+Every phase reports five categories: correctness, data quality/coverage, signal metrics, portfolio/paper metrics and operational metrics.
+
+## Success criterion
+
+The project succeeds as an investment research system only if richer state provides stable **incremental leakage-free out-of-sample information** over simpler baselines and the resulting portfolio policies continue to add useful cost-adjusted value in immutable forward paper trading with controlled risk.
+
+Negative lanes/models/policies remain durable results and can be removed from the active path rather than defended with added complexity.
 
 ## Required read order for a fresh implementation session
 
 1. `AGENTS.md`
 2. this file
-3. `docs/handoffs/LATEST.md`
-4. #27, then #28–#32
-5. #29/#19/#21 for candidate work
-6. `finance_quant/lab/`, `tests/test_lab_*.py`, `scripts/run_lab_mutation_probes.py`
-7. `finance_quant/workstation/` and `tests/test_workstation_product.py`
-8. older assurance material only when relevant to a concrete product bug
+3. #35
+4. #36
+5. `docs/handoffs/LATEST.md`
+6. #27 + existing fixed lab contracts/tests
+7. relevant implementation issue: #29, #37/#19, #21, #38, #32/#17 or #39
+8. `finance_quant/lab/`, `tests/test_lab_*.py`, `scripts/run_lab_mutation_probes.py`
+9. `finance_quant/workstation/` and `tests/test_workstation_product.py`
+10. older assurance material only when relevant to a concrete product bug
