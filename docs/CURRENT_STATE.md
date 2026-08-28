@@ -1,89 +1,132 @@
 # Current project state
 
-<!-- MACHINE-STATE: architecture=OSS_FIRST_AUTONOMOUS_TRADER_REPLATFORM status=A2_AWAITING_HITL assurance=A2 active_issue=16 -->
+<!-- MACHINE-STATE: architecture=WORKING_LOCAL_QUANT_WORKSTATION status=PRODUCT_MVP_ACTIVE active_issue=26 -->
 
 ## Active direction
 
-The active master plan is issue **#12 — OSS-first autonomous trader + visual research console**. A1 / issue **#15** is complete. A2 / issue **#16 — Autonomous Trader v0** has completed its public implementation/assurance work and genuine one-shot hidden acceptance. The formal remaining A2 gate is explicit `HITL_PROMOTION`.
+Build and empirically improve the working local quant workstation. The active product loop is:
 
-**That promotion is intentionally on hold.** Before enabling unattended paper capability, the owner requested a product-level OSS architecture reassessment because the intended product is broader than the current validated A2 kernel: configurable starting paper capital, real historical/ongoing PIT data, temporal knowledge/RAG, local model training, paper execution, and a proper operator dashboard.
+`real prices + historical PIT information -> temporal KG/features -> local model -> strict walk-forward evaluation -> objective future-price outcome -> persistent local paper account -> browser UI`
 
-The immediate project action is therefore an OSS component bakeoff, not promotion.
+The former assurance-phase ladder and OSS-architecture bakeoff are no longer product gates. Historical A1/A2 evidence remains in the repository as useful implementation history, but new work is driven by whether the local zero-capital product runs correctly and whether its predictive methods work out of sample.
 
-## Runtime and capability
+Live-capital trading is still out of scope. Local simulated paper trading is the product target.
 
-- Primary runtime: **LEAN** commit `185c691b89f28bd68e48d53c02147415134975f0`
-- Runtime disposition: **ADOPT_WITH_CONSTRAINTS** for the validated deterministic daily-bar next-eligible-open slice
-- Finance-quant SQLite account/order/fill truth: implemented
-- Atomic SessionReceipt lineage and exact replay: implemented
-- Deterministic PIT-safe baseline + mechanical non-widening risk gate: implemented
-- Read-only operator evidence surface: implemented
-- Five-run clean LEAN determinism: PASS
-- Five-run multi-session restart/replay determinism: PASS
-- Stateful/property, metamorphic, mutation, differential, clean-environment, and chaos/fault public gates: PASS
+## Working workstation MVP
 
-## A2 frozen evaluation and hidden acceptance
+The durable branch contains `finance_quant.workstation`, runnable with:
 
-Frozen public evaluation SHA: `1ecc470cd6e0e23bf1d439f51e4e2c39674f02c4`.
-Candidate artifact SHA-256: `446fdc1a0c87db3a6a2ab4e94fab3d7e9f8fd389cc41676be12c3803b1f2d093`.
-Pinned LEAN commit: `185c691b89f28bd68e48d53c02147415134975f0`.
+`python -m finance_quant workstation --ticker AAPL --start 2018-01-01 --capital 100000`
 
-The authorized private runner reported one completed isolated A2 sealed run:
+or:
 
-- case set: `A2-ISSUE-16-PRIVATE-V1`
-- scorer package SHA-256: `223ddbd0eb679b6e968639a96033b305a1e853366221f62543cdbd74b771fcb0`
-- evaluator: `a2-private-evaluator-v1`, SHA-256 `1ef08ed11d6fa493d57ea70b9e57784d2fcbf10b1ea0d45d3955b4b2c4a65cc4`
-- sealed bundle SHA-256: `bf711753f3ce2ce6047d854fbf8a6e2ec0c790a52d5f49c2d7d997c013a69a4c`
-- seal use: `1 / 1` consumed
-- status: `pass`
-- aggregate metrics: `conformant=1.0`, `evaluated=1.0`
-- failure classes: none
+`python -m finance_quant.workstation --ticker AAPL --start 2018-01-01 --capital 100000`
 
-Canonical public evidence is stored at `docs/acceptance/A2_ISSUE_16_SEAL_RECORD.json` and `docs/acceptance/A2_ISSUE_16_SAFE_ACCEPTANCE_RECEIPT.json`. Recomputing the seven-field SealRecord commitment with the frozen public hashing rule yields `327a07323e55c3762ec2b04650f8c7d1f792fa8e210a2adc2583cea7a42c1f86`, exactly matching the receipt. The receipt is bound to the exact frozen candidate and satisfies the frozen A2 public verifier rules.
+Current MVP capabilities:
 
-No exact hidden cases, labels, expected outputs, IDs, traces, counts, or oracle internals are stored publicly.
+- real adjusted daily OHLCV from Yahoo's chart endpoint;
+- real SEC company-facts history for Revenue, NetIncomeLoss, Assets and Liabilities;
+- historical knowledge gating by SEC `filed` date and report-period valid time;
+- latest-known revision selection at each historical knowledge cut;
+- price-only baseline features and price + PIT-SEC-KG features;
+- local ridge-regression training with strict walk-forward temporal eligibility;
+- objective next-session open-to-close return labels;
+- baseline-vs-KG directional accuracy, correlation and long/cash return comparison;
+- a separate latest-bar signal, distinct from labeled historical evaluation;
+- persistent SQLite local paper account using the existing `VirtualAccountStore`;
+- signal-at-close -> next-session-open simulated fills with configurable starting capital and slippage;
+- browser UI showing price history, predictions, model comparison, latest PIT SEC facts, account NAV/cash/position and recent prediction outcomes.
 
-## Reusable product/data assets already present
+## First real-data product run
 
-The repo also contains older but potentially reusable assets not yet promoted into the active autonomous-trader product path:
+GitHub Actions workflow `workstation-demo`, run `33146074713`, completed successfully on Ubuntu against real AAPL price history and real SEC company facts.
 
-- bitemporal `vt/kt` PIT record semantics and durable SQLite PIT store;
-- Polygon market-data/corporate-action ingestion;
+Window: 2018-01-01 through 2026-08-27.
+Walk-forward evaluated predictions: **1,988**.
+
+Results:
+
+- price-only directional accuracy: **53.3702%**;
+- price + SEC-KG directional accuracy: **51.8612%**;
+- KG directional delta: **-1.5091 percentage points**;
+- price-only long/cash cumulative return: **+478.0179%** over the evaluated daily signal sequence;
+- price + SEC-KG long/cash cumulative return: **+299.6102%**;
+- KG long/cash delta: **-178.4077 percentage points**;
+- latest price-only prediction on 2026-08-27 input: **+0.2526%** next-session open-to-close;
+- latest KG prediction: **+0.4105%**.
+
+The current small SEC-fundamental KG therefore **does not improve the AAPL walk-forward baseline**. That is the first empirical result, not a failure of the workstation architecture. The next research task is to improve/expand the information graph and model and repeat controlled ablations across multiple symbols/regimes.
+
+## Paper-trading proof
+
+The same successful workflow ran two consecutive historical cutoffs using one persistent account state directory:
+
+- 2026-08-26 close: form and persist a KG-model signal;
+- 2026-08-27: execute that pending signal at the next session open;
+- executed paper fill: **BUY 305 AAPL @ 310.61209779052734** including configured slippage;
+- resulting marked paper NAV at the 2026-08-27 close: **$101,210.2061** from **$100,000** starting capital;
+- position: **305 shares**.
+
+This is local simulated paper only. It uses no broker and no real capital.
+
+## Correctness checks kept
+
+The focused workstation tests cover only product correctness properties that matter to the demo:
+
+- SEC filing date is a historical knowledge gate;
+- future prices cannot change earlier walk-forward predictions;
+- historical labeled evaluation is distinct from the current live signal;
+- persistent paper state fills the previous signal at the next open and does not duplicate the fill on rerun.
+
+The focused suite passed 4/4 on the real-data demo runner. A separate Windows full-suite run reached **1,039 passed / 25 skipped / 1 failed**; the sole failure was an obsolete bootstrap-handoff assertion requiring `#15` in the old handoff, not a workstation failure.
+
+## What is still missing
+
+The MVP proves the complete loop but is intentionally small. The next product work is:
+
+1. broaden the historical temporal KG beyond four SEC accounting concepts: filings/events, entities/relationships, industry/supply-chain/exposure edges and revisions;
+2. add PIT-safe text/RAG evidence tied to each decision-time knowledge cut;
+3. add stronger local model research/training and model comparison, likely adapting Qlib/RD-Agent where useful rather than blocking on them;
+4. run multi-ticker and cross-sectional walk-forward experiments with benchmarks, costs and regime slices;
+5. add a continuous/scheduled local paper runner that refreshes data, forms signals and advances the persistent account without manual reruns;
+6. improve the browser workstation for model/KG ablations, trades/fills/PnL and click-through historical evidence;
+7. keep replacing custom plumbing with OSS only when that materially accelerates the working product.
+
+## Historical assets retained
+
+Useful older assets remain available and may be reused where they help:
+
+- bitemporal `vt/kt` PIT store and Polygon ingestion;
 - Qlib compiler boundary;
-- temporal graph/KG boundary design;
-- legacy research/evaluation fixtures.
+- temporal graph design;
+- pinned LEAN execution work;
+- authoritative SQLite account/order/fill implementation;
+- SessionReceipt/replay machinery;
+- older assurance evidence and tests.
 
-These should be assessed alongside mature OSS rather than rewritten blindly.
+They are no longer mandatory phase gates for the local paper product.
 
-## Active OSS reassessment
+## Safety scope
 
-The detailed handoff is `docs/handoffs/2026-08-27-oss-product-architecture-reassessment.md`.
-
-Initial verified candidates include FinRL-X (`AI4Finance-Foundation/FinRL-Trading`), Open Papertrade (`Open-Papertrade/Open-Papertrade`), Agentic Trading Lab (`Open-Finance-Lab/AgenticTrading`), Microsoft Qlib and RD-Agent, with OpenBB/FinGPT as follow-up candidates.
-
-The objective is a layer-by-layer **KEEP / REPLACE / ADAPT / DELETE** decision for data/PIT, research/model training, temporal KG/RAG, execution/paper account, frontend/operator UX and local deployment. Finance-quant's unusual proven assets—PIT/authority semantics, exact account/replay evidence, sealed acceptance, mutation/chaos gates and promotion controls—should not be discarded unless a replacement explicitly passes conformance.
-
-## Authority
-
-- Trading authority: **NONE**
-- Unattended paper: **DISABLED**
-- Live capital: **DISABLED**
-- Frontend authority: **OPERATOR_ONLY**
-
-A passing hidden receipt does not itself grant capability authority. A2 remains `IN_PROGRESS` until a later explicit human `HITL_PROMOTION` is durably recorded.
+- Local simulated paper: **ENABLED as a product capability when the workstation is run**.
+- Broker-hosted paper: **not used**.
+- Live capital: **DISABLED / out of scope**.
+- No hidden acceptance reruns are needed for product iteration.
 
 ## Next exact action
 
-Perform the OSS product architecture bakeoff described in the latest handoff. Produce a decision matrix for each layer with current implementation, candidate OSS, KEEP/REPLACE/ADAPT/DELETE disposition, licensing/security/maintenance risks, required conformance tests, migration cost and custom code made unnecessary. Update the master roadmap/issues before implementing a material pivot.
+Improve the predictive engine, not the assurance shell. Start with a larger historical PIT knowledge dataset and controlled multi-symbol walk-forward ablation:
 
-Do **not** ask for A2 promotion first. Until the architecture decision is durable, keep authority `NONE`, paper disabled and live capital disabled, and do not consume another hidden seal use.
+`price baseline vs price+fundamentals vs price+RAG vs price+temporal-KG vs combined`.
+
+Keep the stock's subsequent realized price/return as the objective outcome and surface the comparison directly in the workstation.
 
 ## Required read order for a fresh session
 
 1. `AGENTS.md`
 2. this file
 3. `docs/handoffs/LATEST.md`
-4. `docs/handoffs/2026-08-27-oss-product-architecture-reassessment.md`
-5. issue #12 and issue #16
-6. issue #17 plus issues #19/#20/#21
-7. relevant contracts/tests and external OSS repositories
+4. issue #12
+5. issue #26
+6. `finance_quant/workstation/` and `tests/test_workstation_product.py`
+7. older architecture/assurance material only when relevant to a concrete implementation decision
