@@ -1,0 +1,34 @@
+{
+  "experiment": {
+    "experiment_id": "lab-smoke",
+    "code_sha": "fixture-code-sha",
+    "env_lock_hash": "fixture-env",
+    "dataset_manifest_hash": "fixture-dataset",
+    "split_policy_ref": "walk-forward-smoke",
+    "cost_model_ref": "2bps-smoke",
+    "seeds": [1],
+    "outcome_horizon": "1d"
+  },
+  "snapshots": [
+    {
+      "entity": "AAA",
+      "decision_time": "2024-01-02T16:00:00+00:00",
+      "horizon": "1d",
+      "data": [
+        {"lane": "price", "artifact_hash": "price-v1", "known_at": "2024-01-02T16:00:00+00:00", "payload": {"signal": 0.01}},
+        {"lane": "news", "artifact_hash": "news-v1", "known_at": "2024-01-02T16:00:00+00:00", "payload": {"signal": 0.02}},
+        {"lane": "news", "artifact_hash": "future-news", "known_at": "2024-01-04T16:00:00+00:00", "payload": {"signal": 999.0}}
+      ]
+    }
+  ],
+  "outcomes": [
+    {
+      "entity": "AAA",
+      "decision_time": "2024-01-02T16:00:00+00:00",
+      "outcome_time": "2024-01-03T16:00:00+00:00",
+      "horizon": "1d",
+      "realized_return": 0.01,
+      "cost_bps": 2.0
+    }
+  ]
+}
