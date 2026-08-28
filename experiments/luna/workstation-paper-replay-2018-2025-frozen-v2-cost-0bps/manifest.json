@@ -1,0 +1,248 @@
+{
+  "analysis": {
+    "allocation": 0.95,
+    "execution": "next-session open target rebalance, mark at next-session close",
+    "interpretation": "local zero-money historical simulation; not broker paper or live performance",
+    "model_training": "strict walk-forward ridge; baseline price features and kg price-plus-SEC-fact features",
+    "name": "historical-workstation-paper-replay",
+    "slippage_bps": 0.0
+  },
+  "parameters": {
+    "end": "2025-12-31",
+    "initial_cash": 100000.0,
+    "min_train": 126,
+    "retrain_every": 21,
+    "snapshot_dir": "experiments\\luna\\workstation-paper-replay-2018-2025-frozen\\inputs",
+    "start": "2018-01-01",
+    "tickers": [
+      "AAPL",
+      "MSFT",
+      "AMZN"
+    ],
+    "train_window": 756
+  },
+  "results": [
+    {
+      "account_path": "experiments\\luna\\workstation-paper-replay-2018-2025-frozen-v2-cost-0bps\\accounts\\aapl-baseline.sqlite",
+      "bar_count": 2011,
+      "checkpoint_path": "experiments\\luna\\workstation-paper-replay-2018-2025-frozen-v2-cost-0bps\\accounts\\aapl-baseline.sqlite.checkpoint.json",
+      "clock_semantics": "workstation daily bars; SEC facts visible by filed date; historical Yahoo bars are adjusted and do not provide source-native knowledge timestamps",
+      "data_end": "2025-12-31",
+      "data_start": "2018-01-02",
+      "fills": 1197,
+      "final_nav": 399753.8880723413,
+      "initial_cash": 100000.0,
+      "long_session_rate": 0.7828947368421053,
+      "long_sessions": 1428,
+      "marked_return": 2.997538880723413,
+      "max_drawdown": -0.4022614452433184,
+      "mean_daily_marked_return": 0.0009017670318728718,
+      "model": "baseline",
+      "model_metrics": {
+        "correlation": 0.012790062253286815,
+        "count": 1824,
+        "directional_accuracy": 0.5367324561403509,
+        "long_cash_return": 4.314905274913697,
+        "mae": 0.011075405710703628,
+        "rmse": 0.015416967678485716
+      },
+      "orders": 1197,
+      "prediction_count": 1824,
+      "state_hash": "08e608332a1d5f97b8d552812cfb850e2287ec3ebd2ab643007d4bc56d35c6c3",
+      "ticker": "AAPL",
+      "trade_notional": 75726630.02980709
+    },
+    {
+      "account_path": "experiments\\luna\\workstation-paper-replay-2018-2025-frozen-v2-cost-0bps\\accounts\\aapl-kg.sqlite",
+      "bar_count": 2011,
+      "checkpoint_path": "experiments\\luna\\workstation-paper-replay-2018-2025-frozen-v2-cost-0bps\\accounts\\aapl-kg.sqlite.checkpoint.json",
+      "clock_semantics": "workstation daily bars; SEC facts visible by filed date; historical Yahoo bars are adjusted and do not provide source-native knowledge timestamps",
+      "data_end": "2025-12-31",
+      "data_start": "2018-01-02",
+      "fills": 923,
+      "final_nav": 219473.06953548,
+      "initial_cash": 100000.0,
+      "long_session_rate": 0.6650219298245614,
+      "long_sessions": 1213,
+      "marked_return": 1.1947306953547998,
+      "max_drawdown": -0.3817923070717455,
+      "mean_daily_marked_return": 0.0005643021289308415,
+      "model": "kg",
+      "model_metrics": {
+        "correlation": 0.025553839558234405,
+        "count": 1824,
+        "directional_accuracy": 0.5219298245614035,
+        "long_cash_return": 2.626735433385785,
+        "mae": 0.011259183249735563,
+        "rmse": 0.016080029068997383
+      },
+      "orders": 923,
+      "prediction_count": 1824,
+      "state_hash": "9d3ac219916b159541ba13e4e824403d8b26fc665b5fe6a7ebeca8ffea921c8a",
+      "ticker": "AAPL",
+      "trade_notional": 54055113.87459372
+    },
+    {
+      "account_path": "experiments\\luna\\workstation-paper-replay-2018-2025-frozen-v2-cost-0bps\\accounts\\msft-baseline.sqlite",
+      "bar_count": 2011,
+      "checkpoint_path": "experiments\\luna\\workstation-paper-replay-2018-2025-frozen-v2-cost-0bps\\accounts\\msft-baseline.sqlite.checkpoint.json",
+      "clock_semantics": "workstation daily bars; SEC facts visible by filed date; historical Yahoo bars are adjusted and do not provide source-native knowledge timestamps",
+      "data_end": "2025-12-31",
+      "data_start": "2018-01-02",
+      "fills": 966,
+      "final_nav": 455130.20725645387,
+      "initial_cash": 100000.0,
+      "long_session_rate": 0.5882675438596491,
+      "long_sessions": 1073,
+      "marked_return": 3.551302072564539,
+      "max_drawdown": -0.22377199431199923,
+      "mean_daily_marked_return": 0.0009236732636321099,
+      "model": "baseline",
+      "model_metrics": {
+        "correlation": 0.07120877704156628,
+        "count": 1824,
+        "directional_accuracy": 0.5142543859649122,
+        "long_cash_return": 0.7656521870734834,
+        "mae": 0.010311312389489692,
+        "rmse": 0.014093631071477649
+      },
+      "orders": 966,
+      "prediction_count": 1824,
+      "state_hash": "d7c373f94a1db705115a7c22eeb30841adef08325ca4482271fe279296bfd4f9",
+      "ticker": "MSFT",
+      "trade_notional": 170930254.89444986
+    },
+    {
+      "account_path": "experiments\\luna\\workstation-paper-replay-2018-2025-frozen-v2-cost-0bps\\accounts\\msft-kg.sqlite",
+      "bar_count": 2011,
+      "checkpoint_path": "experiments\\luna\\workstation-paper-replay-2018-2025-frozen-v2-cost-0bps\\accounts\\msft-kg.sqlite.checkpoint.json",
+      "clock_semantics": "workstation daily bars; SEC facts visible by filed date; historical Yahoo bars are adjusted and do not provide source-native knowledge timestamps",
+      "data_end": "2025-12-31",
+      "data_start": "2018-01-02",
+      "fills": 846,
+      "final_nav": 273567.65262456,
+      "initial_cash": 100000.0,
+      "long_session_rate": 0.6140350877192983,
+      "long_sessions": 1120,
+      "marked_return": 1.7356765262455998,
+      "max_drawdown": -0.35608111693767375,
+      "mean_daily_marked_return": 0.0006603064196471938,
+      "model": "kg",
+      "model_metrics": {
+        "correlation": 0.06769575330246759,
+        "count": 1824,
+        "directional_accuracy": 0.5038377192982456,
+        "long_cash_return": 0.2747471665953143,
+        "mae": 0.010468657611141298,
+        "rmse": 0.014300126859349921
+      },
+      "orders": 846,
+      "prediction_count": 1824,
+      "state_hash": "456aa8dcf00499a1e8fb3578c74150cab60513cb7ad01448c87343a5606ee471",
+      "ticker": "MSFT",
+      "trade_notional": 99562524.21264961
+    },
+    {
+      "account_path": "experiments\\luna\\workstation-paper-replay-2018-2025-frozen-v2-cost-0bps\\accounts\\amzn-baseline.sqlite",
+      "bar_count": 2011,
+      "checkpoint_path": "experiments\\luna\\workstation-paper-replay-2018-2025-frozen-v2-cost-0bps\\accounts\\amzn-baseline.sqlite.checkpoint.json",
+      "clock_semantics": "workstation daily bars; SEC facts visible by filed date; historical Yahoo bars are adjusted and do not provide source-native knowledge timestamps",
+      "data_end": "2025-12-31",
+      "data_start": "2018-01-02",
+      "fills": 824,
+      "final_nav": 96748.74806779907,
+      "initial_cash": 100000.0,
+      "long_session_rate": 0.5460526315789473,
+      "long_sessions": 996,
+      "marked_return": -0.03251251932200927,
+      "max_drawdown": -0.590584514282212,
+      "mean_daily_marked_return": 9.881223372532603e-05,
+      "model": "baseline",
+      "model_metrics": {
+        "correlation": -0.016528916648042295,
+        "count": 1824,
+        "directional_accuracy": 0.48519736842105265,
+        "long_cash_return": -0.4355526510766432,
+        "mae": 0.012913710938483211,
+        "rmse": 0.017354231211631453
+      },
+      "orders": 824,
+      "prediction_count": 1824,
+      "state_hash": "00b29a37a8d1665d5176dae22bd09ebd913fd59bd14be688c5f7988ede244667",
+      "ticker": "AMZN",
+      "trade_notional": 50095960.74948883
+    },
+    {
+      "account_path": "experiments\\luna\\workstation-paper-replay-2018-2025-frozen-v2-cost-0bps\\accounts\\amzn-kg.sqlite",
+      "bar_count": 2011,
+      "checkpoint_path": "experiments\\luna\\workstation-paper-replay-2018-2025-frozen-v2-cost-0bps\\accounts\\amzn-kg.sqlite.checkpoint.json",
+      "clock_semantics": "workstation daily bars; SEC facts visible by filed date; historical Yahoo bars are adjusted and do not provide source-native knowledge timestamps",
+      "data_end": "2025-12-31",
+      "data_start": "2018-01-02",
+      "fills": 847,
+      "final_nav": 182590.18785789,
+      "initial_cash": 100000.0,
+      "long_session_rate": 0.6047149122807017,
+      "long_sessions": 1103,
+      "marked_return": 0.8259018785789001,
+      "max_drawdown": -0.49640764375998236,
+      "mean_daily_marked_return": 0.0004654371836044784,
+      "model": "kg",
+      "model_metrics": {
+        "correlation": -0.013676965958472514,
+        "count": 1824,
+        "directional_accuracy": 0.5076754385964912,
+        "long_cash_return": -0.2656506993387119,
+        "mae": 0.012936890136143596,
+        "rmse": 0.017401636611244612
+      },
+      "orders": 847,
+      "prediction_count": 1824,
+      "state_hash": "571d255f847230fc7745085837a605a6aecd42c0c764ee9ec90a070794828d51",
+      "ticker": "AMZN",
+      "trade_notional": 50166262.38950348
+    }
+  ],
+  "script_sha256": "2637a2f91f2405a5ad8772eda9ceb05b5ab7e94db2348cde6573a3008e8553a4",
+  "sources": [
+    {
+      "bar_count": 2011,
+      "end": "2025-12-31",
+      "fact_count": 715,
+      "input_snapshot": "experiments\\luna\\workstation-paper-replay-2018-2025-frozen\\inputs\\aapl.json",
+      "input_snapshot_sha256": "e81ff350abfa635378f6b2e520707a578aee4a2c7d7533f2ade162c892ff978c",
+      "sources": {
+        "fundamentals": "SEC CompanyFacts",
+        "price": "Yahoo chart endpoint"
+      },
+      "start": "2018-01-01",
+      "ticker": "AAPL"
+    },
+    {
+      "bar_count": 2011,
+      "end": "2025-12-31",
+      "fact_count": 710,
+      "input_snapshot": "experiments\\luna\\workstation-paper-replay-2018-2025-frozen\\inputs\\msft.json",
+      "input_snapshot_sha256": "0aca6eba5a094195e72445436fba0f29ddcdeb399d08aec316dcb8909c8bdfd7",
+      "sources": {
+        "fundamentals": "SEC CompanyFacts",
+        "price": "Yahoo chart endpoint"
+      },
+      "start": "2018-01-01",
+      "ticker": "MSFT"
+    },
+    {
+      "bar_count": 2011,
+      "end": "2025-12-31",
+      "fact_count": 694,
+      "input_snapshot": "experiments\\luna\\workstation-paper-replay-2018-2025-frozen\\inputs\\amzn.json",
+      "input_snapshot_sha256": "6f6d0034a300d8261f8e0f474ff7c1e1bfd693e012953390838696786e7adcd5",
+      "sources": {
+        "fundamentals": "SEC CompanyFacts",
+        "price": "Yahoo chart endpoint"
+      },
+      "start": "2018-01-01",
+      "ticker": "AMZN"
+    }
+  ]
+}
