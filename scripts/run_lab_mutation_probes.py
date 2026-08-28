@@ -64,6 +64,13 @@ PROBES = (
         "tests/test_lab_control_plane.py::test_canonical_outcome_coverage_must_be_exact",
     ),
     Probe(
+        "evaluation identity stopped depending on realized outcomes",
+        "finance_quant/lab/runner.py",
+        "            \"outcome_ids\": sorted(outcome.outcome_id for outcome in outcomes),",
+        "            \"outcome_ids\": [],",
+        "tests/test_lab_evaluation_identity.py::test_actual_outcome_and_snapshot_content_are_part_of_run_identity",
+    ),
+    Probe(
         "router allowed unresolved future outcomes",
         "finance_quant/lab/runner.py",
         "        if _parse_time(score.outcome_time) <= _parse_time(decision_time):\n            rewards[score.arm_id] += score.strategy_net_return",
