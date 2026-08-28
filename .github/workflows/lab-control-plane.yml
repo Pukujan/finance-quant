@@ -9,6 +9,7 @@ on:
       - "finance_quant/experiments/ledger.py"
       - "finance_quant/__main__.py"
       - "tests/test_lab_*.py"
+      - "fixtures/lab/**"
       - ".github/workflows/lab-control-plane.yml"
 
 jobs:
@@ -22,5 +23,17 @@ jobs:
       - run: python -m pip install -e ".[test]"
       - name: Fixed laboratory correctness tests
         run: python -m pytest tests/test_lab_*.py -q
+      - name: Autonomous candidate execution smoke
+        run: |
+          python -m finance_quant lab run \
+            fixtures/lab/benchmark-smoke.json \
+            fixtures/lab/candidates-smoke.json \
+            --state-dir .lab-smoke-state \
+            --parallel 4 \
+            --output lab-smoke-result.json
       - name: Existing workstation regression
         run: python -m pytest tests/test_workstation_product.py -q
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lab-smoke-result
+          path: lab-smoke-result.json
