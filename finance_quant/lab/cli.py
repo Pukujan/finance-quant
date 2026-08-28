@@ -32,6 +32,7 @@ from .core import (
     canonical_json,
     freeze_snapshot,
 )
+from .matrix import expand_arm_matrix
 from .registry import ComponentRegistry
 from .runner import run_batch
 
@@ -97,12 +98,24 @@ def _emit(payload: Any, output: str = "") -> None:
 
 def load_candidates(path: str | Path) -> tuple[ArmSpec, ...]:
     payload = _json_file(path)
+    if not isinstance(payload, Mapping):
+        raise LabError("candidate file must contain a JSON object")
     forbidden = {"snapshots", "outcomes", "labels", "benchmark", "experiment"} & set(payload)
     if forbidden:
         raise LabError(f"candidate file cannot own benchmark data: {sorted(forbidden)}")
-    arms = tuple(_arm(item) for item in payload.get("arms", ()))
+    explicit = tuple(_arm(item) for item in payload.get("arms", ()))
+    matrix_arms: tuple[ArmSpec, ...] = ()
+    if "matrix" in payload:
+        matrix = payload["matrix"]
+        if not isinstance(matrix, Mapping):
+            raise LabError("candidate matrix must be an object")
+        matrix_arms = expand_arm_matrix(matrix)
+    arms = explicit + matrix_arms
     if not arms:
-        raise LabError("candidate file must declare at least one arm")
+        raise LabError("candidate file must declare explicit arms or a matrix")
+    ids = [arm.arm_id for arm in arms]
+    if len(ids) != len(set(ids)):
+        raise LabError("candidate file generated duplicate arm ids")
     return arms
 
 
