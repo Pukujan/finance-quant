@@ -29,7 +29,10 @@ class ShadowPaperLab:
         return self.root / f"{safe}.sqlite"
 
     def _open(self, arm_id: str) -> VirtualAccountStore:
-        return VirtualAccountStore(self._path(arm_id), initial_cash=self.initial_cash)
+        path = self._path(arm_id)
+        if path.exists():
+            return VirtualAccountStore(path)
+        return VirtualAccountStore(path, initial_cash=self.initial_cash)
 
     @staticmethod
     def _position(state: Mapping[str, object], instrument: str) -> D:
@@ -37,6 +40,22 @@ class ShadowPaperLab:
             if str(row["instrument_id"]) == instrument:
                 return D(str(row["quantity"]))
         return D("0")
+
+    @staticmethod
+    def _marks(
+        state: Mapping[str, object],
+        instrument: str,
+        execution_price: D,
+        marks: Mapping[str, float] | None,
+    ) -> dict[str, D]:
+        resolved = {str(key): D(str(value)) for key, value in (marks or {}).items()}
+        resolved[instrument] = execution_price
+        for row in state.get("positions", []):
+            name = str(row["instrument_id"])
+            quantity = D(str(row["quantity"]))
+            if quantity != 0 and name not in resolved:
+                raise LabError(f"missing mark for existing shadow position: {name}")
+        return resolved
 
     def advance(
         self,
@@ -49,6 +68,7 @@ class ShadowPaperLab:
         execution_price: float,
         target_allocation: float = 0.95,
         fee_bps: float = 0.0,
+        marks: Mapping[str, float] | None = None,
     ) -> dict:
         """Execute a long/cash arm at a supplied simulated execution price.
 
@@ -70,7 +90,8 @@ class ShadowPaperLab:
         try:
             state = store.authoritative_state()
             current = self._position(state, instrument)
-            nav = D(store.nav({instrument: price})["nav"]) if current != 0 else D(str(state["cash"]))
+            current_marks = self._marks(state, instrument, price, marks)
+            nav = D(store.nav(current_marks)["nav"])
             target = D("0")
             if predicted_return > 0:
                 target = (nav * allocation / price).to_integral_value(rounding=ROUND_FLOOR)
@@ -110,16 +131,14 @@ class ShadowPaperLab:
                     source_event_id="shadow-source:" + content_hash(transition_key),
                 )
             final_state = store.authoritative_state()
-            marks = {instrument: price}
-            for row in final_state["positions"]:
-                marks.setdefault(str(row["instrument_id"]), price)
+            final_marks = self._marks(final_state, instrument, price, marks)
             return {
                 "arm_id": arm_id,
                 "instrument": instrument,
                 "position": str(self._position(final_state, instrument)),
                 "executed": delta != 0,
                 "state": final_state,
-                "nav": store.nav(marks),
+                "nav": store.nav(final_marks),
             }
         finally:
             store.close()
