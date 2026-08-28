@@ -1,0 +1,18 @@
+{
+  "arms": [
+    {
+      "arm_id": "price",
+      "lanes": ["price"],
+      "knowledge_manifest_hash": "d4fa97c8a97ce8b631426fbe1d7c5695b4ad11087c5654f96f75b6aa79772f38",
+      "executor_ref": "finance_quant.lab.demo:weighted_signal",
+      "model_config": {"weights": {"price": 1.0}}
+    },
+    {
+      "arm_id": "price-news",
+      "lanes": ["price", "news"],
+      "knowledge_manifest_hash": "8e21035f2bc54e7f4b10877f3ba4249d029fb2350809cce5ea782ad503091350",
+      "executor_ref": "finance_quant.lab.demo:weighted_signal",
+      "model_config": {"weights": {"price": 1.0, "news": 1.0}}
+    }
+  ]
+}
