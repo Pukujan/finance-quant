@@ -1,0 +1,53 @@
+name: workstation-demo
+
+on:
+  pull_request:
+    paths:
+      - "finance_quant/workstation/**"
+      - "tests/test_workstation_product.py"
+      - ".github/workflows/workstation-demo.yml"
+
+jobs:
+  product-demo:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install -e .
+      - name: Product correctness tests
+        run: python -m pytest tests/test_workstation_product.py -q
+      - name: Form real-data signal for Aug 26
+        run: python -m finance_quant.workstation --ticker AAPL --start 2018-01-01 --end 2026-08-26 --capital 100000 --state-dir .demo-state --json > workstation-2026-08-26.json
+      - name: Advance real-data paper account on Aug 27
+        run: python -m finance_quant.workstation --ticker AAPL --start 2018-01-01 --end 2026-08-27 --capital 100000 --state-dir .demo-state --json > workstation-2026-08-27.json
+      - name: Print objective result
+        shell: python
+        run: |
+          import json
+          with open("workstation-2026-08-27.json", encoding="utf-8") as f:
+              state = json.load(f)
+          r = state["research"]
+          b = r["metrics"]["baseline"]
+          k = r["metrics"]["kg"]
+          p = state["paper"]
+          print("AAPL WORKSTATION RESULT")
+          print("walk_forward_count=", k["count"])
+          print("price_directional_accuracy=", b["directional_accuracy"])
+          print("kg_directional_accuracy=", k["directional_accuracy"])
+          print("directional_delta=", r["metrics"]["delta"]["directional_accuracy"])
+          print("price_long_cash_return=", b["long_cash_return"])
+          print("kg_long_cash_return=", k["long_cash_return"])
+          print("long_cash_delta=", r["metrics"]["delta"]["long_cash_return"])
+          print("live_price_prediction=", r["live_signal"]["baseline_predicted"])
+          print("live_kg_prediction=", r["live_signal"]["kg_predicted"])
+          print("paper_nav=", p["nav"])
+          print("paper_position_quantity=", p["position_quantity"])
+          print("paper_executed_this_run=", p["executed_this_run"])
+      - uses: actions/upload-artifact@v4
+        with:
+          name: workstation-demo-result
+          path: |
+            workstation-2026-08-26.json
+            workstation-2026-08-27.json
