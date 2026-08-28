@@ -33,6 +33,19 @@ def content_hash(value: Any) -> str:
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
+def report_path(path: Path, root: Path = ROOT) -> str:
+    """Render repo-local paths relatively and external drill paths safely.
+
+    Phase-B determinism drills intentionally redirect receipts into a temporary
+    directory outside the repository.  ``Path.relative_to`` is therefore only
+    valid for the normal in-repo case.
+    """
+    try:
+        return str(path.relative_to(root))
+    except ValueError:
+        return str(path)
+
+
 def load_canonical_fixture_manifest(path: Path | None = None) -> dict[str, Any]:
     """Load a canonical manifest when supplied, otherwise use the fixed fixture."""
     candidates = [path] if path else [ROOT / "fixtures" / "canonical_fixture_manifest.json"]
@@ -184,7 +197,7 @@ def main() -> int:
 
     report = {"campaign": "B1-B5", "phase": "B", "manifest": manifest,
               "manifest_hash": manifest_hash, "n_days": len(days), "runs": runs,
-              "ledger_receipts": str(RECEIPT_PATH.relative_to(ROOT))}
+              "ledger_receipts": report_path(RECEIPT_PATH)}
     REPORT_PATH.parent.mkdir(parents=True, exist_ok=True)
     REPORT_PATH.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
     print(json.dumps(report, indent=2))

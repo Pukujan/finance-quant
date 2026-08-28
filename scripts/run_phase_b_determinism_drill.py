@@ -64,11 +64,27 @@ def run_qlib_receipt_hash(fixture_dir: Path, work_dir: Path) -> str:
     return content_hash(json.loads(mlflow_path.read_text(encoding="utf-8")))
 
 
+def semantic_lean_receipt(receipt: dict[str, Any]) -> dict[str, Any]:
+    """Remove execution-location noise before determinism comparison.
+
+    The LEAN stub writes its generated custom-data helper next to the requested
+    output file. Determinism drills intentionally use a different temp directory
+    per run, so the directory portion is not semantic output and must not make
+    otherwise identical receipts compare unequal.
+    """
+    normalized = dict(receipt)
+    custom_data_source = normalized.get("custom_data_source")
+    if custom_data_source:
+        normalized["custom_data_source"] = Path(str(custom_data_source)).name
+    return normalized
+
+
 def run_lean_receipt_hash(fixture_dir: Path, work_dir: Path) -> str:
-    """Run LEAN Phase B stub and return the receipt hash."""
+    """Run LEAN Phase B stub and return a semantic receipt hash."""
     out_path = work_dir / "lean_receipt.json"
     lean.main(["--out", str(out_path)])
-    return content_hash(json.loads(out_path.read_text(encoding="utf-8")))
+    receipt = json.loads(out_path.read_text(encoding="utf-8"))
+    return content_hash(semantic_lean_receipt(receipt))
 
 
 def run_one_iteration(run_index: int, fixture_dir: Path, work_dir: Path) -> dict[str, Any]:

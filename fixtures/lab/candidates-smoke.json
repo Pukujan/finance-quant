@@ -1,0 +1,30 @@
+{
+  "arms": [
+    {
+      "arm_id": "price",
+      "components": [
+        {"lane": "price", "artifact_hash": "price-v1"}
+      ],
+      "executor_ref": "finance_quant.lab.demo:weighted_signal",
+      "model_config": {"weights": {"price": 1.0}}
+    },
+    {
+      "arm_id": "price-news-v3",
+      "components": [
+        {"lane": "price", "artifact_hash": "price-v1"},
+        {"lane": "news", "artifact_hash": "news-v3"}
+      ],
+      "executor_ref": "finance_quant.lab.demo:weighted_signal",
+      "model_config": {"weights": {"price": 1.0, "news": 1.0}}
+    },
+    {
+      "arm_id": "price-news-v4",
+      "components": [
+        {"lane": "price", "artifact_hash": "price-v1"},
+        {"lane": "news", "artifact_hash": "news-v4"}
+      ],
+      "executor_ref": "finance_quant.lab.demo:weighted_signal",
+      "model_config": {"weights": {"price": 1.0, "news": 1.0}}
+    }
+  ]
+}

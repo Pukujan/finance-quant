@@ -1,0 +1,46 @@
+name: lab-control-plane
+
+on:
+  push:
+    branches: [main, product/workstation-lab-integration]
+    paths:
+      - "finance_quant/lab/**"
+      - "finance_quant/workstation/**"
+      - "finance_quant/trader/account.py"
+      - "finance_quant/experiments/ledger.py"
+      - "finance_quant/__main__.py"
+      - "tests/test_lab_*.py"
+      - "tests/test_workstation_product.py"
+      - "fixtures/lab/**"
+      - "scripts/run_lab_mutation_probes.py"
+      - ".github/workflows/lab-control-plane.yml"
+  pull_request:
+    branches: [main]
+
+jobs:
+  control-plane:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install -e ".[test]"
+      - name: Fixed laboratory correctness tests
+        run: python -m pytest tests/test_lab_*.py -q
+      - name: Targeted semantic mutation probes
+        run: python scripts/run_lab_mutation_probes.py
+      - name: Autonomous candidate execution smoke
+        run: |
+          python -m finance_quant lab run \
+            fixtures/lab/benchmark-smoke.json \
+            fixtures/lab/candidates-smoke.json \
+            --state-dir .lab-smoke-state \
+            --parallel 4 \
+            --output lab-smoke-result.json
+      - name: Workstation regression
+        run: python -m pytest tests/test_workstation_product.py -q
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lab-smoke-result
+          path: lab-smoke-result.json
