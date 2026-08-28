@@ -1,139 +1,194 @@
-# Handoff — fixed parallel research laboratory ready for candidate agents
+# Handoff — Luna-ready versioned parallel experiment executioner
 
 Date: 2026-08-28
 Branch: `bootstrap/oss-autonomous-trader-replatform`
 Active issue: #27
 Product mode: local research + simulated paper only; no broker/live capital
 
-## What changed
+## State
 
-The repository now has an executable **fixed laboratory/control plane** so Luna or another multi-agent implementation system can generate many candidate KG/RAG/data/model arms without owning the benchmark, future labels, scoring semantics or paper-account truth.
+The fixed research laboratory is now implemented and green. Luna/subagents can publish many competing data/KG/RAG/model versions and use the repository itself as the executioner/measuring machine.
 
-Product loop:
+The control plane, not candidate code, owns:
 
-`fixed historical benchmark -> PIT snapshot freeze -> candidate arms -> parallel predictions -> one canonical realized outcome per decision -> full-information scoring -> prior-OOS-only router -> isolated shadow paper -> workstation/leaderboards`
+- historical PIT snapshot construction;
+- canonical realized outcomes;
+- evaluation/run identity;
+- scoring;
+- no-hindsight router timing;
+- experiment ledger truth;
+- per-arm simulated paper-account truth.
 
-The former assurance-phase ladder remains historical implementation material, not the roadmap.
+Candidate workers own component/model implementations and version proposals.
 
-## Run interface for Luna
+## Autonomous flow
 
-Use:
+### 1. Publish immutable versioned component artifacts
 
-`python -m finance_quant lab run BENCHMARK.json CANDIDATES.json --state-dir .lab-state --parallel 16 --output result.json`
+`python -m finance_quant lab publish-component SPEC.json PAYLOAD.json --registry .lab-state/registry --output artifact.json`
 
-Two separate files are intentional:
+Temporal component payload schema:
 
-- `BENCHMARK.json` owns experiment metadata, historical candidate data/PIT clocks, decision cuts and realized outcomes;
-- `CANDIDATES.json` owns only arm definitions, lane declarations, executor references and candidate configuration.
+`finance-quant.lab.temporal-observations.v1`
 
-The candidate loader rejects snapshots/outcomes/labels/benchmark data. A candidate therefore cannot change the future answer it is judged against through the normal execution interface.
+Each observation has:
 
-Templates:
+- `entity` (`*` allowed for global/macro observations);
+- `known_at`;
+- optional `valid_from` / `valid_to`;
+- component-specific payload.
 
-- `fixtures/lab/benchmark-smoke.json`
-- `fixtures/lab/candidates-smoke.json`
+### 2. Assemble the fixed PIT benchmark
 
-## Control-plane implementation
+`python -m finance_quant lab assemble-benchmark EVALUATION.json COMPONENTS.json --registry .lab-state/registry --output benchmark.json`
 
-New `finance_quant/lab/` package:
+`EVALUATION.json` owns fixed canonical outcomes and experiment settings. `COMPONENTS.json` is just the artifact hashes to make available at historical decision cuts.
 
-- `core.py` — immutable component/manifest/arm/batch identities; PIT lane data and snapshot freeze; candidate-only `ArmContext`; canonical outcomes and scores;
-- `registry.py` — content-addressed immutable component artifacts, SQLite metadata, parent DAG and descendant queries;
-- `runner.py` — deterministic sequential/parallel arm execution, exact manifest guard, canonical full-information scoring, ExperimentLedger persistence and first no-hindsight expert router;
-- `cli.py` — separate benchmark/candidate execution interface;
-- `shadow.py` — one persistent zero-money `VirtualAccountStore` per arm, restart-safe/idempotent and isolated;
-- `demo.py` — deterministic smoke executor only.
+Benchmark assembly reads the registered artifacts, filters by PIT visibility and freezes all visible versions. A future-known observation cannot enter an earlier snapshot.
 
-Top-level CLI now exposes `finance-quant lab`.
+### 3. Declare candidates
 
-`ExperimentLedger.RunSpec` was extended compatibly with:
+Candidate files may contain explicit arms and/or a bounded `matrix`.
 
-- `knowledge_manifest_hash`
-- `retrieval_policy_hash`
-- `arm_spec_hash`
-- `router_config_hash`
+Every arm selects **exact** `(lane, artifact_hash)` components. Candidate code does not supply its own manifest hash; the lab derives it.
 
-## Correctness tests
+A frozen snapshot can simultaneously contain e.g.:
 
-`tests/test_lab_control_plane.py`, `tests/test_lab_manifest_guard.py`, and `tests/test_lab_shadow.py` cover the fixed semantics that candidate agents must not be able to change accidentally:
+`price@v2 | news@v3 | news@v4 | KG@v5 | KG@v6`
 
-- deterministic content/artifact identities;
-- immutable old component versions;
-- DAG descendant isolation;
-- deterministic manifests and one artifact per lane;
-- property-based future-known data insertion cannot alter an earlier snapshot;
-- direct future-known snapshot construction rejected;
-- arm sees only declared lanes;
-- claimed knowledge manifest must equal exact frozen lane artifacts;
-- sequential == parallel for deterministic arms;
-- exact canonical outcome coverage and same outcome ID for all arms at a decision;
-- router ignores outcomes unresolved at its decision time;
-- ExperimentLedger run identities are idempotent and arm-sensitive;
-- candidate file cannot smuggle benchmark outcomes/labels;
-- shadow accounts are isolated by arm, survive restart and do not duplicate the same simulated transition;
-- multi-instrument shadow valuation requires explicit marks rather than inventing prices.
+so different arms can compare versions directly against the same future outcome.
 
-## Green CI evidence
+The matrix expander supports:
+
+- fixed base components;
+- named versions for variant lanes;
+- explicitly requested lane combinations;
+- multiple model executors/configs;
+- `max_arms` ceiling.
+
+It does not silently generate an unbounded Cartesian product.
+
+### 4. Execute all affordable arms
+
+`python -m finance_quant lab run benchmark.json candidates.json --state-dir .lab-state --parallel 16 --output result.json`
+
+Every arm predicts before the canonical outcome is joined. Every arm at a decision receives the exact same outcome ID and cost assumptions.
+
+The result records:
+
+- batch hash;
+- evaluation hash;
+- every prediction;
+- every score;
+- per-arm summary metrics.
+
+`evaluation_hash` depends on the actual frozen snapshot IDs and actual outcome IDs, so changing either changes the ExperimentLedger run identity even if a human dataset label was accidentally left unchanged.
+
+### 5. Route/paper
+
+The first expert router uses prior resolved OOS results only. Outcomes that have not resolved by the historical decision time cannot affect its weights.
+
+`ShadowPaperLab` provides one persistent zero-money `VirtualAccountStore` per arm, with restart/idempotency and account isolation.
+
+## Stable implementation surfaces
+
+`finance_quant/lab/`:
+
+- `core.py` — immutable component/arm/snapshot/outcome identities and PIT semantics;
+- `registry.py` — content-addressed artifact store + dependency DAG;
+- `benchmark.py` — standard temporal-observation schema + component-to-PIT-benchmark assembly;
+- `matrix.py` — bounded declarative arm expansion;
+- `runner.py` — parallel prediction, canonical full-information scoring, evaluation identity, ledger writes, no-hindsight router;
+- `shadow.py` — isolated persistent simulated accounts;
+- `cli.py` — publish / assemble / run public interface;
+- `demo.py` — synthetic deterministic smoke executor only.
+
+`ExperimentLedger.RunSpec` includes knowledge/retrieval/arm/router identity plus `evaluation_hash`.
+
+## Latest correctness evidence
 
 Dedicated workflow: `.github/workflows/lab-control-plane.yml`.
 
-Run **33149664715** completed successfully on control-plane code SHA `e67335d4e55490acbfef152cee0cb0036d0fd0a9`:
+Latest green code run: **33173989475** on SHA `4ce8be50ecdc453d0ece0db440bf2b93f693063b`.
 
-- fixed laboratory correctness suite: **14 passed in 4.86s**;
-- autonomous separated benchmark/candidate CLI smoke: **passed**;
-- existing workstation regression: **4 passed in 0.87s**;
-- smoke output artifact: `lab-smoke-result`, artifact ID **9677180076**;
-- artifact SHA256: `47d8c009235254a2ed787404d6fe6a8fd72465d013ae735853bb4aaf547ea0e4`.
+- lab tests: **23 passed in 1.90s**;
+- targeted source mutation probes: **9 killed / 0 survived**;
+- public CLI smoke: **passed**;
+- existing workstation regression: **4 passed**;
+- smoke artifact ID: **9686784711**;
+- artifact ZIP SHA256: `a0bdbcc9c2708c82dee482408387aff3a5248c7c2843022cb53f7a9bd5826354`.
 
-The smoke run produced price and price+news predictions from the same frozen snapshot and then scored both against the exact same canonical outcome ID. A deliberately future-known news record was present in the benchmark input and was excluded by the historical snapshot freeze.
+The mutation probes prove current tests detect direct corruptions to:
 
-## Existing workstation result retained
+- future-known PIT filtering;
+- simultaneous same-lane component versions;
+- direct future snapshot construction;
+- exact component selection;
+- canonical outcome coverage;
+- actual evaluation-content identity;
+- router hindsight;
+- candidate label/benchmark separation;
+- shadow-account restart semantics.
 
-The working real-data workstation remains intact. Real AAPL/SEC workflow `33146074713` produced 1,988 walk-forward predictions:
+The smoke concurrently ran:
 
-- price-only directional accuracy: 53.3702%;
-- price + current small SEC-fundamental set: 51.8612%;
-- current knowledge delta: -1.5091 pp.
+- `price` -> +0.0100 prediction;
+- `price + news@v3` -> +0.0300;
+- `price + news@v4` -> -0.0050;
 
-The current small SEC fundamentals do **not** prove KG value. The point of the new laboratory is to test richer historical information lanes objectively and in parallel.
+from the same frozen snapshot and scored all three against one canonical outcome ID. This is synthetic infrastructure evidence, not market-alpha evidence.
 
-The existing real-data paper proof remains:
+## Existing real product result remains
 
-- signal 2026-08-26;
-- BUY 305 AAPL next open 2026-08-27 @ 310.61209779052734;
+The workstation real-data result is unchanged:
+
+- AAPL window through 2026-08-27;
+- 1,988 walk-forward predictions;
+- price-only directional accuracy **53.3702%**;
+- current tiny SEC-fundamental lane **51.8612%**;
+- delta **-1.5091 pp**.
+
+Current SEC fundamentals do not prove KG value.
+
+Existing zero-money paper proof:
+
+- 2026-08-26 signal persisted;
+- simulated 2026-08-27 next-open fill BUY 305 AAPL @ 310.61209779052734;
 - marked NAV $101,210.2061 from $100,000.
 
-This is simulated paper evidence only, not profitability evidence.
+This proves the execution path, not profitability.
+
+## Luna execution assignment
+
+Use #29, #19 and #21 as parallel candidate workstreams. Spawn independent workers for:
+
+1. raw OHLCV + timestamped splits/dividends/corporate actions;
+2. SEC filing text/amendments;
+3. ALFRED macro vintages;
+4. historical financial news/events + syndication dedup + attention/hype features;
+5. industrial supplier/customer/competitor relationships;
+6. bounded temporal graph retrieval / PIT-safe RAG;
+7. stronger local predictive model families.
+
+Each worker should publish versioned temporal component artifacts or arm executors through the stable lab interfaces. Do not redesign benchmark/outcome semantics inside those lanes.
+
+First real candidate family:
+
+`price | +fundamentals | +news/hype | +events | +supply/competitors | +macro | +RAG | +bounded-KG | combined | contextual router`
+
+across multiple symbols/regimes.
 
 ## Durable issue map
 
-- #27 parent flywheel/control plane
-- #28 component registry/DAG
-- #29 historical PIT data lanes
-- #30 parallel arm scheduler/shared outcomes
+- #27 parent laboratory/flywheel
+- #28 registry/DAG
+- #29 historical PIT data
+- #30 arm scheduler/shared outcomes
 - #31 scoring/router/shadow paper
-- #32 workstation experiment UI
+- #32 experiment UI
 - #19 temporal KG + PIT-safe RAG
-- #21 model research/training
+- #21 local model research
 
-The shared interfaces above are now code, not just issue prose. Candidate subagents should adapt to these interfaces rather than redesigning benchmark/outcome semantics locally.
+## Important boundary
 
-## Next exact action for Luna
-
-Spawn parallel candidate workers against #29, #19 and #21:
-
-1. raw OHLCV + timestamped corporate actions;
-2. SEC filing text/amendments;
-3. ALFRED macro vintages;
-4. historical news/event ingestion + syndication dedup;
-5. industrial/supplier/customer/competitor relation extraction;
-6. bounded temporal graph retrieval / PIT-safe RAG;
-7. stronger local model families.
-
-Have each worker publish immutable component artifacts/arm executors and candidate definitions. Run all affordable arms through the fixed benchmark runner. Do not let candidate code construct realized labels or read live/unfrozen data directly.
-
-First substantive experiment set:
-
-`price | +fundamentals | +news/hype | +events | +supply/competitors | +macro | +RAG | +bounded-KG | combined | router`
-
-across multiple symbols/regimes. Subsequent realized prices remain the objective judge.
+The private/sealed holdout repository was not inspected or rerun. Do not inspect its cases/labels unless a later explicit authorization permits that. Normal product iteration should use public/fixed historical evaluation sets and future realized outcomes.
