@@ -37,6 +37,9 @@ python -m finance_quant workstation --ticker AAPL --start 2018-01-01 --capital 1
 
 The current structured SEC lane should be understood as **PIT fundamentals**, not a full knowledge graph. Internal legacy field names may still use `kg`; a real historical temporal KG/RAG is the next product wave.
 
+The expanded scope and its provenance handoff are pinned in
+[`docs/FOSSIL_KNOWLEDGE_PACK.md`](docs/FOSSIL_KNOWLEDGE_PACK.md).
+
 ### Fixed parallel research laboratory
 
 `finance_quant.lab` is the execution/measuring layer for candidate data, KG/RAG, feature and model versions.
