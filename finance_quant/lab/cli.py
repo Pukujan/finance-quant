@@ -5,6 +5,8 @@ Usage:
         --state-dir .lab-state --parallel 8
 
 The benchmark owns historical snapshots/outcomes. Candidate files own arms only.
+Each arm selects exact versioned component artifacts; its knowledge manifest is
+derived by the control plane rather than supplied by candidate code.
 """
 from __future__ import annotations
 
@@ -27,11 +29,30 @@ from .core import (
 from .runner import run_batch
 
 
+def _components(raw: Mapping[str, Any]) -> tuple[tuple[str, str], ...]:
+    if "lanes" in raw or "knowledge_manifest_hash" in raw:
+        raise LabError(
+            "candidate arms must declare exact components; legacy lanes/knowledge_manifest_hash are not accepted"
+        )
+    rows = raw.get("components")
+    if not isinstance(rows, list) or not rows:
+        raise LabError("candidate arm must declare a non-empty components list")
+    components: list[tuple[str, str]] = []
+    for item in rows:
+        if not isinstance(item, Mapping):
+            raise LabError("each candidate component must be an object with lane and artifact_hash")
+        lane = str(item.get("lane", ""))
+        artifact_hash = str(item.get("artifact_hash", ""))
+        if not lane or not artifact_hash:
+            raise LabError("candidate component lane and artifact_hash are required")
+        components.append((lane, artifact_hash))
+    return tuple(components)
+
+
 def _arm(raw: Mapping[str, Any]) -> ArmSpec:
     return ArmSpec(
         arm_id=str(raw["arm_id"]),
-        lanes=tuple(str(x) for x in raw["lanes"]),
-        knowledge_manifest_hash=str(raw["knowledge_manifest_hash"]),
+        components=_components(raw),
         executor_ref=str(raw["executor_ref"]),
         model_config_json=canonical_json(raw.get("model_config", {})),
         retrieval_policy_json=canonical_json(raw.get("retrieval_policy", {})),
@@ -42,7 +63,7 @@ def _arm(raw: Mapping[str, Any]) -> ArmSpec:
 
 def load_candidates(path: str | Path) -> tuple[ArmSpec, ...]:
     payload = json.loads(Path(path).read_text(encoding="utf-8"))
-    forbidden = {"snapshots", "outcomes", "labels", "benchmark"} & set(payload)
+    forbidden = {"snapshots", "outcomes", "labels", "benchmark", "experiment"} & set(payload)
     if forbidden:
         raise LabError(f"candidate file cannot own benchmark data: {sorted(forbidden)}")
     arms = tuple(_arm(item) for item in payload.get("arms", ()))
