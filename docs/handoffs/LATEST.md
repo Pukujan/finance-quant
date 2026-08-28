@@ -1,82 +1,138 @@
-# Handoff — working predictive workstation MVP
+# Handoff — fixed parallel research laboratory ready for candidate agents
 
 Date: 2026-08-28
 Branch: `bootstrap/oss-autonomous-trader-replatform`
-Active issue: #26
-Product mode: local simulated paper only; no broker/live capital
+Active issue: #27
+Product mode: local research + simulated paper only; no broker/live capital
 
-## Direction
+## What changed
 
-The active objective is no longer the old assurance ladder or an architecture bakeoff. Build, run and empirically improve the actual local quant product:
+The repository now has an executable **fixed laboratory/control plane** so Luna or another multi-agent implementation system can generate many candidate KG/RAG/data/model arms without owning the benchmark, future labels, scoring semantics or paper-account truth.
 
-`real data -> PIT historical knowledge -> temporal KG/RAG/features -> local model -> walk-forward -> subsequent price outcome -> persistent local paper -> visible workstation`
+Product loop:
 
-Keep only correctness tests that catch genuine product bugs/leakage/account errors. Historical assurance artifacts remain in the repo but are not active product gates.
+`fixed historical benchmark -> PIT snapshot freeze -> candidate arms -> parallel predictions -> one canonical realized outcome per decision -> full-information scoring -> prior-OOS-only router -> isolated shadow paper -> workstation/leaderboards`
 
-## Working implementation
+The former assurance-phase ladder remains historical implementation material, not the roadmap.
 
-`finance_quant/workstation/` now provides:
+## Run interface for Luna
 
-- real Yahoo adjusted daily prices;
-- real SEC companyfacts converted into historical PIT facts;
-- SEC filing-date knowledge cuts and report-period valid time;
-- price-only and price+SEC-KG feature sets;
-- local ridge training and strict walk-forward evaluation;
-- separate current/latest signal generation;
-- persistent SQLite paper account using `VirtualAccountStore`;
-- next-session-open simulated fills;
-- browser UI with price chart, predictions, KG facts, baseline comparison and paper account state.
+Use:
 
-Run:
+`python -m finance_quant lab run BENCHMARK.json CANDIDATES.json --state-dir .lab-state --parallel 16 --output result.json`
 
-`python -m finance_quant workstation --ticker AAPL --start 2018-01-01 --capital 100000`
+Two separate files are intentional:
 
-## First real-data result
+- `BENCHMARK.json` owns experiment metadata, historical candidate data/PIT clocks, decision cuts and realized outcomes;
+- `CANDIDATES.json` owns only arm definitions, lane declarations, executor references and candidate configuration.
 
-Workflow run `33146074713` succeeded against real AAPL + SEC history through 2026-08-27. Focused workstation tests: **4 passed**.
+The candidate loader rejects snapshots/outcomes/labels/benchmark data. A candidate therefore cannot change the future answer it is judged against through the normal execution interface.
 
-Walk-forward count: **1,988**.
+Templates:
 
-- price-only directional accuracy: **53.3702%**
-- price+SEC-KG directional accuracy: **51.8612%**
-- KG delta: **-1.5091 pp**
-- price-only long/cash cumulative return: **+478.0179%**
-- price+SEC-KG long/cash cumulative return: **+299.6102%**
-- KG return delta: **-178.4077 pp**
+- `fixtures/lab/benchmark-smoke.json`
+- `fixtures/lab/candidates-smoke.json`
 
-Current conclusion: the first small SEC-fundamental KG **hurts this AAPL baseline**. Do not claim KG predictive value from infrastructure alone. Expand the information set/model and keep the same controlled ablation discipline.
+## Control-plane implementation
 
-## Paper result
+New `finance_quant/lab/` package:
 
-Two consecutive real-data cutoffs reused one persistent local paper account:
+- `core.py` — immutable component/manifest/arm/batch identities; PIT lane data and snapshot freeze; candidate-only `ArmContext`; canonical outcomes and scores;
+- `registry.py` — content-addressed immutable component artifacts, SQLite metadata, parent DAG and descendant queries;
+- `runner.py` — deterministic sequential/parallel arm execution, exact manifest guard, canonical full-information scoring, ExperimentLedger persistence and first no-hindsight expert router;
+- `cli.py` — separate benchmark/candidate execution interface;
+- `shadow.py` — one persistent zero-money `VirtualAccountStore` per arm, restart-safe/idempotent and isolated;
+- `demo.py` — deterministic smoke executor only.
 
-- 2026-08-26 signal persisted;
-- 2026-08-27 next-open execution occurred;
-- fill: BUY 305 AAPL @ 310.61209779052734;
-- marked NAV after the 2026-08-27 close: $101,210.2061 from $100,000 start.
+Top-level CLI now exposes `finance-quant lab`.
 
-No real capital or broker was involved.
+`ExperimentLedger.RunSpec` was extended compatibly with:
 
-## Correctness status
+- `knowledge_manifest_hash`
+- `retrieval_policy_hash`
+- `arm_spec_hash`
+- `router_config_hash`
 
-Focused product tests verify:
+## Correctness tests
 
-- filing-time PIT gating;
-- no future-price contamination of earlier predictions;
-- historical evaluation/live-signal separation;
-- persistent account next-open fill and rerun idempotency.
+`tests/test_lab_control_plane.py`, `tests/test_lab_manifest_guard.py`, and `tests/test_lab_shadow.py` cover the fixed semantics that candidate agents must not be able to change accidentally:
 
-A Windows full-suite execution recorded 1,039 passed / 25 skipped / 1 failed. The single failure is legacy bootstrap-document choreography (`#15` expected in the old handoff), not product code.
+- deterministic content/artifact identities;
+- immutable old component versions;
+- DAG descendant isolation;
+- deterministic manifests and one artifact per lane;
+- property-based future-known data insertion cannot alter an earlier snapshot;
+- direct future-known snapshot construction rejected;
+- arm sees only declared lanes;
+- claimed knowledge manifest must equal exact frozen lane artifacts;
+- sequential == parallel for deterministic arms;
+- exact canonical outcome coverage and same outcome ID for all arms at a decision;
+- router ignores outcomes unresolved at its decision time;
+- ExperimentLedger run identities are idempotent and arm-sensitive;
+- candidate file cannot smuggle benchmark outcomes/labels;
+- shadow accounts are isolated by arm, survive restart and do not duplicate the same simulated transition;
+- multi-instrument shadow valuation requires explicit marks rather than inventing prices.
 
-## Next exact action
+Dedicated CI:
+`.github/workflows/lab-control-plane.yml`
 
-Improve predictive quality and prove/disprove richer knowledge value:
+It runs all lab tests, runs the benchmark/candidate smoke through the public CLI, runs the existing workstation regression, and uploads the smoke result.
 
-1. expand temporal historical knowledge beyond four SEC concepts;
-2. add PIT-safe filing text/RAG and entity/event/relationship edges;
-3. run multi-symbol/cross-sectional walk-forward ablations;
-4. introduce stronger local research/model tooling (Qlib/RD-Agent only where it accelerates this);
-5. add continuous local paper refresh/signal/execution;
-6. deepen the frontend so a decision point can show exactly what was known, predicted, traded and what price did afterward.
+Earlier green control-plane runs include:
 
-Do not return to assurance-phase sequencing unless a concrete product bug requires a specific old mechanism.
+- `33149223541` — initial fixed-lab tests + workstation regression green;
+- `33149292495` — manifest-to-actual-artifact guard green;
+- `33149419972` — benchmark/candidate separation tests green.
+
+Check the latest `lab-control-plane` run at branch head before starting candidate integration; shadow-paper tests were added after those earlier runs.
+
+## Existing workstation result retained
+
+The working real-data workstation remains intact. Real AAPL/SEC workflow `33146074713` produced 1,988 walk-forward predictions:
+
+- price-only directional accuracy: 53.3702%;
+- price + current small SEC-fundamental set: 51.8612%;
+- current knowledge delta: -1.5091 pp.
+
+The current small SEC fundamentals do **not** prove KG value. The point of the new laboratory is to test richer historical information lanes objectively and in parallel.
+
+The existing real-data paper proof remains:
+
+- signal 2026-08-26;
+- BUY 305 AAPL next open 2026-08-27 @ 310.61209779052734;
+- marked NAV $101,210.2061 from $100,000.
+
+This is simulated paper evidence only, not profitability evidence.
+
+## Durable issue map
+
+- #27 parent flywheel/control plane
+- #28 component registry/DAG
+- #29 historical PIT data lanes
+- #30 parallel arm scheduler/shared outcomes
+- #31 scoring/router/shadow paper
+- #32 workstation experiment UI
+- #19 temporal KG + PIT-safe RAG
+- #21 model research/training
+
+The shared interfaces above are now code, not just issue prose. Candidate subagents should adapt to these interfaces rather than redesigning benchmark/outcome semantics locally.
+
+## Next exact action for Luna
+
+Spawn parallel candidate workers against #29, #19 and #21:
+
+1. raw OHLCV + timestamped corporate actions;
+2. SEC filing text/amendments;
+3. ALFRED macro vintages;
+4. historical news/event ingestion + syndication dedup;
+5. industrial/supplier/customer/competitor relation extraction;
+6. bounded temporal graph retrieval / PIT-safe RAG;
+7. stronger local model families.
+
+Have each worker publish immutable component artifacts/arm executors and candidate definitions. Run all affordable arms through the fixed benchmark runner. Do not let candidate code construct realized labels or read live/unfrozen data directly.
+
+First substantive experiment set:
+
+`price | +fundamentals | +news/hype | +events | +supply/competitors | +macro | +RAG | +bounded-KG | combined | router`
+
+across multiple symbols/regimes. Subsequent realized prices remain the objective judge.
