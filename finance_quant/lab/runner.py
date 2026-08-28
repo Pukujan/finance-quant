@@ -23,6 +23,7 @@ from .core import (
     LabError,
     _parse_time,
     arm_context,
+    content_hash,
     load_executor,
     score_prediction,
 )
@@ -42,6 +43,7 @@ class ArmSummary:
 @dataclass(frozen=True)
 class BatchResult:
     batch_hash: str
+    evaluation_hash: str
     predictions: tuple[ArmPrediction, ...]
     scores: tuple[ArmScore, ...]
     summaries: tuple[ArmSummary, ...]
@@ -49,6 +51,7 @@ class BatchResult:
     def to_dict(self) -> dict:
         return {
             "batch_hash": self.batch_hash,
+            "evaluation_hash": self.evaluation_hash,
             "predictions": [asdict(item) for item in self.predictions],
             "scores": [asdict(item) for item in self.scores],
             "summaries": [asdict(item) for item in self.summaries],
@@ -70,7 +73,19 @@ def _summary(arm_id: str, scores: Sequence[ArmScore]) -> ArmSummary:
     return ArmSummary(arm_id, count, hit, mae, rmse, mean_net, capital - 1.0)
 
 
-def run_spec_for(batch: ExperimentBatchSpec, arm: ArmSpec) -> RunSpec:
+def evaluation_hash_for(
+    snapshots: Sequence[DecisionSnapshot],
+    outcomes: Sequence[CanonicalOutcome],
+) -> str:
+    return content_hash(
+        {
+            "snapshot_ids": sorted(snapshot.snapshot_id for snapshot in snapshots),
+            "outcome_ids": sorted(outcome.outcome_id for outcome in outcomes),
+        }
+    )
+
+
+def run_spec_for(batch: ExperimentBatchSpec, arm: ArmSpec, evaluation_hash: str = "") -> RunSpec:
     return RunSpec(
         experiment_id=f"{batch.experiment_id}:{arm.arm_id}",
         code_sha=batch.code_sha,
@@ -86,6 +101,7 @@ def run_spec_for(batch: ExperimentBatchSpec, arm: ArmSpec) -> RunSpec:
         retrieval_policy_hash=arm.retrieval_policy_hash,
         arm_spec_hash=arm.arm_spec_hash,
         router_config_hash="",
+        evaluation_hash=evaluation_hash,
     )
 
 
@@ -143,6 +159,8 @@ def run_batch(
         extra = set(outcome_by_key) - expected_keys
         raise LabError(f"canonical outcome coverage mismatch missing={sorted(missing)} extra={sorted(extra)}")
 
+    actual_evaluation_hash = evaluation_hash_for(snapshots, outcomes)
+
     for snapshot in snapshots:
         for arm in batch.arms:
             _validate_arm_manifest(snapshot, arm)
@@ -172,7 +190,7 @@ def run_batch(
     if ledger is not None:
         by_arm = {summary.arm_id: summary for summary in summaries}
         for arm in batch.arms:
-            record = ledger.begin(run_spec_for(batch, arm))
+            record = ledger.begin(run_spec_for(batch, arm, actual_evaluation_hash))
             summary = by_arm[arm.arm_id]
             metrics = {
                 "count": float(summary.count),
@@ -186,10 +204,14 @@ def run_batch(
                 record.run_id,
                 RunStatus.SUCCESS,
                 metrics=metrics,
-                artifacts={"batch_hash": batch.batch_hash, "arm_spec_hash": arm.arm_spec_hash},
+                artifacts={
+                    "batch_hash": batch.batch_hash,
+                    "arm_spec_hash": arm.arm_spec_hash,
+                    "evaluation_hash": actual_evaluation_hash,
+                },
             )
 
-    return BatchResult(batch.batch_hash, tuple(predictions), tuple(scores), summaries)
+    return BatchResult(batch.batch_hash, actual_evaluation_hash, tuple(predictions), tuple(scores), summaries)
 
 
 def router_weights(
