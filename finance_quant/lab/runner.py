@@ -90,14 +90,11 @@ def run_spec_for(batch: ExperimentBatchSpec, arm: ArmSpec) -> RunSpec:
 
 
 def _validate_arm_manifest(snapshot: DecisionSnapshot, arm: ArmSpec) -> None:
-    by_lane = {item.lane: item for item in snapshot.lanes}
-    missing = [lane for lane in arm.lanes if lane not in by_lane]
-    if missing:
-        raise LabError(f"snapshot missing arm lanes: {missing}")
-    actual = KnowledgeManifest(tuple((lane, by_lane[lane].artifact_hash) for lane in arm.lanes))
+    context = arm_context(snapshot, arm)
+    actual = KnowledgeManifest(tuple((item.lane, item.artifact_hash) for item in context.lanes))
     if actual.manifest_hash != arm.knowledge_manifest_hash:
         raise LabError(
-            f"arm {arm.arm_id!r} manifest does not match the frozen lane artifacts "
+            f"arm {arm.arm_id!r} manifest does not match its exact frozen component artifacts "
             f"at {snapshot.entity}/{snapshot.decision_time}"
         )
 
@@ -149,7 +146,6 @@ def run_batch(
     for snapshot in snapshots:
         for arm in batch.arms:
             _validate_arm_manifest(snapshot, arm)
-            arm_context(snapshot, arm)
 
     tasks = [(snapshot, arm) for snapshot in snapshots for arm in batch.arms]
     if max_workers == 1:
