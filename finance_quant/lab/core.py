@@ -79,6 +79,8 @@ class ComponentArtifact:
 
 @dataclass(frozen=True)
 class KnowledgeManifest:
+    """Exact component artifact selected for each semantic knowledge lane."""
+
     components: tuple[tuple[str, str], ...]
 
     def __post_init__(self) -> None:
@@ -103,7 +105,7 @@ class KnowledgeManifest:
 
 @dataclass(frozen=True)
 class TemporalLaneDatum:
-    """One candidate lane value before the decision-time freeze."""
+    """One versioned component value before the decision-time freeze."""
 
     lane: str
     artifact_hash: str
@@ -123,7 +125,13 @@ class TemporalLaneDatum:
         valid_from: str | None = None,
         valid_to: str | None = None,
     ) -> "TemporalLaneDatum":
+        if not lane or not artifact_hash:
+            raise LabError("lane and artifact_hash are required")
         return cls(lane, artifact_hash, known_at, canonical_json(payload), valid_from, valid_to)
+
+    @property
+    def component_key(self) -> tuple[str, str]:
+        return self.lane, self.artifact_hash
 
     def is_visible(self, decision_time: str) -> bool:
         decision = _parse_time(decision_time)
@@ -144,12 +152,22 @@ class LaneValue:
     payload_json: str
 
     @property
+    def component_key(self) -> tuple[str, str]:
+        return self.lane, self.artifact_hash
+
+    @property
     def payload(self) -> Any:
         return json.loads(self.payload_json)
 
 
 @dataclass(frozen=True)
 class DecisionSnapshot:
+    """All visible component versions at one historical decision cut.
+
+    Multiple artifacts for the same semantic lane are intentionally allowed so
+    arms can compare `news@v3` and `news@v4` against the same market outcome.
+    """
+
     entity: str
     decision_time: str
     horizon: str
@@ -159,13 +177,13 @@ class DecisionSnapshot:
         decision = _parse_time(self.decision_time)
         if not self.entity or not self.horizon:
             raise LabError("snapshot entity/horizon cannot be empty")
-        normalized = tuple(sorted(self.lanes, key=lambda item: item.lane))
-        names = [item.lane for item in normalized]
-        if len(names) != len(set(names)):
-            raise LabError("snapshot must contain at most one frozen value per lane")
+        normalized = tuple(sorted(self.lanes, key=lambda item: (item.lane, item.artifact_hash)))
+        keys = [item.component_key for item in normalized]
+        if len(keys) != len(set(keys)):
+            raise LabError("snapshot must contain at most one frozen value per component artifact")
         for item in normalized:
             if _parse_time(item.known_at) > decision:
-                raise LabError(f"future-known lane {item.lane!r} leaked into snapshot")
+                raise LabError(f"future-known component {item.component_key!r} leaked into snapshot")
         object.__setattr__(self, "lanes", normalized)
 
     @property
@@ -179,17 +197,20 @@ def freeze_snapshot(
     horizon: str,
     data: Iterable[TemporalLaneDatum],
 ) -> DecisionSnapshot:
-    """Filter before arm selection/ranking and keep latest visible value per lane."""
-    visible: dict[str, TemporalLaneDatum] = {}
+    """Filter before arm selection/ranking; preserve side-by-side component versions.
+
+    If one immutable component artifact emits multiple temporally versioned rows,
+    the latest row visible at the decision cut is kept for that exact artifact.
+    Different artifacts in the same lane remain independently addressable.
+    """
+    visible: dict[tuple[str, str], TemporalLaneDatum] = {}
     for item in data:
         if not item.is_visible(decision_time):
             continue
-        prior = visible.get(item.lane)
-        if prior is None or (_parse_time(item.known_at), item.artifact_hash) > (
-            _parse_time(prior.known_at),
-            prior.artifact_hash,
-        ):
-            visible[item.lane] = item
+        key = item.component_key
+        prior = visible.get(key)
+        if prior is None or _parse_time(item.known_at) > _parse_time(prior.known_at):
+            visible[key] = item
     lanes = tuple(
         LaneValue(item.lane, item.artifact_hash, item.known_at, item.payload_json)
         for item in visible.values()
@@ -199,9 +220,14 @@ def freeze_snapshot(
 
 @dataclass(frozen=True)
 class ArmSpec:
+    """Complete candidate hypothesis with exact component versions declared.
+
+    `components` contains one `(lane, artifact_hash)` pair per consumed lane. The
+    manifest hash is derived, never supplied by candidate code.
+    """
+
     arm_id: str
-    lanes: tuple[str, ...]
-    knowledge_manifest_hash: str
+    components: tuple[tuple[str, str], ...]
     executor_ref: str
     model_config_json: str = "{}"
     retrieval_policy_json: str = "{}"
@@ -209,12 +235,12 @@ class ArmSpec:
     portfolio_policy_json: str = "{}"
 
     def __post_init__(self) -> None:
-        if not self.arm_id or not self.executor_ref or not self.knowledge_manifest_hash:
-            raise LabError("arm_id, executor_ref, and knowledge_manifest_hash are required")
-        normalized_lanes = tuple(sorted(set(self.lanes)))
-        if not normalized_lanes:
-            raise LabError("arm must declare at least one knowledge lane")
-        object.__setattr__(self, "lanes", normalized_lanes)
+        if not self.arm_id or not self.executor_ref:
+            raise LabError("arm_id and executor_ref are required")
+        manifest = KnowledgeManifest(self.components)
+        if not manifest.components:
+            raise LabError("arm must declare at least one component")
+        object.__setattr__(self, "components", manifest.components)
         for field in (
             "model_config_json",
             "retrieval_policy_json",
@@ -227,6 +253,18 @@ class ArmSpec:
             except json.JSONDecodeError as exc:
                 raise LabError(f"{field} must be valid JSON") from exc
             object.__setattr__(self, field, canonical_json(parsed))
+
+    @property
+    def knowledge_manifest(self) -> KnowledgeManifest:
+        return KnowledgeManifest(self.components)
+
+    @property
+    def knowledge_manifest_hash(self) -> str:
+        return self.knowledge_manifest.manifest_hash
+
+    @property
+    def lanes(self) -> tuple[str, ...]:
+        return tuple(lane for lane, _ in self.components)
 
     @property
     def model_config_hash(self) -> str:
@@ -297,17 +335,23 @@ class ArmContext:
                 return item.payload
         raise KeyError(lane)
 
+    def artifact_for(self, lane: str) -> str:
+        for item in self.lanes:
+            if item.lane == lane:
+                return item.artifact_hash
+        raise KeyError(lane)
+
     @property
     def config(self) -> Any:
         return json.loads(self.config_json)
 
 
 def arm_context(snapshot: DecisionSnapshot, arm: ArmSpec) -> ArmContext:
-    by_lane = {item.lane: item for item in snapshot.lanes}
-    missing = [lane for lane in arm.lanes if lane not in by_lane]
+    by_component = {item.component_key: item for item in snapshot.lanes}
+    missing = [component for component in arm.components if component not in by_component]
     if missing:
-        raise LabError(f"snapshot missing arm lanes: {missing}")
-    selected = tuple(by_lane[lane] for lane in arm.lanes)
+        raise LabError(f"snapshot missing arm components: {missing}")
+    selected = tuple(by_component[component] for component in arm.components)
     return ArmContext(
         snapshot.entity,
         snapshot.decision_time,
