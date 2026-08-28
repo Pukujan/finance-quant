@@ -16,10 +16,11 @@ from .core import (
 )
 from .registry import ComponentRegistry
 from .runner import BatchResult, router_weights, run_batch
+from .shadow import ShadowPaperLab
 
 __all__ = [
     "ArmContext", "ArmPrediction", "ArmScore", "ArmSpec", "BatchResult",
     "CanonicalOutcome", "ComponentArtifact", "ComponentRegistry", "ComponentSpec",
     "DecisionSnapshot", "ExperimentBatchSpec", "KnowledgeManifest", "LabError",
-    "TemporalLaneDatum", "freeze_snapshot", "router_weights", "run_batch",
+    "ShadowPaperLab", "TemporalLaneDatum", "freeze_snapshot", "router_weights", "run_batch",
 ]
