@@ -51,6 +51,7 @@ class RunSpec:
     retrieval_policy_hash: str = ""
     arm_spec_hash: str = ""
     router_config_hash: str = ""
+    evaluation_hash: str = ""
 
     def __post_init__(self) -> None:
         required = (self.experiment_id, self.code_sha, self.env_lock_hash,
