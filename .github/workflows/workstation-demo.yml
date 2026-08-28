@@ -1,7 +1,9 @@
 name: workstation-demo
 
 on:
-  pull_request:
+  push:
+    branches:
+      - "bootstrap/oss-autonomous-trader-replatform"
     paths:
       - "finance_quant/workstation/**"
       - "tests/test_workstation_product.py"
