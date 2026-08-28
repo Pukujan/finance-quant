@@ -73,18 +73,19 @@ Top-level CLI now exposes `finance-quant lab`.
 - shadow accounts are isolated by arm, survive restart and do not duplicate the same simulated transition;
 - multi-instrument shadow valuation requires explicit marks rather than inventing prices.
 
-Dedicated CI:
-`.github/workflows/lab-control-plane.yml`
+## Green CI evidence
 
-It runs all lab tests, runs the benchmark/candidate smoke through the public CLI, runs the existing workstation regression, and uploads the smoke result.
+Dedicated workflow: `.github/workflows/lab-control-plane.yml`.
 
-Earlier green control-plane runs include:
+Run **33149664715** completed successfully on control-plane code SHA `e67335d4e55490acbfef152cee0cb0036d0fd0a9`:
 
-- `33149223541` — initial fixed-lab tests + workstation regression green;
-- `33149292495` — manifest-to-actual-artifact guard green;
-- `33149419972` — benchmark/candidate separation tests green.
+- fixed laboratory correctness suite: **14 passed in 4.86s**;
+- autonomous separated benchmark/candidate CLI smoke: **passed**;
+- existing workstation regression: **4 passed in 0.87s**;
+- smoke output artifact: `lab-smoke-result`, artifact ID **9677180076**;
+- artifact SHA256: `47d8c009235254a2ed787404d6fe6a8fd72465d013ae735853bb4aaf547ea0e4`.
 
-Check the latest `lab-control-plane` run at branch head before starting candidate integration; shadow-paper tests were added after those earlier runs.
+The smoke run produced price and price+news predictions from the same frozen snapshot and then scored both against the exact same canonical outcome ID. A deliberately future-known news record was present in the benchmark input and was excluded by the historical snapshot freeze.
 
 ## Existing workstation result retained
 
