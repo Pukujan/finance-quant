@@ -1,6 +1,6 @@
 # AGENTS.md — finance-quant operating contract
 
-This repository is an OSS-backed quantitative research, validation, governance, promotion, and autonomous paper-trading laboratory. Agents are implementation workers, not trading or promotion authorities.
+This repository is a local quantitative research, historical point-in-time evaluation, and zero-capital simulated paper-trading workstation. Agents are implementation/research workers; empirical market outcomes and executable product semantics judge research usefulness.
 
 ## Mandatory read order
 
@@ -10,83 +10,82 @@ Before making a material change, read in this order:
 2. `docs/CURRENT_STATE.md`
 3. the active GitHub master/child issue referenced by current state
 4. `docs/handoffs/LATEST.md`
-5. relevant ADR/spike/contract/property files
-6. affected implementation and tests
+5. relevant contracts/specs and affected implementation/tests
 
-If these sources conflict, stop implementation and resolve the conflict in durable project state first.
+If these sources conflict, resolve the conflict in durable project state before implementation.
 
 ## Authority hierarchy
 
-1. Capital/safety/holdout restrictions in this file and accepted policy contracts.
-2. Machine-readable project and assurance contracts under `contracts/`.
-3. Accepted architecture/decision documents and active GitHub issue acceptance criteria.
-4. Property catalog and executable oracles.
-5. Implementation details.
+1. Live-capital/safety restrictions in this file and explicit human instructions.
+2. Active product issue acceptance criteria and shared public contracts.
+3. Executable product-correctness properties/tests for PIT, experiment identity, outcomes, paper accounting, and integration behavior.
+4. Implementation details.
+5. Research/model/KG outputs.
 
-Tests, UI state, model output, OSS runtime behavior, agent instructions, MLflow state, or research metrics never outrank policy/authority contracts.
+Research metrics, model output, UI state, agent claims, or framework state never outrank fixed PIT/evaluation/account semantics.
 
 ## Hard rules
 
-- Preserve point-in-time semantics: no feature, graph edge, universe membership, label, model input, or decision may use information before its legitimate `known_at` time.
-- Do not inspect, copy, expose, or optimize against exact sealed holdout cases/labels from `finance-quant-holdout` unless an authorized holdout issue explicitly grants that capability.
-- Do not add or enable brokerage credentials, live capital, or live order authority unless a later explicit human authorization issue exists. A passing test/holdout/CI run never grants capital authority.
-- Risk may reduce/reject requested exposure; generated code/model/KG/UI/agent logic may not widen risk authority.
-- Search/model/KG workers may propose; promotion is a separate authority path.
-- Failed, crashed, invalid, rejected, and superseded attempts remain in durable lineage.
-- Never weaken/delete an acceptance test merely to make a change pass. If a test is wrong, document the property/spec change and update its oracle deliberately.
-- Trading-decision models introduced under issue #21 are from-scratch only: no pretrained weights, embeddings, latent representations, or hidden external model knowledge in the decision path unless a future explicit policy issue changes this rule.
+- Preserve point-in-time semantics: no feature, graph edge, document, universe membership, label, router input, model input, or decision may use information before its legitimate `known_at` time.
+- Historical corpus filtering happens before retrieval/ranking/embedding results can influence a decision-time feature or prediction.
+- Do not inspect, copy, expose, or optimize against sealed hidden holdout cases/labels unless an explicit current issue grants access.
+- Do not add or enable brokerage credentials, live capital, or live order authority. Local simulated paper trading is allowed; broker/live capital remains out of scope.
+- Failed, crashed, invalid, rejected, superseded, and losing research attempts remain in durable lineage.
+- Never weaken/delete a correctness test merely to make a change pass. If the semantic contract changes, update the durable issue/spec and oracle deliberately.
+- A component/model/KG lane may propose predictions; canonical historical snapshots, realized labels, scoring, experiment identity, and paper-account truth are owned by the fixed laboratory/control plane.
 
 ## OSS adoption rule
 
 Prefer `upstream pinned dependency -> thin adapter -> constrained extension -> fork only as last resort`.
 
-A local fork requires a documented upstream blocker, patch inventory, conformance tests, upstream-sync plan, and removal condition. Do not copy a mature framework into this repo and accidentally become its maintainer.
+A local fork requires a concrete product reason and a bounded adapter/patch surface. Do not copy mature frameworks into this repo when a dependency or adapter suffices.
 
 ## Vertical-slice rule
 
 New capabilities should be delivered as:
 
-`domain/backend -> typed API/events -> evidence/observability -> thin operator/research UI -> end-to-end validation`
+`real/PIT data -> typed component artifact -> experiment arm -> walk-forward/outcome -> evidence/metrics -> workstation visibility`
 
-The frontend is an operator/research surface only. It never owns fills, account truth, risk decisions, promotion, holdout access, or capital authority; commands must pass through backend policy/authority gates.
+The frontend is an operator/research surface only. It never owns fills, paper-account truth, historical labels, PIT filtering, experiment identity, or live-capital authority.
 
-## SDD/PDD change contract
+## Specification and testing contract
 
-Every material capability/authority change must:
+For material capabilities:
 
-- reference an active GitHub issue and assurance phase (`A0`–`A8`);
-- define/update the relevant spec/contract before or with implementation (SDD);
-- identify stable property IDs and executable oracles for critical behavior (PDD);
-- declare property impact: `PRESERVE`, `STRENGTHEN`, or `CHANGE`;
-- add independent tests appropriate to the phase assurance contract;
-- update machine-readable project/assurance state when capability status changes;
-- update affected human documentation and the session handoff.
+- reference the active GitHub issue;
+- define or preserve the shared public interface/semantics before or with implementation;
+- add the cheapest executable tests that can credibly falsify bugs that would invalidate research or paper execution;
+- prefer deterministic unit/integration tests plus property/metamorphic tests for time, replay, cache, DAG, router, and concurrency semantics;
+- use targeted mutation testing for critical semantic modules where small operator mistakes could silently corrupt results;
+- use small hidden black-box product scenarios only when they add information beyond visible tests;
+- use TLA+/SMT/formal methods only for a concrete state-machine/concurrency problem that executable tests cannot credibly cover.
 
-## Validation
+Do not recreate the former assurance-phase ladder as the product roadmap. Tests exist to catch real product/research-integrity bugs, not to grant abstract capability authority.
 
-`contracts/assurance/capability-assurance-v1.json` is the phase assurance authority. Required gates are conjunctive; an aggregate score cannot compensate for a failed critical gate.
+## Multi-agent implementation rule
 
-Use the cheapest technique that can credibly falsify the property, with deeper methods where required: static/IR checks, unit/regression, property/stateful, hidden acceptance, mutation, differential/metamorphic, repeated determinism, clean environment, chaos/fault injection, soak, TLA+, selective SMT, selective Lean 4, and HITL promotion.
+The active flywheel architecture is defined by GitHub issue #27 and child issues #28–#32, with #19 owning KG/RAG and #21 owning model research.
 
-**HITL (`HITL_PROMOTION`) is a capability/promotion gate, not per-trade manual control and not a substitute for automated validation.**
+Agents/subagents may implement candidate components and models in parallel, but they must converge on shared contracts owned by the laboratory/control plane. Sibling agents must not silently invent incompatible artifact, arm, outcome, router, or paper-account semantics.
 
-T3/TLA obligations must not silently skip in authoritative CI. Hidden acceptance cases remain hidden. Surviving mutations that bypass a critical invariant are gate failures.
+Candidate code must not directly construct future labels, relax the knowledge cut, or change scoring/cost assumptions. Those are passed in by the laboratory.
 
 ## Session completion / handoff
 
 Before ending a material work session:
 
-1. run every gate required for the active assurance phase that can run in the session/CI;
-2. record exact commands, results, known skips, and CI/run links or identifiers;
-3. update `docs/CURRENT_STATE.md` when semantic project state changed;
-4. create/update `docs/handoffs/LATEST.md` and an append-only dated handoff record;
-5. record active issue, branch/base, completed work, decisions, blockers, known failures, and the **next exact action**;
-6. ensure a fresh session can continue without relying on chat history.
-
-A session is not considered durably complete if the next worker must ask what the project was trying to do.
+1. run the focused correctness/integration tests relevant to the change, plus available CI when useful;
+2. record exact commands/results and known failures;
+3. update `docs/CURRENT_STATE.md` when semantic project state changes;
+4. update `docs/handoffs/LATEST.md` so a fresh worker can continue without chat history;
+5. update the active issue with completed work, blockers, and the next exact action when material.
 
 ## Current execution direction
 
-The active master plan is GitHub issue #12 and the assurance authority is #14. Bootstrap #13 and A1 / issue #15 are complete. The active implementation issue is **#16 — A2 Autonomous Trader v0 unattended local paper vertical slice** using the A1-selected pinned LEAN runtime under `ADOPT_WITH_CONSTRAINTS`.
+The active master product is GitHub issue #12. The working workstation is tracked in #26. The experiment flywheel/control-plane architecture is #27 with implementation lanes #28–#32; #19 is the temporal KG/RAG lane and #21 is local model research.
 
-Trading authority remains `NONE`; autonomous paper and live capital remain disabled. A2 implementation may build and validate the paper-trading capability, but it must not enable unattended paper operation until every required A2 assurance gate passes and an explicit `HITL_PROMOTION` is recorded.
+Current product loop:
+
+`real historical data -> PIT normalization -> versioned knowledge/model components -> parallel walk-forward arms -> canonical realized market outcomes -> full-information scoring/router -> isolated persistent local paper accounts -> browser workstation`
+
+Local simulated paper trading is enabled as a product capability. Broker-hosted paper and live capital are not used. The next priority is the fixed laboratory/control plane so autonomous implementation agents can generate many candidate lanes/arms without owning the benchmark or evaluation semantics.
