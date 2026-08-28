@@ -1,16 +1,16 @@
 # Current project state
 
-<!-- MACHINE-STATE: architecture=WORKING_LOCAL_QUANT_WORKSTATION_PLUS_LAB status=LUNA_CANDIDATE_EXECUTION_READY active_issue=27 -->
+<!-- MACHINE-STATE: architecture=ADAPTIVE_MODULAR_QUANT_PORTFOLIO_ENGINE status=CONTRACT_RECONCILIATION_BEFORE_PARALLEL_BUILD active_issue=35 -->
 
-## Active direction
+## Latest durable continuation package
 
-Build and empirically improve the working local quant workstation through a fixed parallel research laboratory:
+Read `docs/handoffs/SESSION_2026-08-28_ADAPTIVE_QUANT_ENGINE.md` before resuming architecture/implementation work. It captures the full 2026-08-28 design session and the newest correction that occurred after #35/#36 were initially written.
 
-`real historical data -> PIT normalization -> immutable versioned knowledge/model components -> assembled historical benchmark -> parallel walk-forward arms -> canonical realized market outcomes -> full-information scoring/router -> isolated persistent local paper accounts -> browser workstation`
+## Active product direction
 
-The former assurance-phase ladder and OSS architecture bakeoff are not product gates. Historical evidence remains as implementation history. New research is judged by direct product correctness and unseen realized market outcomes.
+The product is now best framed as a **local adaptive modular multi-strategy quantitative portfolio engine**:
 
-Live capital is out of scope. Local simulated paper trading is enabled.
+`heterogeneous signals -> model/meta weights -> forecast distributions/ranks -> portfolio allocation -> local zero-money paper -> realized outcomes -> weight/version evolution`
 
 ### Luna execution update (2026-08-28)
 
@@ -84,137 +84,66 @@ Live capital is out of scope. Local simulated paper trading is enabled.
   2023–2025 US-equity slice is only an engineering-first public fixture.
 
 ## Fixed laboratory/control plane is Luna-ready
+At decision time `T`, every participating signal/model may use only information legitimately knowable at `T`. The engine combines independent versioned strategy/signal providers, decides how much trust each deserves under the current context, converts forecasts into explicit target allocations/trades/cash, executes only local simulated paper, and updates future strategy credibility from subsequently realized outcomes.
 
-`finance_quant.lab` is now the fixed measuring/execution layer for Luna or other candidate-generating agents. Candidate workers can publish many data/KG/RAG/model versions and run them in parallel without owning historical labels, PIT cuts, scoring, evaluation identity, or paper-account truth.
+**MarketState, temporal KG/RAG, news/epistemics and vendor pre-quantized feeds are optional signal-provider families, not the product itself.** Price/momentum/breakout/volatility/fundamental/macro strategies must fit the same engine without requiring MarketState.
 
-The autonomous flow is:
+Forward paper is a continuous benchmark, not a later deployment stage. Every executable credible strategy/policy should begin accumulating prospective paper history as soon as it can produce a valid decision.
 
-1. publish immutable component artifacts;
-2. assemble PIT historical benchmark snapshots from registered component versions and fixed canonical outcomes;
-3. declare explicit arms or a bounded arm matrix;
-4. run all affordable arms concurrently;
-5. score every arm against the same realized outcome at each decision point;
-6. preserve exact component/evaluation/run lineage;
-7. route using prior resolved OOS results only;
-8. advance surviving arms in isolated zero-money shadow paper accounts.
+Live capital remains out of scope.
 
-### Public CLI
+## Immediate architecture reconciliation
 
-Publish a component:
+Architecture proposal #35 and foundation issue #36 were written before the final strategy-centric clarification and may over-center the Market State Fabric.
 
-`python -m finance_quant lab publish-component SPEC.json PAYLOAD.json --registry .lab-state/registry --output artifact.json`
+Before broad implementation, the next session must reconcile #35/#36 around the parent structure:
 
-Assemble a benchmark:
+```text
+Adaptive Quantitative Portfolio Engine
+    ├── Signal Provider Framework
+    │     ├── price / momentum / breakout / volatility
+    │     ├── fundamentals / macro
+    │     ├── vendor quantified data
+    │     ├── MarketState / epistemics / trends
+    │     ├── KG / RAG / exposure / analog retrieval
+    │     └── future signal families
+    ├── Forecast / Model Expert Framework
+    ├── MetaWeight / Context Router
+    ├── Portfolio Policy Framework
+    ├── Execution / Persistent Paper Accounts
+    └── Outcome / Learning / Versioning
+```
 
-`python -m finance_quant lab assemble-benchmark EVALUATION.json COMPONENTS.json --registry .lab-state/registry --output benchmark.json`
+Do not silently make `MarketState` a mandatory universal input in the walking skeleton. A simple technical strategy must traverse the same permanent engine.
 
-Run candidate arms:
+Likely shared contracts to settle in #36 include:
 
-`python -m finance_quant lab run benchmark.json candidates.json --state-dir .lab-state --parallel 16 --output result.json`
+- `SignalProvider` / immutable `SignalArtifact` or `SignalVector`;
+- `ForecastDistribution`;
+- `StrategySpec`;
+- meta/router weight state;
+- `PortfolioIntent`;
+- paper execution/fill objects;
+- `CanonicalOutcome`;
+- immutable artifact/version identity.
 
-`EVALUATION.json`/the assembled benchmark owns canonical outcomes. `CANDIDATES.json` owns only candidate arm/component/model/retrieval configuration. Candidate files are rejected if they contain snapshots, outcomes, labels, benchmark data, or experiment metadata.
+This should be a short contract correction, not a new assurance program.
 
-## Stable lab contracts
+## Fixed laboratory remains authoritative
 
-### Versioned components
+The working workstation and fixed experiment laboratory are already merged to `main`.
 
-`ComponentSpec` + `ComponentRegistry` provide content-addressed immutable artifacts with:
+`finance_quant.lab` continues to own canonical historical snapshots/outcomes, PIT cuts, scoring, evaluation identity, router timing and simulated-account truth. Candidate components may propose signals, state, retrieval, forecasts, strategy/meta weights and portfolio policies; they do not own the answer key.
 
-- lane/name/version;
-- code/input-dataset identity;
-- schema/ontology/extractor/parameter identity;
-- parent artifacts and dependency DAG;
-- immutable payload bytes;
-- descendant queries for selective downstream invalidation.
+Stable fixed-lab flow:
 
-A standard temporal-observation artifact uses schema:
+`publish immutable components -> assemble PIT benchmark -> run exact-version arms -> join same canonical outcome -> score -> ExperimentLedger -> prior-resolved-only routing -> isolated paper accounts`
 
-`finance-quant.lab.temporal-observations.v1`
+Existing lab correctness semantics, component/evaluation hashes, mutation probes and paper-account invariants remain in force. Do not redesign them inside candidate lanes unless a concrete integration bug requires a centrally coordinated change.
 
-with observations carrying `entity`, `known_at`, optional valid-time interval, and payload. Global observations may use entity `*`.
+## Existing empirical baseline retained
 
-### Multiple versions at one historical cut
-
-A frozen snapshot may contain several versions of the same semantic lane simultaneously, e.g.:
-
-`price@v2 | news@v3 | news@v4 | KG-retriever@v5 | KG-retriever@v6`
-
-Each `ArmSpec` selects exact `(lane, artifact_hash)` components. One arm still uses at most one artifact per semantic lane, but different arms can select different versions from the same frozen snapshot. This directly supports A/B/C/... version flywheels.
-
-### Benchmark assembly
-
-`assemble_benchmark` reads registered temporal artifacts and freezes each version at each fixed decision time **after PIT filtering**. Future-known rows are absent from the frozen snapshot. Canonical realized outcomes remain a separate evaluation input.
-
-### Arm matrices
-
-Candidate files may declare a bounded matrix with:
-
-- fixed base components;
-- named versions for variant lanes;
-- explicit lane combinations/interactions;
-- multiple model executors/configs;
-- `max_arms` hard ceiling.
-
-The lab expands this into exact immutable `ArmSpec`s. It never silently invents a full Cartesian product beyond the combinations requested.
-
-### Full-information execution
-
-Every affordable arm can predict every eligible historical decision. One canonical outcome is materialized per entity/decision/horizon and every arm is scored against that exact same outcome ID/cost assumptions.
-
-The standard-library thread runner is the dependency-light baseline. Ray/Optuna/Qlib may be adapters later, not prerequisites for correctness.
-
-### Experiment identity
-
-`ExperimentLedger.RunSpec` now includes:
-
-- knowledge manifest hash;
-- retrieval policy hash;
-- arm spec hash;
-- router config hash;
-- **evaluation hash**.
-
-The evaluation hash is derived from actual frozen snapshot IDs and actual canonical outcome IDs, so changing historical input content or the realized answer necessarily creates a different experiment identity even if a human dataset label was left unchanged.
-
-### Router and shadow paper
-
-The first inspectable router is an exponentially weighted expert ensemble that only consumes outcomes resolved by the current historical decision time. Future unresolved arm performance cannot affect earlier weights.
-
-`ShadowPaperLab` maintains one persistent authoritative `VirtualAccountStore` per arm. Accounts are isolated, restart-safe/idempotent, and zero-money simulation only.
-
-## Correctness evidence
-
-Dedicated workflow: `.github/workflows/lab-control-plane.yml`.
-
-Latest green code run: **33173989475** at SHA `4ce8be50ecdc453d0ece0db440bf2b93f693063b`.
-
-Results:
-
-- lab correctness suite: **23 passed**;
-- targeted semantic source mutations: **9/9 killed, 0 survived**;
-- public benchmark/candidate CLI smoke: **passed**;
-- existing workstation regression: **4/4 passed**;
-- smoke artifact ID: **9686784711**;
-- smoke artifact ZIP SHA256: `a0bdbcc9c2708c82dee482408387aff3a5248c7c2843022cb53f7a9bd5826354`.
-
-The nine mutation probes deliberately corrupt:
-
-1. future-known PIT filtering;
-2. simultaneous same-lane version preservation;
-3. direct snapshot future-time guard;
-4. exact component selection;
-5. canonical outcome coverage;
-6. evaluation identity dependence on realized outcomes;
-7. router no-hindsight timing;
-8. candidate benchmark/label separation;
-9. shadow-account restart behavior.
-
-All nine are detected by the executable tests.
-
-The smoke proves `price`, `price+news@v3`, and `price+news@v4` can run concurrently from the same frozen snapshot and receive the same canonical outcome ID. This is a synthetic control-plane proof, not predictive-performance evidence.
-
-## Working workstation MVP retained
-
-`finance_quant.workstation` remains runnable with:
+The workstation remains runnable:
 
 `python -m finance_quant workstation --ticker AAPL --start 2018-01-01 --capital 100000`
 
@@ -299,39 +228,178 @@ The replay harness is `scripts/run_workstation_paper_replay.py` (SHA-256
 `2637a2f91f2405a5ad8772eda9ceb05b5ab7e94db2348cde6573a3008e8553a4`).
 
 Real AAPL/SEC workflow `33146074713` produced 1,988 evaluated walk-forward predictions:
+Existing real AAPL/SEC workflow produced 1,988 walk-forward predictions:
 
 - price-only directional accuracy: **53.3702%**;
-- price + current small SEC-fundamental feature set: **51.8612%**;
+- price + current small SEC-fundamental set: **51.8612%**;
 - delta: **-1.5091 percentage points**.
 
-The current tiny SEC-fundamental set hurts this baseline. Do not claim KG predictive value from it. Historical simple long/cash metrics are also not a realistic cost-complete strategy result.
+The current tiny SEC structured feature set hurt the baseline. Do not claim KG predictive value from it.
 
 Existing zero-money paper proof remains:
 
 - 2026-08-26 signal persisted;
-- 2026-08-27 simulated next-open fill: **BUY 305 AAPL @ 310.61209779052734**;
-- marked NAV: **$101,210.2061** from $100,000 starting cash.
+- 2026-08-27 simulated next-open fill: BUY 305 AAPL @ 310.61209779052734;
+- marked NAV about $101,210.21 from $100,000.
 
-That proves signal -> persistent state -> simulated execution -> marked account, not profitability.
+That proves signal -> persistent state -> simulated execution -> mark, not profitability.
+
+The current adjusted Yahoo historical lane is not strict raw PIT truth because later corporate actions can retroactively restate adjusted history. #29 should supply raw OHLCV + separately timestamped corporate actions.
+
+## Strategy/meta-engine direction
+
+The important object is not one permanent strategy but a versioned strategy specification combining:
+
+- signal/provider versions + signal weights;
+- model/expert versions + model weights;
+- horizon/context/regime weighting;
+- portfolio policy and risk parameters;
+- execution/cost/rebalance assumptions.
+
+Weights may initially be static controls, then evolve through inspectable prior-resolved-only methods such as exponentially weighted experts, rolling optimization, Bayesian/model averaging or contextual routers.
+
+The system must preserve complete trial/version genealogy so AI-generated strategy search does not become automated backtest overfitting.
+
+Do not optimize only directional accuracy or raw return. Evaluate forecast skill and portfolio skill separately, and decompose market/factor exposure from genuine selection/timing value where feasible.
+
+## Portfolio engine direction
+
+#38 owns forecast-to-allocation behavior.
+
+The system must answer:
+
+- where to invest;
+- how much to invest;
+- how much cash to hold;
+- how to diversify by real economic/factor/theme exposure;
+- what to buy/sell/hold;
+- whether switching is worth transaction costs;
+- when to rebalance;
+- when to abstain/no-trade;
+- how liquidity/correlation/risk constraints change raw forecast conviction.
+
+`PortfolioIntent` is the immutable handoff from forecasts/meta-strategy to paper execution and records target weights, trade deltas, cash target, expected return/risk/cost, turnover, binding constraints and provenance.
+
+Initial competing policy families remain:
+
+1. equal-weight top-K;
+2. edge/confidence-weighted top-K with caps;
+3. volatility-scaled/risk-budgeted;
+4. mean-variance/robust convex allocation with turnover/cost penalties;
+5. explicit cash/no-trade threshold.
+
+Each policy should receive identical upstream forecasts/cost assumptions and accumulate its own persistent forward paper history.
+
+## Market State / epistemic provider direction
+
+#37 remains a candidate signal-provider family, not the parent engine.
+
+Useful layered representation:
+
+`SourceArtifact -> Observation -> Claim/Proposition -> Evidence -> bitemporal EpistemicState -> MarketBeliefState -> Derived MarketState -> BenchmarkedKnowledge -> PredictiveKnowledge`
+
+Factual reliability, market attention, economic materiality, exposure/transmission confidence and predictive usefulness remain separate.
+
+`TrendState` should retain level, robust percentile/z-score, multi-horizon velocity, acceleration, noise, trend shape, structural-break probability, novelty, persistence, saturation/decay and cross-source confirmation rather than one generic hype score.
+
+The ontology remains a stable core + versioned domain modules. Graph relations retain valid/knowledge time, provenance, confidence/materiality, and graph expansion stays typed/bounded.
+
+## Raw vs pre-quantized data
+
+The engine must support both custom extraction and already structured/quantized providers.
+
+Potential data/source families include:
+
+- raw market OHLCV/corporate actions;
+- SEC filing text/XBRL;
+- ALFRED/FRED macro vintages;
+- GDELT/open event data;
+- GitHub/Hugging Face activity for relevant technical/adoption signals;
+- optional commercial RavenPack/LSEG MarketPsych/LSEG MRN/FactSet-Alexandria style feeds;
+- social attention sources where licensing/coverage is appropriate.
+
+Vendor scores are optional signal adapters, not hard dependencies. We do not need to recreate every professional extraction system before testing useful strategies.
+
+## Local architecture / OSS direction
+
+Use a modular monolith with process-isolated heavy workers, not microservices by default.
+
+Own unique semantics; reuse commodity machinery:
+
+- fixed `finance_quant.lab` / ExperimentLedger;
+- existing paper account substrate;
+- retained LEAN execution/backtest integration where useful;
+- Parquet/ZSTD + DuckDB + Polars for local historical analytics;
+- one retrieval engine initially (OpenSearch or lighter Qdrant where appropriate);
+- LightGBM/XGBoost + transparent linear/ranking baselines;
+- Qlib only where it materially accelerates research;
+- local LLM runtime for extraction/classification where justified;
+- RDFLib/pySHACL/OWL/PROV/RO-Crate-style export for #39 after useful lineages exist;
+- no Kafka/Kubernetes/distributed lakehouse before actual workload demands them.
+
+## SWE / multi-agent execution
+
+Use typed shared contracts and durable work packets as synchronization boundaries for AI coding agents.
+
+Every work packet should declare issue/dependencies, owned files/modules, typed inputs/outputs, forbidden authority, focused acceptance tests and required product proof/experiment/paper artifact.
+
+Use stronger reasoning/integration agents for temporal semantics, statistical leakage, architecture, hard debugging and adversarial review; parallelize bounded adapters, signal providers, model executors, tests and UX. Agent/model routing should eventually be empirical rather than permanent Sol=Luna role assignment.
+
+There is no direct Luna connector in the current ChatGPT environment; Luna must be launched externally.
+
+## Verification strategy
+
+Tests protect the product; assurance is not the roadmap.
+
+Risk-targeted stack:
+
+- lint/format + strict typing/import rules;
+- typed contracts/schema round-trips;
+- focused TDD/integration tests;
+- property/invariant tests for universal semantics;
+- metamorphic tests for PIT/reordering/dedup/retrieval invariance;
+- targeted mutation probes for tiny bugs that could create fake alpha/account corruption;
+- deterministic replay for experiment identity;
+- Lean/SMT only for concrete hard invariants not credibly covered by executable tests;
+- historical WFO + forward paper judge investment usefulness.
+
+Correctness gates software merging. Noisy alpha metrics gate research promotion.
+
+## Major adversarial risk
+
+AI coding makes strategy generation cheap and therefore increases the danger of **automated strategy-selection overfitting**.
+
+Do not implement `generate thousands -> choose best historical Sharpe -> declare winner`.
+
+Preserve every attempted strategy/version and the number/search process that produced it. Use strict walk-forward chronology, appropriate untouched evaluation, multiple-testing/backtest-overfitting discipline and prospective paper evidence.
+
+The engine must be allowed to conclude that sophisticated providers have zero useful weight.
 
 ## Active durable issues
 
-- #12 master working local predictive quant workstation
-- #26 workstation MVP + empirical iteration
-- #27 versioned knowledge lanes + parallel full-information laboratory
-- #28 component registry/manifests/DAG
-- #29 historical PIT data lanes
-- #30 parallel arm scheduler/shared outcomes
-- #31 scoring/router/shadow paper
-- #32 workstation experiment/lineage UI
-- #19 temporal KG + PIT-safe RAG
-- #21 local model research/training
-- #18 continuous local paper refresh
-- #17 browser workstation UX
+- #12 — master workstation/product
+- #27 — fixed versioned/full-information research lab
+- #29 — historical PIT data lanes
+- #19 — temporal KG + PIT-safe RAG
+- #21 — local model research/training
+- #18 — continuous local paper refresh
+- #17/#32 — workstation/lineage UX
+- #35 — architecture proposal; **must be reconciled with latest adaptive-engine correction**
+- #36 — walking skeleton/API contracts/agent work graph; **must generalize beyond mandatory MarketState**
+- #37 — Market State/epistemics/trends/exposures signal-provider family
+- #38 — portfolio allocation + diversified forward paper
+- #39 — reproducible Research Evidence Bundle
 
 ## Next exact action
 
-The shared executioner is ready. **Do not redesign its benchmark/outcome semantics inside candidate lanes.**
+1. Read `docs/handoffs/SESSION_2026-08-28_ADAPTIVE_QUANT_ENGINE.md`.
+2. Reconcile #35/#36 and this current state so the adaptive multi-strategy engine is clearly the parent concept and MarketState is optional.
+3. Freeze the smallest correct signal/strategy/meta/forecast/portfolio contracts and walking skeleton.
+4. Prove the skeleton with a simple price/momentum/breakout/volatility vertical slice that does not require KG/news.
+5. Resume #29/#37/#19/#21/#38 workers in parallel behind those contracts.
+6. Put every executable credible strategy/policy into local forward paper immediately.
+7. Surface signal weights, meta weights, forecasts, target allocation, fills, realized outcomes and version evolution in the workstation.
+8. Add #39 audit/export only after useful lineages exist.
 
 The initial parallel Luna worker wave is complete. The next bounded research
 wave against #29, #19 and #21 is:
@@ -344,30 +412,22 @@ wave against #29, #19 and #21 is:
 
 The scope decision for longer history, broader equities, crypto, FX, and
 prediction markets remains open; see `docs/plans/OPEN_SCOPE_QUESTIONS.md`.
+## Success criterion
 
-Each worker should emit immutable versioned temporal component artifacts and/or arm executors. The lab then assembles the fixed PIT benchmark and expands/runs explicit or matrix arms concurrently.
+The project succeeds as an investment system if the local adaptive engine can produce reproducible, PIT-correct strategies whose signal/model/policy weighting demonstrates stable incremental usefulness under strict walk-forward research and continues to produce useful cost/risk-adjusted behavior in immutable prospective paper portfolios.
 
-First substantive experiment family:
+It is not a requirement that MarketState/KG/RAG survive. It is a requirement that the engine objectively learn which components deserve weight.
 
-`price | +fundamentals | +news/hype | +events | +supply/competitors | +macro | +RAG | +bounded-KG | combined | contextual router`
-
-across multiple symbols/regimes. Subsequent realized market prices remain the objective judge.
-
-## Safety scope
-
-- Local simulated paper: **ENABLED**.
-- Parallel per-arm shadow paper: **ENABLED as simulation**.
-- Broker-hosted paper: **not used**.
-- Live capital: **DISABLED / out of scope**.
-- Existing private/sealed holdout contents must not be inspected or optimized against without explicit authorization.
-
-## Required read order for a fresh implementation session
+## Required read order for a fresh session
 
 1. `AGENTS.md`
 2. this file
-3. `docs/handoffs/LATEST.md`
-4. #27, then #28–#32
-5. #29/#19/#21 for candidate work
-6. `finance_quant/lab/`, `tests/test_lab_*.py`, `scripts/run_lab_mutation_probes.py`
-7. `finance_quant/workstation/` and `tests/test_workstation_product.py`
-8. older assurance material only when relevant to a concrete product bug
+3. `docs/handoffs/SESSION_2026-08-28_ADAPTIVE_QUANT_ENGINE.md`
+4. #35
+5. #36
+6. `docs/handoffs/LATEST.md`
+7. #27 + fixed lab contracts/tests
+8. relevant candidate issue (#29, #37/#19, #21, #38, #32/#17, #39)
+9. `finance_quant/lab/`, `tests/test_lab_*.py`, mutation probes
+10. `finance_quant/workstation/` and its product tests
+11. older assurance material only when relevant to a concrete product bug
