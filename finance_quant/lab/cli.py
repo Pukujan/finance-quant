@@ -1,31 +1,38 @@
 """CLI for the fixed research laboratory.
 
-Usage:
-    python -m finance_quant lab run benchmark.json candidates.json \
+Typical autonomous flow:
+
+    finance-quant lab publish-component spec.json payload.json --registry .lab-state/registry
+    finance-quant lab assemble-benchmark evaluation.json components.json \
+        --registry .lab-state/registry --output benchmark.json
+    finance-quant lab run benchmark.json candidates.json \
         --state-dir .lab-state --parallel 8
 
-The benchmark owns historical snapshots/outcomes. Candidate files own arms only.
-Each arm selects exact versioned component artifacts; its knowledge manifest is
-derived by the control plane rather than supplied by candidate code.
+Canonical outcomes stay in the evaluation/benchmark side. Candidate files own
+arms only and select exact immutable component artifacts.
 """
 from __future__ import annotations
 
 import argparse
 import json
+from dataclasses import asdict
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
 from finance_quant.experiments.ledger import ExperimentLedger
 
+from .benchmark import assemble_benchmark
 from .core import (
     ArmSpec,
     CanonicalOutcome,
+    ComponentSpec,
     ExperimentBatchSpec,
     LabError,
     TemporalLaneDatum,
     canonical_json,
     freeze_snapshot,
 )
+from .registry import ComponentRegistry
 from .runner import run_batch
 
 
@@ -61,8 +68,35 @@ def _arm(raw: Mapping[str, Any]) -> ArmSpec:
     )
 
 
+def _component_spec(raw: Mapping[str, Any]) -> ComponentSpec:
+    return ComponentSpec(
+        lane=str(raw["lane"]),
+        name=str(raw["name"]),
+        version=str(raw["version"]),
+        code_sha=str(raw["code_sha"]),
+        input_dataset_manifest_hash=str(raw["input_dataset_manifest_hash"]),
+        schema_version=str(raw.get("schema_version", "1")),
+        ontology_version=str(raw.get("ontology_version", "1")),
+        model_or_extractor_hash=str(raw.get("model_or_extractor_hash", "")),
+        parameters_json=canonical_json(raw.get("parameters", {})),
+        knowledge_cut_or_build_range=str(raw.get("knowledge_cut_or_build_range", "")),
+        parent_artifact_hashes=tuple(str(x) for x in raw.get("parent_artifact_hashes", ())),
+    )
+
+
+def _json_file(path: str | Path) -> Any:
+    return json.loads(Path(path).read_text(encoding="utf-8"))
+
+
+def _emit(payload: Any, output: str = "") -> None:
+    text = json.dumps(payload, sort_keys=True, indent=2)
+    if output:
+        Path(output).write_text(text + "\n", encoding="utf-8")
+    print(text)
+
+
 def load_candidates(path: str | Path) -> tuple[ArmSpec, ...]:
-    payload = json.loads(Path(path).read_text(encoding="utf-8"))
+    payload = _json_file(path)
     forbidden = {"snapshots", "outcomes", "labels", "benchmark", "experiment"} & set(payload)
     if forbidden:
         raise LabError(f"candidate file cannot own benchmark data: {sorted(forbidden)}")
@@ -73,7 +107,7 @@ def load_candidates(path: str | Path) -> tuple[ArmSpec, ...]:
 
 
 def load_benchmark(path: str | Path):
-    payload = json.loads(Path(path).read_text(encoding="utf-8"))
+    payload = _json_file(path)
     if "arms" in payload:
         raise LabError("benchmark file cannot declare candidate arms")
     raw = payload["experiment"]
@@ -134,6 +168,22 @@ def load_execution(benchmark_path: str | Path, candidate_path: str | Path):
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="finance-quant lab")
     sub = parser.add_subparsers(dest="lab_command", required=True)
+
+    publish = sub.add_parser("publish-component", help="Publish one immutable component artifact")
+    publish.add_argument("spec")
+    publish.add_argument("payload")
+    publish.add_argument("--registry", default=".lab-state/registry")
+    publish.add_argument("--output", default="")
+
+    assemble = sub.add_parser(
+        "assemble-benchmark",
+        help="Freeze registered component versions at fixed canonical outcome cuts",
+    )
+    assemble.add_argument("evaluation")
+    assemble.add_argument("components")
+    assemble.add_argument("--registry", default=".lab-state/registry")
+    assemble.add_argument("--output", required=True)
+
     run = sub.add_parser("run", help="Run candidate arms against a separate fixed benchmark")
     run.add_argument("benchmark")
     run.add_argument("candidate_set")
@@ -145,18 +195,42 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: Sequence[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
-    if args.lab_command != "run":
-        return 2
-    state = Path(args.state_dir)
-    state.mkdir(parents=True, exist_ok=True)
-    batch, snapshots, outcomes = load_execution(args.benchmark, args.candidate_set)
-    ledger = ExperimentLedger(state / "experiments.sqlite")
-    try:
-        result = run_batch(batch, snapshots, outcomes, max_workers=args.parallel, ledger=ledger)
-    finally:
-        ledger.close()
-    text = json.dumps(result.to_dict(), sort_keys=True, indent=2)
-    if args.output:
-        Path(args.output).write_text(text + "\n", encoding="utf-8")
-    print(text)
-    return 0
+
+    if args.lab_command == "publish-component":
+        raw_spec = _json_file(args.spec)
+        payload = _json_file(args.payload)
+        registry = ComponentRegistry(args.registry)
+        try:
+            artifact = registry.build(_component_spec(raw_spec), payload)
+        finally:
+            registry.close()
+        _emit(asdict(artifact), args.output)
+        return 0
+
+    if args.lab_command == "assemble-benchmark":
+        evaluation = _json_file(args.evaluation)
+        component_set = _json_file(args.components)
+        hashes = component_set.get("artifacts") if isinstance(component_set, Mapping) else None
+        if not isinstance(hashes, list) or not hashes:
+            raise LabError("components file must contain a non-empty artifacts list")
+        registry = ComponentRegistry(args.registry)
+        try:
+            benchmark = assemble_benchmark(evaluation, registry, (str(x) for x in hashes))
+        finally:
+            registry.close()
+        _emit(benchmark, args.output)
+        return 0
+
+    if args.lab_command == "run":
+        state = Path(args.state_dir)
+        state.mkdir(parents=True, exist_ok=True)
+        batch, snapshots, outcomes = load_execution(args.benchmark, args.candidate_set)
+        ledger = ExperimentLedger(state / "experiments.sqlite")
+        try:
+            result = run_batch(batch, snapshots, outcomes, max_workers=args.parallel, ledger=ledger)
+        finally:
+            ledger.close()
+        _emit(result.to_dict(), args.output)
+        return 0
+
+    return 2
