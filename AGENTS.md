@@ -88,4 +88,4 @@ Current product loop:
 
 `real historical data -> PIT normalization -> versioned knowledge/model components -> parallel walk-forward arms -> canonical realized market outcomes -> full-information scoring/router -> isolated persistent local paper accounts -> browser workstation`
 
-Local simulated paper trading is enabled as a product capability. Broker-hosted paper and live capital are not used. The next priority is the fixed laboratory/control plane so autonomous implementation agents can generate many candidate lanes/arms without owning the benchmark or evaluation semantics.
+Local simulated paper trading is enabled as a product capability. Broker-hosted paper and live capital are not used. The workstation and fixed laboratory are merged to `main`; the next priority is parallel candidate implementation against #29, #19 and #21 using the stable lab interfaces, followed by objective multi-arm historical/OOS evaluation.
