@@ -8,6 +8,7 @@ from scripts.run_b1_b5_phase_b import (
     content_hash,
     load_canonical_fixture_manifest,
     main,
+    report_path,
     strategy_stub,
 )
 
@@ -56,8 +57,17 @@ def test_ledger_record(tmp_path):
     assert "ExperimentLedger" in lines[0]
 
 
+def test_report_path_handles_external_drill_receipt(tmp_path):
+    root = tmp_path / "repo"
+    root.mkdir()
+    inside = root / "reports" / "receipt.jsonl"
+    outside = tmp_path / "phase-b-drill" / "receipt.jsonl"
+    assert report_path(inside, root) == str(Path("reports") / "receipt.jsonl")
+    assert report_path(outside, root) == str(outside)
+
+
 def test_main_creates_report(tmp_path):
-    report_path = tmp_path / "b1_b5_rank_ic.json"
+    report_path_value = tmp_path / "b1_b5_rank_ic.json"
     receipt_path = tmp_path / "experiment_ledger_receipts.jsonl"
     code = main()
     # main writes to default paths; we just verify it returns 0
