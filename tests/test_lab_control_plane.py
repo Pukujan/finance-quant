@@ -213,11 +213,11 @@ def test_lab_runs_are_idempotently_identified_in_existing_experiment_ledger(tmp_
         ledger.close()
 
 
-def test_cli_candidate_set_is_an_executioner_not_a_label_generator(tmp_path, capsys):
+def test_cli_separates_fixed_benchmark_from_candidate_arms(tmp_path, capsys):
     price_manifest = KnowledgeManifest((("price", "price-v1"),)).manifest_hash
     knowledge_manifest = KnowledgeManifest((("price", "price-v1"), ("news", "news-v1"))).manifest_hash
-    payload = {
-        "batch": {
+    benchmark = {
+        "experiment": {
             "experiment_id": "cli-test",
             "code_sha": "code",
             "env_lock_hash": "env",
@@ -226,22 +226,6 @@ def test_cli_candidate_set_is_an_executioner_not_a_label_generator(tmp_path, cap
             "cost_model_ref": "2bps",
             "seeds": [1],
             "outcome_horizon": "1d",
-            "arms": [
-                {
-                    "arm_id": "price",
-                    "lanes": ["price"],
-                    "knowledge_manifest_hash": price_manifest,
-                    "executor_ref": "finance_quant.lab.demo:weighted_signal",
-                    "model_config": {"weights": {"price": 1}},
-                },
-                {
-                    "arm_id": "price-news",
-                    "lanes": ["price", "news"],
-                    "knowledge_manifest_hash": knowledge_manifest,
-                    "executor_ref": "finance_quant.lab.demo:weighted_signal",
-                    "model_config": {"weights": {"price": 1, "news": 1}},
-                },
-            ],
         },
         "snapshots": [
             {
@@ -266,11 +250,43 @@ def test_cli_candidate_set_is_an_executioner_not_a_label_generator(tmp_path, cap
             }
         ],
     }
-    path = tmp_path / "candidates.json"
-    path.write_text(json.dumps(payload), encoding="utf-8")
-    rc = lab_main(["run", str(path), "--state-dir", str(tmp_path / "state"), "--parallel", "2"])
+    candidates = {
+        "arms": [
+            {
+                "arm_id": "price",
+                "lanes": ["price"],
+                "knowledge_manifest_hash": price_manifest,
+                "executor_ref": "finance_quant.lab.demo:weighted_signal",
+                "model_config": {"weights": {"price": 1}},
+            },
+            {
+                "arm_id": "price-news",
+                "lanes": ["price", "news"],
+                "knowledge_manifest_hash": knowledge_manifest,
+                "executor_ref": "finance_quant.lab.demo:weighted_signal",
+                "model_config": {"weights": {"price": 1, "news": 1}},
+            },
+        ]
+    }
+    benchmark_path = tmp_path / "benchmark.json"
+    candidate_path = tmp_path / "candidates.json"
+    benchmark_path.write_text(json.dumps(benchmark), encoding="utf-8")
+    candidate_path.write_text(json.dumps(candidates), encoding="utf-8")
+    rc = lab_main([
+        "run", str(benchmark_path), str(candidate_path),
+        "--state-dir", str(tmp_path / "state"), "--parallel", "2",
+    ])
     assert rc == 0
     result = json.loads(capsys.readouterr().out)
     predictions = {row["arm_id"]: row["predicted_return"] for row in result["predictions"]}
     assert predictions["price"] == pytest.approx(0.01)
     assert predictions["price-news"] == pytest.approx(0.03)
+
+
+def test_candidate_file_cannot_smuggle_outcomes(tmp_path):
+    from finance_quant.lab.cli import load_candidates
+
+    path = tmp_path / "bad-candidates.json"
+    path.write_text(json.dumps({"arms": [], "outcomes": [{"fake": True}]}), encoding="utf-8")
+    with pytest.raises(LabError, match="cannot own benchmark data"):
+        load_candidates(path)
