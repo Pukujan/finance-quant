@@ -61,6 +61,11 @@ def _cmd_drill(args: argparse.Namespace) -> int:
     return _run_script(COMMANDS["drill"], args.remainder)
 
 
+def _cmd_workstation(args: argparse.Namespace) -> int:
+    from finance_quant.workstation.app import main as workstation_main
+    return workstation_main(args.remainder)
+
+
 _SUBCOMMAND_HANDLERS = {
     "verify": _cmd_verify,
     "benchmark": _cmd_benchmark,
@@ -88,12 +93,15 @@ def _cmd_help(args: argparse.Namespace) -> int:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="finance-quant",
-        description="Reproducible quantitative research and trading laboratory",
+        description="Local quantitative research and paper-trading workstation",
     )
     sub = parser.add_subparsers(dest="command")
 
     p_help = sub.add_parser("help", help="Show this help message")
     p_help.set_defaults(func=_cmd_help)
+
+    p_workstation = sub.add_parser("workstation", help="Launch the real-data predictive research and local paper UI")
+    p_workstation.set_defaults(func=_cmd_workstation)
 
     p_verify = sub.add_parser("verify", help="Run the existing verification suite (pytest + smoke)")
     p_verify.set_defaults(func=_cmd_verify)
