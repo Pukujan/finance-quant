@@ -1,7 +1,10 @@
 """CLI for the fixed research laboratory.
 
 Usage:
-    python -m finance_quant lab run candidate-set.json --state-dir .lab-state --parallel 8
+    python -m finance_quant lab run benchmark.json candidates.json \
+        --state-dir .lab-state --parallel 8
+
+The benchmark owns historical snapshots/outcomes. Candidate files own arms only.
 """
 from __future__ import annotations
 
@@ -16,6 +19,7 @@ from .core import (
     ArmSpec,
     CanonicalOutcome,
     ExperimentBatchSpec,
+    LabError,
     TemporalLaneDatum,
     canonical_json,
     freeze_snapshot,
@@ -36,21 +40,22 @@ def _arm(raw: Mapping[str, Any]) -> ArmSpec:
     )
 
 
-def load_candidate_set(path: str | Path):
+def load_candidates(path: str | Path) -> tuple[ArmSpec, ...]:
     payload = json.loads(Path(path).read_text(encoding="utf-8"))
-    raw_batch = payload["batch"]
-    arms = tuple(_arm(item) for item in raw_batch["arms"])
-    batch = ExperimentBatchSpec(
-        experiment_id=str(raw_batch["experiment_id"]),
-        code_sha=str(raw_batch["code_sha"]),
-        env_lock_hash=str(raw_batch["env_lock_hash"]),
-        dataset_manifest_hash=str(raw_batch["dataset_manifest_hash"]),
-        split_policy_ref=str(raw_batch["split_policy_ref"]),
-        cost_model_ref=str(raw_batch["cost_model_ref"]),
-        seeds=tuple(int(x) for x in raw_batch["seeds"]),
-        outcome_horizon=str(raw_batch["outcome_horizon"]),
-        arms=arms,
-    )
+    forbidden = {"snapshots", "outcomes", "labels", "benchmark"} & set(payload)
+    if forbidden:
+        raise LabError(f"candidate file cannot own benchmark data: {sorted(forbidden)}")
+    arms = tuple(_arm(item) for item in payload.get("arms", ()))
+    if not arms:
+        raise LabError("candidate file must declare at least one arm")
+    return arms
+
+
+def load_benchmark(path: str | Path):
+    payload = json.loads(Path(path).read_text(encoding="utf-8"))
+    if "arms" in payload:
+        raise LabError("benchmark file cannot declare candidate arms")
+    raw = payload["experiment"]
 
     snapshots = []
     for row in payload["snapshots"]:
@@ -85,13 +90,31 @@ def load_candidate_set(path: str | Path):
         )
         for row in payload["outcomes"]
     )
-    return batch, tuple(snapshots), outcomes
+    return raw, tuple(snapshots), outcomes
+
+
+def load_execution(benchmark_path: str | Path, candidate_path: str | Path):
+    raw, snapshots, outcomes = load_benchmark(benchmark_path)
+    arms = load_candidates(candidate_path)
+    batch = ExperimentBatchSpec(
+        experiment_id=str(raw["experiment_id"]),
+        code_sha=str(raw["code_sha"]),
+        env_lock_hash=str(raw["env_lock_hash"]),
+        dataset_manifest_hash=str(raw["dataset_manifest_hash"]),
+        split_policy_ref=str(raw["split_policy_ref"]),
+        cost_model_ref=str(raw["cost_model_ref"]),
+        seeds=tuple(int(x) for x in raw["seeds"]),
+        outcome_horizon=str(raw["outcome_horizon"]),
+        arms=arms,
+    )
+    return batch, snapshots, outcomes
 
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="finance-quant lab")
     sub = parser.add_subparsers(dest="lab_command", required=True)
-    run = sub.add_parser("run", help="Run a declarative candidate-set JSON through the fixed lab")
+    run = sub.add_parser("run", help="Run candidate arms against a separate fixed benchmark")
+    run.add_argument("benchmark")
     run.add_argument("candidate_set")
     run.add_argument("--state-dir", default=".lab-state")
     run.add_argument("--parallel", type=int, default=1)
@@ -105,7 +128,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 2
     state = Path(args.state_dir)
     state.mkdir(parents=True, exist_ok=True)
-    batch, snapshots, outcomes = load_candidate_set(args.candidate_set)
+    batch, snapshots, outcomes = load_execution(args.benchmark, args.candidate_set)
     ledger = ExperimentLedger(state / "experiments.sqlite")
     try:
         result = run_batch(batch, snapshots, outcomes, max_workers=args.parallel, ledger=ledger)
