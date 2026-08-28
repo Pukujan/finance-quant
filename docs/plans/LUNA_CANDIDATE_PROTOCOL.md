@@ -1,6 +1,6 @@
 # Luna candidate implementation protocol
 
-This file is the execution brief for a multi-agent implementation runner. The fixed laboratory in `finance_quant.lab` is already the benchmark/execution/scoring authority. Candidate agents build useful PIT data/state/KG/RAG/model/portfolio components against it; they do not redesign canonical outcome semantics locally.
+This file is the execution brief for a multi-agent implementation runner. The fixed laboratory in `finance_quant.lab` is already the benchmark/execution/scoring authority. Candidate agents build useful PIT data, signal, state, KG/RAG, model/meta and portfolio components against it; they do not redesign canonical outcome semantics locally.
 
 ## Start here
 
@@ -8,19 +8,45 @@ Read in order:
 
 1. `AGENTS.md`
 2. `docs/CURRENT_STATE.md`
-3. issue #35
-4. issue #36
-5. `docs/handoffs/LATEST.md`
-6. issue #27 and the relevant implementation issue (#29, #37/#19, #21, #38, #32/#17, #39)
-7. `finance_quant/lab/` and `tests/test_lab_*.py`
+3. `docs/handoffs/SESSION_2026-08-28_ADAPTIVE_QUANT_ENGINE.md`
+4. issue #35
+5. issue #36
+6. `docs/handoffs/LATEST.md`
+7. issue #27 and the relevant implementation issue (#29, #37/#19, #21, #38, #32/#17, #39)
+8. `finance_quant/lab/` and `tests/test_lab_*.py`
 
-## First action: contract freeze, not another architecture rewrite
+## Latest product framing
 
-Before the broad worker fan-out, complete enough of #36 to freeze the walking-skeleton and shared contracts:
+The parent product is an **adaptive modular multi-strategy quantitative portfolio engine**:
 
-`SourceAdapter -> CanonicalObservation -> MarketState -> ForecastDistribution -> PortfolioIntent -> PaperFill -> CanonicalOutcome -> Score`
+`heterogeneous signal providers -> model/meta weights -> forecast distributions/ranks -> portfolio allocation -> local zero-money paper -> realized outcomes -> weight/version evolution`
 
-Freeze typed/serialized identities for the shared objects plus the machine-readable work-packet schema and tiered CI rules. This should be a short implementation step, not a new assurance program.
+Do not treat MarketState/KG/RAG/news as mandatory. They are candidate signal-provider families alongside price, momentum, breakout, volatility, fundamentals, macro, vendor quantified feeds and future strategies.
+
+The engine must be able to discover that a sophisticated provider deserves zero active weight.
+
+## First action: reconcile and freeze contracts, not another architecture rewrite
+
+#35/#36 were written before the final strategy-centric clarification. Before the broad worker fan-out, reconcile them and freeze the smallest shared contracts so a simple technical strategy and a rich MarketState strategy both traverse the same engine.
+
+Target permanent skeleton concept:
+
+`PIT data/sources -> SignalProvider(s) -> immutable signal/forecast artifacts -> model/meta weights -> ForecastDistribution -> PortfolioIntent -> PaperFill -> CanonicalOutcome -> Score -> future weight/version update`
+
+`MarketState` may be produced inside one provider but must not be the universal mandatory intermediate.
+
+Freeze typed/serialized identities for the shared objects plus the machine-readable work-packet schema and tiered CI rules. Likely shared concepts include:
+
+- `SignalProvider` / `SignalArtifact` or `SignalVector`;
+- `ForecastDistribution`;
+- `StrategySpec`;
+- meta/router weight state;
+- `PortfolioIntent`;
+- paper execution/fill identity;
+- `CanonicalOutcome`;
+- immutable artifact/version identity.
+
+This should be a short implementation step, not a new assurance program.
 
 The fixed lab contracts below remain unchanged unless a concrete centrally coordinated integration bug requires it:
 
@@ -35,20 +61,6 @@ The fixed lab contracts below remain unchanged unless a concrete centrally coord
 - router no-hindsight timing
 - isolated `ShadowPaperLab`
 
-## Initial bounded sphere
-
-Do not attempt the whole world.
-
-Initial research sphere:
-
-- AI + semiconductors
-- US + China + Taiwan
-- roughly 50–100 equities/ETFs
-- daily decisions initially
-- 1d / 5d / 20d horizons
-
-Interfaces remain asset-class-neutral, but crypto/prediction-market expansion is later work.
-
 ## Parallel worker lanes after #36 boundaries exist
 
 ### Market truth worker — #29
@@ -57,42 +69,51 @@ Build raw OHLCV plus separately timestamped splits/dividends/corporate actions. 
 
 Required product tests: future corporate action cannot alter an earlier historical reconstruction; same source snapshot reconstructs deterministically; revision/version metadata remains inspectable.
 
+### Technical signal worker — engine foundation
+
+Implement first-class versioned price-derived providers that prove the engine does not depend on knowledge infrastructure. Candidate initial providers:
+
+- momentum/trend;
+- breakout;
+- volatility/state;
+- optionally simple mean-reversion/technical controls.
+
+Emit the same shared signal/forecast contract used by richer providers. Required tests focus on deterministic feature timing, no future-bar leakage and exact provider/version identity.
+
+Each executable technical strategy should enter historical WFO and local forward paper immediately.
+
 ### SEC/document worker — #29 / #37 / #19
 
-Ingest filing text, filing timestamps, amendments and structured facts. Emit PIT observations/claims/evidence and provenance references.
+Ingest filing text, filing timestamps, amendments and structured facts. Emit PIT observations/claims/evidence and provenance references that can feed fundamental and/or MarketState signal providers.
 
 Required tests: filing/amendment unavailable before publication; later amendment cannot rewrite an earlier state.
 
 ### Macro worker — #29 / #37
 
-Implement historical-vintage macro observations, preferably ALFRED-style where available. Preserve release/revision times and publish versioned state inputs.
+Implement historical-vintage macro observations, preferably ALFRED-style where available. Preserve release/revision times and publish versioned macro signal/state inputs.
 
 Required test: revised macro values cannot leak into earlier cuts.
 
-### News/evidence worker — #29 / #37
+### News / pre-quantized evidence worker — #29 / #37
 
-Ingest historical financial news/events with publication/first-seen timestamps, entity resolution and syndicated-story dedup.
+Support both custom/open extraction and adapter-style pre-quantized sources where legally/technically available. Examples may include GDELT/open corpora and optional commercial RavenPack/LSEG/FactSet-style feeds.
 
-Do not equate mentions with independent evidence. Produce canonical story clusters plus `Observation`, `Claim`, `Evidence`, source lineage and attention/propagation measurements.
+Do not equate mentions with independent evidence. For custom evidence, produce canonical story clusters plus `Observation`, `Claim`, `Evidence`, source lineage and attention/propagation measurements.
 
 Required tests:
 
-- future article cannot alter earlier cut;
-- ingestion reordering with identical knowledge times cannot alter reconstructed state;
+- future article/score cannot alter earlier cut;
+- ingestion reordering with identical knowledge times cannot alter reconstructed signal/state;
 - duplicated syndication does not increase independent factual corroboration;
-- extractor version creates a new immutable artifact rather than mutating old output.
+- provider/extractor version creates a new immutable artifact rather than mutating old output.
 
 ### Trend/state worker — #37
 
-Construct compact `TrendState` / `MarketState` components rather than forwarding raw documents to prediction models.
+Construct compact `TrendState` / `MarketState` **signal-provider outputs**, not a mandatory product intermediate.
 
-TrendState should include level, robust percentile/z-score, fast/medium/slow velocity, acceleration, noise, trend shape, change-point probability, novelty, persistence, saturation/decay and source diversity/cross-source confirmation.
+TrendState can include level, robust percentile/z-score, fast/medium/slow velocity, acceleration, noise, trend shape, change-point probability, novelty, persistence, saturation/decay and source diversity/cross-source confirmation.
 
-Run direct ablations:
-
-`price | +news/events | +TrendState | +MarketState`
-
-Every executable arm enters historical WFO and forward local paper.
+Run provider variants through the same forecast/meta/portfolio engine as technical strategies.
 
 ### Industrial/exposure graph worker — #37 / #19
 
@@ -100,7 +121,7 @@ Build temporal supplier/customer/competitor/product/industry/technology/geograph
 
 Traversal must remain bounded/typed: short default paths, explicit path grammars, top-K/beam limits, hub penalties/materiality decay and path/evidence dedup.
 
-Required tests: path bounds obeyed; future relation evidence absent from earlier cuts; graph expansion cannot explode through hubs; same semantic relationship can coexist with separate empirical transmission measurements.
+Required tests: path bounds obeyed; future relation evidence absent from earlier cuts; graph expansion cannot explode through hubs; semantic relationships stay distinct from empirically benchmarked transmission values.
 
 ### PIT-safe retrieval / analog worker — #19
 
@@ -109,11 +130,13 @@ Implement two separate retrieval problems:
 1. evidence retrieval: relevant current evidence after historical knowledge filtering;
 2. historical analog retrieval: prior states/episodes whose outcomes were already resolved before the decision cut.
 
+Return shared signal/forecast artifacts rather than introducing a separate execution path.
+
 Required tests: future similar document/state cannot alter earlier retrieval; analog outcome must have resolved before `T`.
 
-### Model workers — #21
+### Model / expert workers — #21
 
-Implement local predictive executors that consume only frozen inputs. Start with:
+Implement local predictive experts that consume frozen provider outputs only. Start with:
 
 - linear/ridge/logistic baselines;
 - historical-analog weighted-return predictor;
@@ -121,6 +144,19 @@ Implement local predictive executors that consume only frozen inputs. Start with
 - selected temporal/neural models only when justified by data volume.
 
 Prefer calibrated forecast distributions and cross-sectional ranking. No model executor owns canonical labels or reads unfrozen live data during prediction.
+
+### Meta-weight / strategy-router workers — #21 / #27
+
+Implement inspectable ways of allocating trust across signal/model experts using only outcomes resolved before the current decision cut.
+
+Begin with controls such as:
+
+- static weights;
+- exponentially weighted experts;
+- rolling prior-OOS weight optimization;
+- later Bayesian/context/regime routing.
+
+Preserve the complete attempted strategy/weight genealogy. Do not select only the historically best variant and discard the search history.
 
 ### Portfolio workers — #38
 
@@ -140,33 +176,35 @@ Each policy gets identical forecasts/cost assumptions and its own historical OOS
 
 ## Candidate publication / evaluation flow
 
-For each versioned component or policy:
+For each versioned provider/model/strategy/meta/policy:
 
 1. implement against shared contracts;
 2. add focused correctness tests plus property/metamorphic/mutation checks only where semantic risk warrants;
-3. publish immutable component/model/policy identity;
+3. publish immutable provider/model/strategy/policy identity;
 4. assemble requested artifacts into the fixed benchmark;
 5. declare explicit arms or a bounded matrix;
 6. run with `finance-quant lab run --parallel N`;
 7. start/continue its isolated zero-money forward paper account once executable;
-8. report exact artifact hashes, arm IDs, evaluation hash, historical metrics and prospective paper state.
+8. report exact artifact hashes, arm/strategy IDs, evaluation hash, historical metrics and prospective paper state.
 
-## Matrix strategy
+## Search strategy and overfitting control
 
-Do not brute-force all combinations.
+Do not brute-force all combinations and then crown the historical winner.
 
-Stages:
+Suggested stages:
 
-1. price baseline;
-2. one-lane main effects;
-3. competing versions within useful lanes;
+1. simple technical/static-weight controls;
+2. one-provider main effects;
+3. competing versions within useful providers;
 4. selected interactions;
-5. MarketState / bounded KG / retrieval combinations;
-6. model-family variants on the same information sets;
+5. model-family variants on the same provider sets;
+6. meta-weight variants trained only on prior resolved OOS outputs;
 7. allocation-policy variants on the same forecasts;
-8. contextual router/ensemble using prior resolved OOS only.
+8. contextual/regime strategies only after simpler controls exist.
 
 Use `max_arms` to fail accidental Cartesian explosions.
+
+Preserve attempted strategy genealogy and research-trial counts so automated AI coding does not become an invisible backtest-overfitting engine.
 
 ## Work-packet / handoff contract
 
@@ -198,11 +236,11 @@ Use the cheapest validation layer that can credibly catch the failure:
 - Lean/SMT only for concrete hard invariants where executable tests are not enough;
 - historical WFO and forward paper decide investment usefulness.
 
-Correctness gates merges. Predictive metrics gate research promotion.
+Correctness gates merges. Predictive/portfolio metrics gate research promotion.
 
 ## Audit/export — #39
 
-Do not block the first useful state/forecast/paper loops on RDF infrastructure. Once useful experiment lineages exist, export a Research Evidence Bundle using immutable manifests/ledger plus RDF/JSON-LD, OWL 2, SHACL, PROV-O, deterministic hashing and RO-Crate-style packaging where helpful.
+Do not block useful signal/strategy/forecast/paper loops on RDF infrastructure. Once useful experiment lineages exist, export a Research Evidence Bundle using immutable manifests/ledger plus RDF/JSON-LD, OWL 2, SHACL, PROV-O, deterministic hashing and RO-Crate-style packaging where helpful.
 
 ## Safety/holdout
 
