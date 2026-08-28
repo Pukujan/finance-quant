@@ -1,186 +1,92 @@
-# Handoff — bounded Market State Fabric direction
+# Handoff — adaptive modular quantitative portfolio engine
 
 Date: 2026-08-28
 Branch: `main`
-Active architecture proposal: #35
+Active architecture issue: #35 (pending latest framing reconciliation)
 Product mode: local research + zero-money simulated paper only; no broker/live capital
 
-## Current product state
+## Full continuation package
 
-The working workstation and fixed parallel research laboratory are already merged to `main` from PR #34.
+**Read this first:**
 
-Product merge commit: `9fb53a7974ada959b3ed3bd7d7efe135e6e98848`.
+`docs/handoffs/SESSION_2026-08-28_ADAPTIVE_QUANT_ENGINE.md`
 
-The fixed lab remains the benchmark/evaluation authority. Candidate code must not own canonical outcomes, PIT cuts, scoring, evaluation identity, router timing or paper-account truth.
+That file is the detailed continuation package for the long 2026-08-28 design session. It captures the repo state, empirical results, architecture evolution, MarketState/epistemic/trend concepts, portfolio engine, OSS/data choices, market-reality/overfitting discussion, agent/SWE operating model, adversarial failure matrix, success/kill criteria and exact next-session bootstrap prompt.
 
-Stable fixed-lab flow:
+## Latest conceptual correction
 
-`publish immutable PIT components -> assemble fixed benchmark -> parallel exact-version arms -> same canonical realized outcome -> ExperimentLedger -> prior-resolved-only router -> isolated shadow paper`
+The product center is now:
 
-## Architecture refinement now durable
+> **adaptive modular multi-strategy quantitative portfolio engine**
 
-The 2026-08-28 design discussion is captured in #35 rather than left in chat history.
+Canonical loop:
 
-North star:
+`heterogeneous signal providers -> model/meta weights -> forecast distributions/ranks -> portfolio allocation -> local zero-money paper -> realized outcomes -> weight/version evolution`
 
-`world data -> PIT evidence -> epistemic/market state -> exposure/retrieval -> forecast distributions -> portfolio allocation -> local paper -> realized outcome -> learning`
+Important consequence:
 
-Key correction: forward paper is not a late deployment stage. Every executable surviving arm/policy should start accumulating prospective paper history as soon as it can make a valid decision.
+**MarketState, temporal KG/RAG, news/epistemics, vendor pre-quantized feeds, fundamentals/macro, momentum, breakout, volatility and analog retrieval are signal-provider families. None is architecturally privileged.**
 
-The project is **not** a literal whole-world model. Implementation proceeds through bounded market spheres.
+The engine must be able to learn that any sophisticated provider deserves zero weight.
 
-Initial sphere:
+#35/#36 were originally written before this final clarification and may over-center MarketState. The next session should reconcile those issues before implementing the contract freeze literally.
 
-- AI + semiconductors;
-- US + China + Taiwan;
-- roughly 50–100 equities/ETFs;
-- daily decisions initially;
-- 1d / 5d / 20d horizons.
+## Existing fixed substrate remains unchanged
 
-Architecture remains asset-class-neutral for later crypto/prediction-market adapters.
+The working workstation and fixed parallel lab are already on `main`.
 
-## New execution issues
+`finance_quant.lab` remains the authority for:
 
-- #35 — architecture proposal / north star / phase plan
-- #36 — walking skeleton + typed Market IR/API contracts + AI-agent work graph + tiered CI
-- #37 — bounded Market State Fabric: claims/evidence/epistemics/trends/exposures
-- #38 — forecast-to-allocation portfolio engine + diversified forward paper
-- #39 — reproducible Research Evidence Bundle + semantic provenance export
+- PIT benchmark/snapshot truth;
+- canonical realized outcomes;
+- evaluation identity;
+- scoring;
+- prior-resolved-only routing semantics;
+- isolated persistent paper-account truth.
 
-Existing lanes remain active and are extended rather than replaced:
+Candidate providers/models/strategy/meta/portfolio policies do not own the answer key.
 
-- #27 fixed experiment flywheel/control plane
-- #29 historical PIT data lanes
-- #19 temporal KG + PIT-safe RAG
-- #21 local models/ranking
-- #18 continuous paper loop
-- #17/#32 workstation UX/lineage
+Existing AAPL empirical baseline remains:
 
-## What the Market State Fabric means
+- 1,988 WFO predictions;
+- price-only direction: 53.3702%;
+- price + current small SEC feature set: 51.8612%;
+- delta: -1.5091pp.
 
-Do not store naked graph facts.
+The current small SEC feature set hurt the price baseline. This remains useful negative evidence, not a KG success claim.
 
-Preserve:
+Existing local paper proof remains signal -> persistence -> next-open simulated fill -> mark, not profitability evidence.
 
-`SourceArtifact -> Observation -> Claim -> Evidence -> bitemporal EpistemicState -> MarketBeliefState -> Derived MarketState -> BenchmarkedKnowledge -> PredictiveKnowledge`
+## Immediate next session
 
-Keep factual reliability, attention/hype, economic materiality, exposure strength and predictive usefulness separate.
+Read in order:
 
-Use a stable core ontology plus versioned domain modules. Temporal economic relations retain valid/knowledge time, provenance, confidence and materiality. Graph traversal remains typed and bounded.
+1. `AGENTS.md`
+2. `docs/CURRENT_STATE.md`
+3. `docs/handoffs/SESSION_2026-08-28_ADAPTIVE_QUANT_ENGINE.md`
+4. #35
+5. #36
+6. this file
+7. #27 and relevant candidate issues/contracts/tests.
 
-`TrendState` tracks level, robust percentile/z-score, multi-horizon velocity, acceleration, noise, trend shape, structural breaks, novelty, persistence, saturation/decay and cross-source confirmation rather than one generic sentiment/hype number.
+Then:
 
-## Data compression
+1. reconcile #35/#36 so the adaptive multi-strategy engine is clearly the parent and MarketState is optional;
+2. freeze the smallest shared `SignalProvider`/signal artifact, strategy/meta weight, forecast and `PortfolioIntent` contracts;
+3. make the permanent walking skeleton work with a simple price/momentum/breakout/volatility strategy **without** KG/news;
+4. resume parallel raw-data, MarketState, KG/RAG, model and portfolio-policy workers behind those contracts;
+5. put every executable credible strategy/policy into local forward paper immediately.
 
-Local-first pipeline:
+## Exact bootstrap prompt for a new chat
 
-`raw stream -> relevance -> dedup/story clusters -> claims/events/entities -> state deltas/checkpoints -> compact MarketState -> model matrices`
+> Continue `Pukujan/finance-quant` from durable repo state, not from assumptions. Read `AGENTS.md`, `docs/CURRENT_STATE.md`, and `docs/handoffs/SESSION_2026-08-28_ADAPTIVE_QUANT_ENGINE.md`, then issues #35 and #36 and `docs/handoffs/LATEST.md`. The latest conceptual correction is that the product is an **adaptive modular multi-strategy quantitative portfolio engine**: heterogeneous signal providers -> model/meta weights -> forecast distributions/ranks -> portfolio allocation -> local zero-money paper -> realized outcomes -> weight/version evolution. Market State/KG/RAG/news/vendor feeds are optional signal providers, not the product itself. First reconcile #35/#36/CURRENT_STATE against that correction and tell me exactly what durable issue/contracts need changing; then implement the smallest correct contract/walking-skeleton correction rather than doing more architecture discussion. Preserve fixed `finance_quant.lab` PIT/outcome/scoring/account semantics, keep live capital out of scope, do not inspect the sealed holdout, and make every executable strategy enter forward paper as soon as valid.
 
-Target tiers:
+## Hard boundaries
 
-- cold raw permitted evidence: compressed Parquet/ZSTD;
-- canonical claims/events/entities/relations/provenance;
-- MarketState checkpoints/deltas;
-- PIT model-ready decision snapshots.
-
-Do not predict once per incoming article. Use scheduled cuts and/or material state changes.
-
-## Forecasting direction
-
-Retrieval has two roles:
-
-1. retrieve current relevant evidence;
-2. retrieve prior resolved states/episodes similar to the present one.
-
-Initial arms stay interpretable:
-
-- price only;
-- direct news/events;
-- TrendState;
-- compact MarketState;
-- MarketState + bounded graph exposure;
-- historical analog weighted-return baseline;
-- LightGBM/XGBoost cross-sectional ranker.
-
-Later temporal/neural models are conditional on evidence that simpler models/state representations justify them.
-
-## Portfolio engine — do not stop at predictions
-
-#38 owns the second half of the product.
-
-The system must explicitly answer:
-
-- where to invest;
-- how much to invest;
-- how much cash to keep;
-- how to diversify by economic exposure;
-- what to buy/sell/hold;
-- when/where to rebalance under simulated liquidity/cost assumptions;
-- when to abstain/no-trade.
-
-`PortfolioIntent` is the typed handoff from forecasts to paper execution and includes target weights, trade deltas, target cash, expected return/risk/cost, turnover, binding constraints and provenance.
-
-Initial allocation-policy arms:
-
-1. equal-weight top-K;
-2. edge/confidence weighted top-K with caps;
-3. volatility-scaled/risk-budgeted;
-4. mean-variance/robust convex allocation with turnover/cost penalties;
-5. explicit cash/no-trade threshold.
-
-Each uses identical upstream forecasts and gets its own historical OOS comparison + persistent isolated forward paper account. Forecast skill and allocation skill are scored separately.
-
-## SWE / agent operating model
-
-Use a modular monolith with process-isolated heavy workers, not microservices by default.
-
-Permanent walking skeleton:
-
-`SourceAdapter -> CanonicalObservation -> MarketState -> ForecastDistribution -> PortfolioIntent -> PaperFill -> CanonicalOutcome -> Score -> Workstation`
-
-#36 freezes shared typed contracts and machine-readable work packets before the broad parallel candidate wave.
-
-Every work packet declares dependencies, owned files/modules, typed inputs/outputs, forbidden authority, acceptance tests and required product proof.
-
-Use stronger central reasoning/integration agents for temporal semantics, statistical leakage, shared architecture and hard debugging; fan bounded adapters/features/models/tests/UX out to parallel workers. Model routing should be empirical rather than a permanent Sol=Luna role assignment.
-
-Verification is risk-targeted:
-
-- lint/strict types/contracts for ordinary AI coding errors;
-- focused TDD;
-- property/invariant tests;
-- metamorphic tests for PIT/reordering/dedup/retrieval invariance;
-- targeted mutation tests for tiny research-invalidating bugs;
-- deterministic replay;
-- Lean/SMT only for concrete hard invariants where executable tests are insufficient;
-- historical WFO + forward paper judge research value.
-
-Correctness gates merges. Alpha/performance gates research promotion.
-
-## Audit/reproducibility
-
-#39 targets a sellable Research Evidence Bundle using immutable manifests/ledger plus RDF/JSON-LD, OWL 2, SHACL, PROV-O, deterministic hashes and RO-Crate-style packaging where useful.
-
-The audit layer is not the hot runtime. Its purpose is to let an external party trace a result from exact inputs/state/model/portfolio intent through realized outcome and reproduce scoring where licensed data are available.
-
-## Immediate next action
-
-1. Implement/freeze #36 shared contracts, walking skeleton, MarketIR, PortfolioIntent, work-packet schema and CI tiers.
-2. Resume #29 raw market/SEC/macro/news workers behind those contracts.
-3. Build #37 AI+semiconductor state vertical slices.
-4. Feed #19 KG/RAG + historical analog retrieval into experiment arms.
-5. Run #21 conventional local model/ranking families.
-6. Implement #38 allocation-policy competitors and start their forward paper accounts immediately.
-7. Surface evidence/state/forecast/allocation/fills/results in #32/#17.
-8. Add #39 audit export after useful experiment lineages exist.
-
-Each phase must report correctness, data quality/coverage, signal metrics, portfolio/paper metrics and operational metrics.
-
-## Important boundaries
-
-- No live capital/broker authority.
-- Software correctness is not predictive evidence.
-- Negative OOS/forward-paper results stay in lineage.
-- Do not inspect or optimize against the private sealed holdout without explicit authorization.
-- Do not build distributed infrastructure unless actual local workload demonstrates the need.
-- Do not let assurance/meta-systems become the product.
+- no broker/live-capital authority;
+- no sealed-holdout inspection without explicit authorization;
+- negative research results remain durable;
+- correctness gates software merges; investment metrics gate research promotion;
+- preserve trial genealogy to defend against AI-powered strategy-selection overfitting;
+- do not let assurance/orchestration infrastructure become the product;
+- do not build distributed infrastructure until real local workload requires it.
