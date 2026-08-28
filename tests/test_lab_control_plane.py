@@ -40,20 +40,16 @@ def component(lane: str, version: str, *, parents=(), params=None) -> ComponentS
 
 
 def arm_specs():
-    price_manifest = KnowledgeManifest((("price", "price-v1"),)).manifest_hash
-    knowledge_manifest = KnowledgeManifest((("price", "price-v1"), ("news", "news-v1"))).manifest_hash
     return (
         ArmSpec(
             "A-price",
-            ("price",),
-            price_manifest,
+            (("price", "price-v1"),),
             "finance_quant.lab.demo:weighted_signal",
             model_config_json=json.dumps({"weights": {"price": 1.0}}),
         ),
         ArmSpec(
             "B-price-news",
-            ("price", "news"),
-            knowledge_manifest,
+            (("price", "price-v1"), ("news", "news-v1")),
             "finance_quant.lab.demo:weighted_signal",
             model_config_json=json.dumps({"weights": {"price": 1.0, "news": 0.5}}),
         ),
@@ -135,7 +131,7 @@ def test_future_known_data_cannot_change_prior_frozen_snapshot(future_signal):
     assert before.snapshot_id == after.snapshot_id
 
 
-def test_snapshot_rejects_future_known_lane_if_bypassing_freeze():
+def test_snapshot_rejects_future_known_component_if_bypassing_freeze():
     from finance_quant.lab.core import DecisionSnapshot, LaneValue
 
     with pytest.raises(LabError):
@@ -147,17 +143,58 @@ def test_snapshot_rejects_future_known_lane_if_bypassing_freeze():
         )
 
 
-def test_arm_receives_only_declared_lanes():
+def test_arm_receives_only_declared_exact_components():
     from finance_quant.lab.core import arm_context
 
     a, b = arm_specs()
     snapshot = snapshots()[0]
     context_a = arm_context(snapshot, a)
     context_b = arm_context(snapshot, b)
-    assert [item.lane for item in context_a.lanes] == ["price"]
-    assert [item.lane for item in context_b.lanes] == ["news", "price"]
+    assert [(item.lane, item.artifact_hash) for item in context_a.lanes] == [("price", "price-v1")]
+    assert [(item.lane, item.artifact_hash) for item in context_b.lanes] == [
+        ("news", "news-v1"),
+        ("price", "price-v1"),
+    ]
     with pytest.raises(KeyError):
         context_a.lane_payload("news")
+
+
+def test_multiple_versions_of_same_lane_run_side_by_side_against_same_outcome():
+    snapshot = freeze_snapshot(
+        "AAA",
+        T0,
+        "1d",
+        (
+            TemporalLaneDatum.from_payload("price", "price-v1", T0, {"signal": 0.01}),
+            TemporalLaneDatum.from_payload("news", "news-v3", T0, {"signal": 0.02}),
+            TemporalLaneDatum.from_payload("news", "news-v4", T0, {"signal": -0.015}),
+            TemporalLaneDatum.from_payload("news", "news-v5-future", T2, {"signal": 999.0}),
+        ),
+    )
+    arms = (
+        ArmSpec(
+            "news-v3-arm",
+            (("price", "price-v1"), ("news", "news-v3")),
+            "finance_quant.lab.demo:weighted_signal",
+            model_config_json=json.dumps({"weights": {"price": 1.0, "news": 1.0}}),
+        ),
+        ArmSpec(
+            "news-v4-arm",
+            (("price", "price-v1"), ("news", "news-v4")),
+            "finance_quant.lab.demo:weighted_signal",
+            model_config_json=json.dumps({"weights": {"price": 1.0, "news": 1.0}}),
+        ),
+    )
+    result = run_batch(
+        batch(arms),
+        (snapshot,),
+        (CanonicalOutcome("AAA", T0, T1, "1d", 0.01, 2.0),),
+        max_workers=2,
+    )
+    predictions = {row.arm_id: row.predicted_return for row in result.predictions}
+    assert predictions == pytest.approx({"news-v3-arm": 0.03, "news-v4-arm": -0.005})
+    assert len({row.outcome_id for row in result.scores}) == 1
+    assert {item.artifact_hash for item in snapshot.lanes if item.lane == "news"} == {"news-v3", "news-v4"}
 
 
 def test_parallel_and_sequential_runs_are_identical_and_share_canonical_outcomes():
@@ -202,8 +239,7 @@ def test_lab_runs_are_idempotently_identified_in_existing_experiment_ledger(tmp_
 
         changed = ArmSpec(
             arm.arm_id,
-            arm.lanes,
-            arm.knowledge_manifest_hash,
+            arm.components,
             arm.executor_ref,
             model_config_json=json.dumps({"weights": {"price": 2.0}}),
         )
@@ -213,9 +249,7 @@ def test_lab_runs_are_idempotently_identified_in_existing_experiment_ledger(tmp_
         ledger.close()
 
 
-def test_cli_separates_fixed_benchmark_from_candidate_arms(tmp_path, capsys):
-    price_manifest = KnowledgeManifest((("price", "price-v1"),)).manifest_hash
-    knowledge_manifest = KnowledgeManifest((("price", "price-v1"), ("news", "news-v1"))).manifest_hash
+def test_cli_separates_fixed_benchmark_from_candidate_arms_and_versions(tmp_path, capsys):
     benchmark = {
         "experiment": {
             "experiment_id": "cli-test",
@@ -234,7 +268,8 @@ def test_cli_separates_fixed_benchmark_from_candidate_arms(tmp_path, capsys):
                 "horizon": "1d",
                 "data": [
                     {"lane": "price", "artifact_hash": "price-v1", "known_at": T0, "payload": {"signal": 0.01}},
-                    {"lane": "news", "artifact_hash": "news-v1", "known_at": T0, "payload": {"signal": 0.02}},
+                    {"lane": "news", "artifact_hash": "news-v3", "known_at": T0, "payload": {"signal": 0.02}},
+                    {"lane": "news", "artifact_hash": "news-v4", "known_at": T0, "payload": {"signal": -0.015}},
                     {"lane": "news", "artifact_hash": "future", "known_at": T2, "payload": {"signal": 999}},
                 ],
             }
@@ -254,15 +289,25 @@ def test_cli_separates_fixed_benchmark_from_candidate_arms(tmp_path, capsys):
         "arms": [
             {
                 "arm_id": "price",
-                "lanes": ["price"],
-                "knowledge_manifest_hash": price_manifest,
+                "components": [{"lane": "price", "artifact_hash": "price-v1"}],
                 "executor_ref": "finance_quant.lab.demo:weighted_signal",
                 "model_config": {"weights": {"price": 1}},
             },
             {
-                "arm_id": "price-news",
-                "lanes": ["price", "news"],
-                "knowledge_manifest_hash": knowledge_manifest,
+                "arm_id": "price-news-v3",
+                "components": [
+                    {"lane": "price", "artifact_hash": "price-v1"},
+                    {"lane": "news", "artifact_hash": "news-v3"},
+                ],
+                "executor_ref": "finance_quant.lab.demo:weighted_signal",
+                "model_config": {"weights": {"price": 1, "news": 1}},
+            },
+            {
+                "arm_id": "price-news-v4",
+                "components": [
+                    {"lane": "price", "artifact_hash": "price-v1"},
+                    {"lane": "news", "artifact_hash": "news-v4"},
+                ],
                 "executor_ref": "finance_quant.lab.demo:weighted_signal",
                 "model_config": {"weights": {"price": 1, "news": 1}},
             },
@@ -274,13 +319,13 @@ def test_cli_separates_fixed_benchmark_from_candidate_arms(tmp_path, capsys):
     candidate_path.write_text(json.dumps(candidates), encoding="utf-8")
     rc = lab_main([
         "run", str(benchmark_path), str(candidate_path),
-        "--state-dir", str(tmp_path / "state"), "--parallel", "2",
+        "--state-dir", str(tmp_path / "state"), "--parallel", "3",
     ])
     assert rc == 0
     result = json.loads(capsys.readouterr().out)
     predictions = {row["arm_id"]: row["predicted_return"] for row in result["predictions"]}
-    assert predictions["price"] == pytest.approx(0.01)
-    assert predictions["price-news"] == pytest.approx(0.03)
+    assert predictions == pytest.approx({"price": 0.01, "price-news-v3": 0.03, "price-news-v4": -0.005})
+    assert len({row["outcome_id"] for row in result["scores"]}) == 1
 
 
 def test_candidate_file_cannot_smuggle_outcomes(tmp_path):
@@ -289,4 +334,23 @@ def test_candidate_file_cannot_smuggle_outcomes(tmp_path):
     path = tmp_path / "bad-candidates.json"
     path.write_text(json.dumps({"arms": [], "outcomes": [{"fake": True}]}), encoding="utf-8")
     with pytest.raises(LabError, match="cannot own benchmark data"):
+        load_candidates(path)
+
+
+def test_candidate_file_rejects_legacy_lane_and_manifest_claims(tmp_path):
+    from finance_quant.lab.cli import load_candidates
+
+    path = tmp_path / "legacy-candidates.json"
+    path.write_text(
+        json.dumps({
+            "arms": [{
+                "arm_id": "legacy",
+                "lanes": ["price"],
+                "knowledge_manifest_hash": "candidate-controlled",
+                "executor_ref": "finance_quant.lab.demo:weighted_signal",
+            }]
+        }),
+        encoding="utf-8",
+    )
+    with pytest.raises(LabError, match="must declare exact components"):
         load_candidates(path)
