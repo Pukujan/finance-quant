@@ -1,4 +1,4 @@
-"""Append-only ExperimentLedger facade over SQLite for V0.
+"""Append-only ExperimentLedger facade over SQLite for V0/V2.
 
 MLflow is deliberately NOT called directly by research code. This facade owns the
 minimum reproducibility contract and append-only run truth; an MLflow adapter can
@@ -11,7 +11,7 @@ import json
 import sqlite3
 import threading
 import time
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass
 from enum import Enum
 from pathlib import Path
 from typing import Optional
@@ -34,7 +34,7 @@ def _hash(payload: object) -> str:
 
 @dataclass(frozen=True)
 class RunSpec:
-    """Required fields from spike #4 sec. 3. No partial run specifications."""
+    """Immutable experiment identity; flywheel fields are backward-compatible."""
     experiment_id: str
     code_sha: str
     env_lock_hash: str
@@ -47,6 +47,11 @@ class RunSpec:
     agent_origin: str = "human"
     parent_run_id: Optional[str] = None
     hardware_profile: str = "unspecified"
+    knowledge_manifest_hash: str = ""
+    retrieval_policy_hash: str = ""
+    arm_spec_hash: str = ""
+    router_config_hash: str = ""
+    evaluation_hash: str = ""
 
     def __post_init__(self) -> None:
         required = (self.experiment_id, self.code_sha, self.env_lock_hash,

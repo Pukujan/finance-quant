@@ -1,0 +1,33 @@
+name: workstation-demo
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, product/workstation-lab-integration]
+    paths:
+      - "finance_quant/workstation/**"
+      - "finance_quant/trader/account.py"
+      - "tests/test_workstation_product.py"
+      - ".github/workflows/workstation-demo.yml"
+
+jobs:
+  product-demo:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install -e ".[test]"
+      - name: Product correctness tests
+        run: python -m pytest tests/test_workstation_product.py -q
+      - name: Form real-data signal for Aug 26
+        run: python -m finance_quant.workstation --ticker AAPL --start 2018-01-01 --end 2026-08-26 --capital 100000 --state-dir .demo-state --json > workstation-2026-08-26.json
+      - name: Advance real-data paper account on Aug 27
+        run: python -m finance_quant.workstation --ticker AAPL --start 2018-01-01 --end 2026-08-27 --capital 100000 --state-dir .demo-state --json > workstation-2026-08-27.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: workstation-demo-result
+          path: |
+            workstation-2026-08-26.json
+            workstation-2026-08-27.json
