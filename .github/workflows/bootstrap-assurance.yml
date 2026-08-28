@@ -1,11 +1,8 @@
 name: bootstrap-assurance
 
+# Legacy assurance workflow retained for historical/manual use only.
+# It is intentionally not part of the working-product development loop.
 on:
-  push:
-    branches:
-      - main
-      - "bootstrap/**"
-  pull_request:
   workflow_dispatch:
 
 jobs:
